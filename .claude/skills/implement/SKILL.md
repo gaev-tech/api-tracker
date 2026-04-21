@@ -126,6 +126,7 @@ Only after the user approves the plan:
    - Frontend: `npm run build` and `npm run lint` from `frontend/`
 4. If the build/lint fails, diagnose and fix before reporting completion
 5. Report completion with a summary of exactly what was created/modified/removed
+6. Remind the user to run `/review` (Phase 2 — post-implementation) after the PR is merged
 
 ---
 
