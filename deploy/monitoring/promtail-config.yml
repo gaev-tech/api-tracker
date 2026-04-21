@@ -1,0 +1,44 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: status
+            values: [running]
+    relabel_configs:
+      # Use Docker container name as the instance label
+      - source_labels: [__meta_docker_container_name]
+        regex: /(.*)
+        target_label: container
+      # Use docker-compose service name
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: compose_service
+      # Use image name
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        target_label: compose_project
+      # Drop containers without a compose service label (non-compose containers)
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        action: keep
+        regex: .+
+    pipeline_stages:
+      # Attempt to parse JSON logs; if not JSON, keep raw message
+      - json:
+          expressions:
+            level: level
+            msg: message
+            service: service
+            request_id: request_id
+      - labels:
+          level:
+          service:
