@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ping.v1;
+
+option go_package = "github.com/gaev-tech/api-tracker/contracts/proto/ping/gen;pingv1";
+
+service PingService {
+  rpc Ping(PingRequest) returns (PingResponse);
+}
+
+message PingRequest {
+  string message = 1;
+}
+
+message PingResponse {
+  string message = 1;
+}
