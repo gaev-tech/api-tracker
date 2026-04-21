@@ -84,7 +84,7 @@ deploy/monitoring/
 - **Prometheus** слушает `:9090`. Scrape-интервал 15s. В `prometheus.yml` перечислены job'ы для каждого сервиса (`metrics`-endpoint на `/metrics`), а также для exporters.
 - **Grafana** слушает `:3000`. Admin-credentials: `admin` / `admin` (dev только). Datasource Prometheus и дашборды подключаются через provisioning при старте. Дашборды — готовые JSON из официального каталога Grafana.
 - **nginx-prometheus-exporter** (`nginx/nginx-prometheus-exporter`) — собирает метрики с Nginx stub_status (`/stub_status`). Слушает `:9113`. Для этого nginx.conf должен экспонировать `/stub_status` на внутреннем location.
-- **postgres_exporter** (`prometheuscommunity/postgres-exporter`) — по одному экземпляру на каждый PostgreSQL-сервис (identity, billing, files). Слушают `:9187`, `:9188`, `:9189`. Подключаются через `DATA_SOURCE_NAME`.
+- **postgres_exporter** (`prometheuscommunity/postgres-exporter`) — по одному экземпляру на каждый PostgreSQL-сервис (identity, billing, files). Слушают `:9187`, `:9188`, `:9189`. Подключаются через `DATA_SOURCE_NAME` (DSN с `sslmode=disable` — в dev-окружении TLS на PostgreSQL не настроен).
 
 Используемые дашборды (Grafana Dashboard IDs):
 - **PostgreSQL**: ID 9628 (PostgreSQL Database, совместим с postgres_exporter).
