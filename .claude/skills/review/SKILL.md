@@ -381,17 +381,17 @@ State clearly: **"Project Manager (post): [issue #N closed / PR #M merged or clo
 
 After all three post-implementation roles complete:
 
-1. If any spec was updated in post-implementation review, commit it:
+1. If any spec was updated in post-implementation review, commit it on a branch and open a PR:
    ```bash
+   git checkout -b spec/[task-id]-post-impl-sync
    git add specs/
    git commit -m "spec: post-impl sync for [task-id]
 
    - [file]: [what changed]"
+   git push -u origin spec/[task-id]-post-impl-sync
+   gh pr create --title "spec: post-impl sync for [task-id]" --body "..."
    ```
-   Push directly to main (spec-only commit, no code change):
-   ```bash
-   git push origin main
-   ```
+   PM merges the PR (same as all other PRs — never push directly to main).
 
 2. Confirm: all three roles signed off, issue closed, PR merged or closed, no stale PRs.
 
