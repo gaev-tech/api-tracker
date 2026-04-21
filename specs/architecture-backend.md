@@ -208,7 +208,7 @@
 
 **Ответственность.** Единая точка входа публичного API и WebSocket-подключений.
 
-**Компонент:** Nginx с `auth_request` модулем.
+**Компонент:** Nginx **nginx:alpine** с `auth_request` модулем. В docker-compose окружении upstream DNS резолвится через Docker internal resolver (`resolver 127.0.0.11 valid=30s`) — это позволяет Nginx стартовать даже при отсутствии upstream-сервисов.
 
 **Функции:**
 - TLS termination (включая обработку TLS для WebSocket).
