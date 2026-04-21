@@ -100,11 +100,28 @@ deploy/monitoring/
 
 **Loki + Promtail.**
 - Все сервисы пишут структурированные логи в stdout (JSON-формат).
-- Promtail как DaemonSet на каждой ноде собирает логи pod'ов и отправляет в Loki.
-- Loki индексирует метки (service, pod, severity), сам текст хранит сжатыми chunk'ами.
+- Promtail собирает логи и отправляет в Loki.
+- Loki индексирует метки (service, container, level), сам текст хранит сжатыми chunk'ами.
 - Grafana предоставляет UI для поиска логов (LogQL).
 
 **Стандартные поля в логе:** `timestamp`, `level`, `service`, `request_id`, `user_id`, `message`, `error` (если есть).
+
+**Локальная разработка (docker-compose, I-14):**
+
+Loki и Promtail добавляются в `deploy/docker-compose.yml`. Конфиги хранятся в `deploy/monitoring/`:
+
+```
+deploy/monitoring/
+├── loki-config.yml             # хранилище chunk'ов в filesystem, retention 7d
+├── promtail-config.yml         # pipeline scrape через Docker socket
+...
+```
+
+- **Loki** слушает `:3100`. Хранит логи локально в volume `loki-data`. Retention 7 дней.
+- **Promtail** монтирует Docker socket (`/var/run/docker.sock`) и читает логи всех контейнеров через Docker service discovery. Добавляет метки `container`, `compose_service`, `image`.
+- **Datasource Loki** добавляется в Grafana provisioning (`deploy/monitoring/grafana/provisioning/datasources/loki.yml`).
+
+В K8s — Loki Helm chart + Promtail как DaemonSet (после I-2).
 
 ### 2.4. Request tracing
 
