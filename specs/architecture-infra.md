@@ -24,9 +24,9 @@ Kubernetes, observability, CI/CD, масштабирование. Изменяе
 
 ### 1.2. Топология окружений
 
-Минимум два окружения:
-- **staging** — отдельный namespace (или отдельный кластер для изоляции) для интеграционного тестирования.
-- **production** — основная среда.
+Один кластер Kubernetes, два namespace-а:
+- **`staging`** — для интеграционного тестирования. Деплой происходит автоматически после успешного merge в main.
+- **`production`** — основная среда. Деплой требует ручного подтверждения (`environment: production` с required reviewers в GitHub Actions).
 
 Dev-окружение разработчика — локальный Kubernetes (Kind / Minikube / Docker Desktop) либо Docker Compose с минимальным набором зависимостей (Postgres, Kafka, Redis).
 
@@ -177,7 +177,8 @@ Monorepo разделён на верхнем уровне по экосисте
 │
 ├── .github/
 │   └── workflows/
-│       └── ci-backend.yml
+│       ├── ci-backend.yml          # lint, test, build, push images
+│       └── cd-helm.yml             # helm deploy на staging (авто) и production (ручное)
 ├── Makefile
 └── README.md
 ```
@@ -200,8 +201,8 @@ Monorepo разделён на верхнем уровне по экосисте
 4. **Integration-тесты:** поднимаются через docker-compose (Postgres, Kafka).
 5. **Build images:** для изменившихся сервисов. Path-based триггеры (`paths:` в workflow): изменение в `services/workspace/` → собирается только workspace. Image tagging: `ghcr.io/<owner>/<repo>/<service>:<commit-sha>`, плюс `:latest` для главной ветки. Теги branch-name не используются.
 6. **Push в GitHub Container Registry (ghcr.io):** только при мерже в main. В pull request образы собираются (для проверки Dockerfile), но не публикуются. Все Docker-джобы находятся в `.github/workflows/ci-backend.yml` (отдельный файл для Docker не создаётся).
-7. **Deploy на staging** (автоматически после успешного pipeline в main).
-8. **Deploy на production** — ручное подтверждение (`environment: production` с required reviewers).
+7. **Deploy на staging** — автоматически после успешного pipeline в main. Реализован в отдельном workflow `.github/workflows/cd-helm.yml`. Kubeconfig кластера хранится в GitHub Actions Secret `KUBECONFIG_B64` (base64-encoded), на каждом deploy-job декодируется во временный файл.
+8. **Deploy на production** — ручное подтверждение (`environment: production` с required reviewers). Тот же `cd-helm.yml`, отдельный job с `environment: production`.
 
 ### 3.3. Деплой в Kubernetes
 

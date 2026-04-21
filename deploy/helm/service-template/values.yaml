@@ -1,0 +1,44 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/gaev-tech/api-tracker/service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8080
+  grpcPort: 9090
+
+hpa:
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: false
+  host: ""
+  path: /
+  annotations: {}
+
+# Inline env vars: list of {name, value} pairs
+env: []
+# - name: FOO
+#   value: bar
+
+# envFrom: reference existing ConfigMap and/or Secret by name
+envFrom:
+  configMapRef: ""  # name of ConfigMap to mount as envFrom; empty = skip
+  secretRef: ""     # name of Secret to mount as envFrom; empty = skip
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  path: /metrics
