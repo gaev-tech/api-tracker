@@ -206,7 +206,7 @@ Monorepo разделён на верхнем уровне по экосисте
 
 ### 3.3. Деплой в Kubernetes
 
-**Инструмент:** `helm upgrade --install <release> deploy/helm/<service>` из CI-job.
+**Инструмент:** `helm upgrade --install <release> deploy/helm/<service>` из CI-job. Версия Helm: **3.16.0**, устанавливается через `azure/setup-helm@v4` в GitHub Actions.
 
 #### Шаблон чарта (I-5)
 
