@@ -81,8 +81,14 @@ deploy/monitoring/
         └── overview.json       # базовый dashboard
 ```
 
-- **Prometheus** слушает `:9090`. Scrape-интервал 15s. В `prometheus.yml` перечислены job'ы для каждого сервиса (`metrics`-endpoint на `/metrics`).
-- **Grafana** слушает `:3000`. Admin-credentials: `admin` / `admin` (dev только). Datasource Prometheus и дашборды подключаются через provisioning при старте.
+- **Prometheus** слушает `:9090`. Scrape-интервал 15s. В `prometheus.yml` перечислены job'ы для каждого сервиса (`metrics`-endpoint на `/metrics`), а также для exporters.
+- **Grafana** слушает `:3000`. Admin-credentials: `admin` / `admin` (dev только). Datasource Prometheus и дашборды подключаются через provisioning при старте. Дашборды — готовые JSON из официального каталога Grafana.
+- **nginx-prometheus-exporter** (`nginx/nginx-prometheus-exporter`) — собирает метрики с Nginx stub_status (`/stub_status`). Слушает `:9113`. Для этого nginx.conf должен экспонировать `/stub_status` на внутреннем location.
+- **postgres_exporter** (`prometheuscommunity/postgres-exporter`) — по одному экземпляру на каждый PostgreSQL-сервис (identity, billing, files). Слушают `:9187`, `:9188`, `:9189`. Подключаются через `DATA_SOURCE_NAME`.
+
+Используемые дашборды (Grafana Dashboard IDs):
+- **PostgreSQL**: ID 9628 (PostgreSQL Database, совместим с postgres_exporter).
+- **Nginx**: ID 12708 (NGINX Prometheus Exporter).
 
 В K8s — `kube-prometheus-stack` через Helm (после I-2). ServiceMonitor'ы сервисов активируются через `serviceMonitor.enabled: true` в Helm values.
 
