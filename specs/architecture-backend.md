@@ -266,3 +266,83 @@
 При старте сервиса (до начала приёма трафика) выполняется `goose up` / `migrate up` до последней версии. Если миграция не проходит — сервис не стартует, deployment останавливается. Helm-чарт использует `readinessProbe`, которая становится OK только после успеха миграций.
 
 Для устойчивости к откатам миграции пишутся обратно-совместимыми: новая версия сервиса должна работать со старой и новой схемой. Несовместимые миграции разбиваются на несколько релизов.
+
+---
+
+## 3. Общие Go-пакеты (`backend/pkg/`)
+
+Реализуются в I-16. Все пакеты — независимые Go-модули (или суб-пакеты единого модуля `backend/pkg/`), без циклических зависимостей.
+
+### 3.1. `pkg/logging`
+
+Обёртка над `log/slog` (стандартная библиотека Go 1.21+). Предоставляет:
+- `New(service string) *slog.Logger` — создаёт logger с предустановленным полем `service`.
+- Поля по умолчанию в каждом сообщении: `timestamp`, `level`, `service`.
+- Gin middleware `RequestLogger(logger)` — добавляет к каждому запросу поля `request_id` (из заголовка `X-Request-ID`), `method`, `path`, `status`, `latency`.
+- Формат вывода — JSON в stdout.
+
+### 3.2. `pkg/metrics`
+
+Gin middleware на базе `prometheus/client_golang`. Предоставляет:
+- `Middleware(service string) gin.HandlerFunc` — счётчик запросов (`http_requests_total`, labels: `service`, `method`, `path`, `status`), гистограмма latency (`http_request_duration_seconds`).
+- `Handler() http.Handler` — отдаёт `/metrics` endpoint для Prometheus scrape.
+
+### 3.3. `pkg/sentry`
+
+Стаб до реализации I-15. Предоставляет:
+- `Init(dsn string) error` — no-op, возвращает nil. `// TODO: I-15 — подключить реальный Sentry SDK`.
+- `CaptureError(ctx context.Context, err error)` — no-op. `// TODO: I-15`.
+
+### 3.4. `pkg/grpc`
+
+Обёртки для gRPC клиента и сервера. Предоставляет:
+- `NewServer(opts ...grpc.ServerOption) *grpc.Server` — создаёт gRPC сервер с interceptor'ами: логирование, recovery, propagation `X-Request-ID` через metadata.
+- `NewClient(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error)` — создаёт клиент с таймаутом 5s по умолчанию, interceptor'ами логирования и propagation request_id.
+
+### 3.5. `pkg/kafka`
+
+Обёртки над `segmentio/kafka-go`. Предоставляет:
+- `NewWriter(brokers []string, topic string) *kafka.Writer` — producer с настройками: batch, retry, required acks.
+- `NewReader(brokers []string, topic, groupID string) *kafka.Reader` — consumer.
+
+### 3.6. `pkg/outbox`
+
+Реализация transactional outbox relay. Предоставляет:
+- `Relay` struct — фоновая горутина, читающая из таблицы `<prefix>_outbox` неотправленные записи и публикующая их через `pkg/kafka` writer. Отмечает записи как `sent_at = now()` после успешной публикации.
+- Таблица outbox (DDL в миграциях каждого сервиса): `id`, `topic`, `payload JSONB`, `created_at`, `sent_at`.
+
+### 3.7. `pkg/rsql`
+
+Парсер RSQL для Go. Предоставляет:
+- `Parse(expr string) (Node, error)` — парсит RSQL-строку в AST.
+- `ToSQL(node Node, allowedFields map[string]string) (string, []any, error)` — транслирует AST в SQL WHERE-фрагмент.
+- Лимиты: максимум 4096 символов в выражении, максимум 1000 операндов в `=in=`.
+
+### 3.8. Эталонный сервис `backend/services/ping/`
+
+Минимальный рабочий сервис, использующий все pkg-пакеты. Назначение — проверить интеграцию стека и служить шаблоном для копирования при создании новых сервисов.
+
+Структура:
+```
+backend/services/ping/
+├── cmd/main.go          # точка входа
+├── internal/
+│   └── server.go        # Gin роутер + handlers
+├── migrations/
+│   └── 00001_init.sql   # пустая начальная миграция (goose)
+├── Dockerfile
+└── go.mod
+```
+
+Endpoints:
+- `GET /healthz` → `200 OK` (liveness).
+- `GET /readyz` → `200 OK` после успешных миграций (readiness).
+- `GET /metrics` → Prometheus metrics (через `pkg/metrics`).
+
+Инициализация при старте:
+1. Читает конфиг из env: `PORT`, `DATABASE_URL`, `LOG_LEVEL`, `SENTRY_DSN`.
+2. `pkg/sentry.Init(dsn)`.
+3. `pkg/logging.New("ping")`.
+4. Запускает миграции (`goose up` против `DATABASE_URL`).
+5. Стартует HTTP-сервер.
+6. Graceful shutdown по `SIGTERM`/`SIGINT` с таймаутом 30s.
