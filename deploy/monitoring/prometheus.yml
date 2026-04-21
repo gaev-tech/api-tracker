@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Nginx API Gateway (via nginx-prometheus-exporter)
+  - job_name: nginx-gateway
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+
+  # PostgreSQL — identity-service
+  - job_name: postgres-identity
+    static_configs:
+      - targets: ['postgres-exporter-identity:9187']
+
+  # PostgreSQL — billing-service
+  - job_name: postgres-billing
+    static_configs:
+      - targets: ['postgres-exporter-billing:9187']
+
+  # PostgreSQL — files-service
+  - job_name: postgres-files
+    static_configs:
+      - targets: ['postgres-exporter-files:9187']

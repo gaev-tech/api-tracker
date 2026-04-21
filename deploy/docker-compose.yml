@@ -79,6 +79,89 @@ services:
     # Upstream services (identity-service, workspace-service, etc.) return 502
     # until implemented. Added in subsequent tasks.
 
+  # ── Prometheus ────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - backend
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+
+  # ── Grafana ───────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/postgresql.json
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - backend
+    depends_on:
+      - prometheus
+
+  # ── Nginx Prometheus Exporter ─────────────────────────────────────────────
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.3
+    ports:
+      - "9113:9113"
+    command:
+      - '--nginx.scrape-uri=http://nginx-gateway/stub_status'
+    networks:
+      - backend
+    depends_on:
+      - nginx-gateway
+
+  # ── PostgreSQL Exporter — identity-service ────────────────────────────────
+  postgres-exporter-identity:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: postgresql://identity_user:identity_pass@postgres-identity:5432/identity_db?sslmode=disable
+    networks:
+      - backend
+    depends_on:
+      postgres-identity:
+        condition: service_healthy
+
+  # ── PostgreSQL Exporter — billing-service ─────────────────────────────────
+  postgres-exporter-billing:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    ports:
+      - "9188:9187"
+    environment:
+      DATA_SOURCE_NAME: postgresql://billing_user:billing_pass@postgres-billing:5432/billing_db?sslmode=disable
+    networks:
+      - backend
+    depends_on:
+      postgres-billing:
+        condition: service_healthy
+
+  # ── PostgreSQL Exporter — files-service ───────────────────────────────────
+  postgres-exporter-files:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    ports:
+      - "9189:9187"
+    environment:
+      DATA_SOURCE_NAME: postgresql://files_user:files_pass@postgres-files:5432/files_db?sslmode=disable
+    networks:
+      - backend
+    depends_on:
+      postgres-files:
+        condition: service_healthy
+
   # TODO: I-20 — добавить: Citus (workspace/events/automations), Redis, Kafka, MinIO,
   #              все backend-сервисы, frontend
 
@@ -86,6 +169,8 @@ volumes:
   postgres-identity-data:
   postgres-billing-data:
   postgres-files-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   backend:
