@@ -270,6 +270,23 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/api-tracker/files-service:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/api-tracker/files-service:latest
 
+  helm-lint:
+    name: helm / lint
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.modified, 'deploy/helm') ||
+      contains(github.event.head_commit.added, 'deploy/helm') ||
+      github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: '3.16.0'
+      - name: Lint service-template chart
+        run: helm lint deploy/helm/service-template
+      - name: Template service-template chart
+        run: helm template test-release deploy/helm/service-template
+
   proto:
     name: proto / lint + codegen
     runs-on: ubuntu-latest
