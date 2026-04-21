@@ -1,0 +1,131 @@
+name: CI Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+  pull_request:
+    paths:
+      - 'backend/**'
+
+jobs:
+  identity-service:
+    name: identity-service
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.modified, 'backend/services/identity-service') ||
+      contains(github.event.head_commit.added, 'backend/services/identity-service') ||
+      github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: backend/services/identity-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/identity-service/go.sum
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./...
+
+  workspace-service:
+    name: workspace-service
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.modified, 'backend/services/workspace-service') ||
+      contains(github.event.head_commit.added, 'backend/services/workspace-service') ||
+      github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: backend/services/workspace-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/workspace-service/go.sum
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./...
+
+  automations-service:
+    name: automations-service
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.modified, 'backend/services/automations-service') ||
+      contains(github.event.head_commit.added, 'backend/services/automations-service') ||
+      github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: backend/services/automations-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/automations-service/go.sum
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./...
+
+  events-service:
+    name: events-service
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.modified, 'backend/services/events-service') ||
+      contains(github.event.head_commit.added, 'backend/services/events-service') ||
+      github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: backend/services/events-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/events-service/go.sum
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./...
+
+  billing-service:
+    name: billing-service
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.modified, 'backend/services/billing-service') ||
+      contains(github.event.head_commit.added, 'backend/services/billing-service') ||
+      github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: backend/services/billing-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/billing-service/go.sum
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./...
+
+  files-service:
+    name: files-service
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.modified, 'backend/services/files-service') ||
+      contains(github.event.head_commit.added, 'backend/services/files-service') ||
+      github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: backend/services/files-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/files-service/go.sum
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./...

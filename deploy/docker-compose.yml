@@ -1,0 +1,2 @@
+services: {}
+# TODO: I-20 — наполнить: PostgreSQL, Citus, Redis, Kafka, MinIO, все backend-сервисы, api-gateway, frontend

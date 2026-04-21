@@ -1,1 +1,5 @@
 .DS_Store
+vendor/
+*.exe
+*.test
+backend/services/*/cmd/server

@@ -1,0 +1,10 @@
+go 1.23
+
+use (
+	./services/automations-service
+	./services/billing-service
+	./services/events-service
+	./services/files-service
+	./services/identity-service
+	./services/workspace-service
+)
