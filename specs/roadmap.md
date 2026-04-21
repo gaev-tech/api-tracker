@@ -537,8 +537,8 @@ graph TD
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** установить `kube-prometheus-stack`. Настроить Grafana с админ-паролем в Secret. Настроить datasource Prometheus. Импортировать базовые дашборды (K8s-ресурсы, Nginx Ingress).
-- **Критерии готовности:** (1) Grafana доступна через Ingress с TLS. (2) Метрики K8s видны в Prometheus. (3) Базовый dashboard работает.
+- **Описание:** добавить Prometheus и Grafana в `deploy/docker-compose.yml` как сервисы для локальной разработки. Prometheus scrape-конфиг (`prometheus.yml`) — файл в `deploy/monitoring/`. Grafana — с предустановленным datasource Prometheus и базовым dashboard'ом через provisioning (файлы в `deploy/monitoring/grafana/`). В K8s будет `kube-prometheus-stack` (после I-2).
+- **Критерии готовности:** (1) `docker compose up` поднимает Prometheus (:9090) и Grafana (:3000). (2) Prometheus scrape-конфиг валиден и сам Prometheus виден в targets. (3) Grafana открывается с datasource Prometheus, базовый dashboard виден.
 
 ### I-14. Loki + Promtail
 
