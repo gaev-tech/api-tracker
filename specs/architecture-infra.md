@@ -118,7 +118,7 @@ deploy/monitoring/
 ```
 
 - **Loki** слушает `:3100`. Хранит логи локально в volume `loki-data`. Retention 7 дней.
-- **Promtail** монтирует Docker socket (`/var/run/docker.sock`) и читает логи всех контейнеров через Docker service discovery. Добавляет метки `container`, `compose_service`, `image`.
+- **Promtail** монтирует Docker socket (`/var/run/docker.sock`) и читает логи всех контейнеров через Docker service discovery. Добавляет метки `container`, `compose_service`, `compose_project`.
 - **Datasource Loki** добавляется в Grafana provisioning (`deploy/monitoring/grafana/provisioning/datasources/loki.yml`).
 
 В K8s — Loki Helm chart + Promtail как DaemonSet (после I-2).
