@@ -43,9 +43,24 @@ After reading the specs, ask the user clarifying questions **before writing any 
 - Whether stubs/заглушки are acceptable for this iteration or full implementation is required
 - Scope: exactly what is and isn't included in this task
 
-Keep it to 3–6 questions max. Use lettered options (A/B/C) where the answer is a choice between alternatives. Do not ask questions whose answers are clearly specified in the spec.
+Keep it to 3–6 questions max. Use numbered options (1/2/3) where the answer is a choice between alternatives. Do not ask questions whose answers are clearly specified in the spec.
 
 Wait for the user to answer before proceeding.
+
+---
+
+## Step 2.5 — Update Specs Before Planning
+
+After the user answers all clarifying questions, **before writing the plan**:
+
+1. Identify which answers represent decisions not yet reflected in the specs
+2. Update the relevant spec files (`specs/api-spec.md`, `specs/architecture.md`, `specs/db-schema.md`, etc.) to document those decisions
+3. Commit the spec changes separately — do not mix spec updates with implementation commits
+4. Re-read the updated sections and **repeat Step 2** if the spec changes surface new ambiguities
+
+Only proceed to Step 3 once the specs are up to date.
+
+**Why:** Specs and implementation must never diverge. Updating specs first ensures the plan is derived from accurate documentation, not from temporary decisions held only in conversation context.
 
 ---
 
@@ -115,6 +130,7 @@ Only after the user approves the plan:
 
 - **Never skip Step 1** (read specs) — even for "obvious" tasks
 - **Never skip Step 2** (clarifying questions) — even one question is better than a wrong assumption
+- **Never skip Step 2.5** (update specs) — specs must reflect decisions before implementation begins
 - **Never start coding before the plan is approved**
 - **Apply all plan changes at once** — do not implement half the plan and ask what to do next
 - **No Co-Authored-By** lines in any git commits
