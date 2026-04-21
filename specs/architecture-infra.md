@@ -34,6 +34,16 @@ Dev-окружение разработчика — локальный Kubernete
 
 Секреты хранятся в Kubernetes Secret, на старте инжектятся в pods через env / volume. Для боевого управления секретами может использоваться HashiCorp Vault или SealedSecrets — решение откладывается на более поздний этап.
 
+### 1.4. Конвенции именования БД и credentials
+
+**Названия баз данных:** `<service>_db` — например, `identity_db`, `billing_db`, `files_db`, `workspace_db`, `events_db`, `automations_db`.
+
+**Названия ролей:** `<service>_user` — например, `identity_user`, `billing_user`. Каждая роль имеет права только на свою БД (principle of least privilege).
+
+**K8s Secrets с connection strings:** `<service>-db-credentials` — например, `identity-db-credentials`. Содержит ключ `DATABASE_URL` в формате DSN: `postgresql://<user>:<password>@<host>:5432/<dbname>?sslmode=require`.
+
+Сервисы читают `DATABASE_URL` из env-переменной (через `envFrom.secretRef` в Helm-чарте).
+
 ---
 
 ## 2. Наблюдаемость
