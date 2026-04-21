@@ -527,12 +527,21 @@ Monorepo разделён на верхнем уровне по экосисте
 ├── contracts/                      # общие контракты между backend и frontend
 │   ├── proto/                      # gRPC-контракты и схемы событий Kafka
 │   │   ├── identity/
+│   │   │   └── v1/                 # *.proto + сгенерированные *.pb.go, *_grpc.pb.go (коммитятся в репо)
 │   │   ├── workspace/
+│   │   │   └── v1/
 │   │   ├── automations/
+│   │   │   └── v1/
 │   │   ├── events/
+│   │   │   └── v1/
 │   │   ├── billing/
+│   │   │   └── v1/
 │   │   ├── files/
-│   │   └── buf.yaml
+│   │   │   └── v1/
+│   │   ├── ping/                   # эталонный proto для проверки инфраструктуры codegen (I-17)
+│   │   │   └── v1/                 # ping.proto + ping.pb.go + ping_grpc.pb.go
+│   │   ├── buf.yaml
+│   │   └── buf.gen.yaml            # конфигурация кодогенерации (local plugins, paths=source_relative)
 │   └── openapi/                    # актуальная OpenAPI-спецификация (артефакт CI)
 │       └── openapi.yaml
 │

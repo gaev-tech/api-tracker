@@ -5,9 +5,11 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'contracts/proto/**'
   pull_request:
     paths:
       - 'backend/**'
+      - 'contracts/proto/**'
 
 jobs:
   identity-service:
@@ -267,3 +269,28 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/api-tracker/files-service:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/api-tracker/files-service:latest
+
+  proto:
+    name: proto / lint + codegen
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.modified, 'contracts/proto') ||
+      contains(github.event.head_commit.added, 'contracts/proto') ||
+      github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-action@v1
+        with:
+          version: '1.68.3'
+          lint: true
+          breaking: false
+          push: false
+      - name: Install Go codegen plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+      - name: Run buf generate
+        working-directory: contracts/proto
+        run: buf generate
+      - name: Check generated files are up to date
+        run: git diff --exit-code contracts/proto
