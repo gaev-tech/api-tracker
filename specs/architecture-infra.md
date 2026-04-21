@@ -64,6 +64,28 @@ Dev-окружение разработчика — локальный Kubernete
 - Dashboard Kafka: lag по consumer groups (особенно automations-service и events-service).
 - Dashboard по тарифам: распределение пользователей по тарифам, доход, отказы платежей.
 
+**Локальная разработка (docker-compose, I-13):**
+
+Prometheus и Grafana добавляются в `deploy/docker-compose.yml` как обычные сервисы. Конфигурация хранится в `deploy/monitoring/`:
+
+```
+deploy/monitoring/
+├── prometheus.yml              # scrape-конфиг
+└── grafana/
+    ├── provisioning/
+    │   ├── datasources/
+    │   │   └── prometheus.yml  # автоматическое подключение datasource
+    │   └── dashboards/
+    │       └── dashboard.yml   # провайдер дашбордов
+    └── dashboards/
+        └── overview.json       # базовый dashboard
+```
+
+- **Prometheus** слушает `:9090`. Scrape-интервал 15s. В `prometheus.yml` перечислены job'ы для каждого сервиса (`metrics`-endpoint на `/metrics`).
+- **Grafana** слушает `:3000`. Admin-credentials: `admin` / `admin` (dev только). Datasource Prometheus и дашборды подключаются через provisioning при старте.
+
+В K8s — `kube-prometheus-stack` через Helm (после I-2). ServiceMonitor'ы сервисов активируются через `serviceMonitor.enabled: true` в Helm values.
+
 ### 2.2. Ошибки
 
 **Sentry** собирает все unhandled-исключения и HTTP 5xx-ошибки из сервисов через Go SDK. Context обогащается: user_id (если аутентифицирован), request_id, service name.
