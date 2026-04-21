@@ -488,8 +488,8 @@ graph TD
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** развернуть три managed- или self-hosted (через Zalando Operator / CloudNativePG) PostgreSQL-инстанса для identity-service, billing-service, files-service. Создать базы данных, роли, credentials. Положить connection strings в Kubernetes Secrets.
-- **Критерии готовности:** (1) Каждая из трёх БД доступна из K8s-кластера. (2) Из pod в cluster-е удаётся выполнить `SELECT 1`. (3) Backup policy настроена.
+- **Описание:** добавить три отдельных PostgreSQL-сервиса в `deploy/docker-compose.yml` для identity-service, billing-service, files-service. Каждый сервис — отдельный контейнер с изолированной базой данных, ролью и паролем. Credentials задаются через env-переменные. Backup policy — TODO (производственный backup настраивается отдельно при переходе на K8s/managed).
+- **Критерии готовности:** (1) `docker compose up` поднимает три PostgreSQL-контейнера. (2) Каждая БД доступна через `psql` с заданными credentials. (3) Данные сохраняются между перезапусками контейнеров (named volumes).
 
 ### I-7. Citus-кластер для workspace-service
 
