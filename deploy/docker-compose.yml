@@ -162,6 +162,30 @@ services:
       postgres-files:
         condition: service_healthy
 
+  # ── Loki ──────────────────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.1.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - backend
+    command: -config.file=/etc/loki/local-config.yaml
+
+  # ── Promtail ───────────────────────────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:2.9.8
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - backend
+    depends_on:
+      - loki
+
   # TODO: I-20 — добавить: Citus (workspace/events/automations), Redis, Kafka, MinIO,
   #              все backend-сервисы, frontend
 
@@ -171,6 +195,7 @@ volumes:
   postgres-files-data:
   prometheus-data:
   grafana-data:
+  loki-data:
 
 networks:
   backend:
