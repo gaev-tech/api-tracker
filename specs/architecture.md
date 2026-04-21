@@ -155,7 +155,7 @@
 
 ### 3.3. Rate limiting
 
-На api-gateway: rate limit per-PAT (например, 100 запросов в секунду) и per-IP для неавторизованных endpoint'ов (регистрация, логин).
+На api-gateway: rate limit per-PAT **100 req/s** и per-IP **10 req/s** для неавторизованных endpoint'ов (регистрация, логин). Реализуется через Nginx `limit_req_zone` / `limit_req`.
 
 ### 3.4. Хранение секретов
 
