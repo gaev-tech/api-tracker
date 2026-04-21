@@ -16,7 +16,7 @@ Kubernetes, observability, CI/CD, масштабирование. Изменяе
 - **Ingress:** Nginx Ingress Controller. TLS-сертификаты — через cert-manager и Let's Encrypt.
 - **Service Mesh:** на старте не используется; при необходимости добавляется Linkerd (лёгкий аналог Istio).
 - **Kafka:** через Strimzi Operator — декларативное управление кластером Kafka в K8s. Минимум 3 брокера в production.
-- **PostgreSQL и Citus:** managed-сервис облачного провайдера (предпочтительно) или через оператор (Zalando Postgres Operator / CloudNativePG) для self-hosted. Citus может быть развёрнут отдельно через Citus Community Operator.
+- **PostgreSQL и Citus:** версия **16**. В dev-окружении — `postgres:16-alpine` в docker-compose. В production — managed-сервис облачного провайдера (предпочтительно) или через оператор (Zalando Postgres Operator / CloudNativePG) для self-hosted. Citus может быть развёрнут отдельно через Citus Community Operator.
 - **Redis:** через оператор (Redis Operator) или managed-сервис.
 - **Prometheus + Grafana + Loki:** через `kube-prometheus-stack` (Grafana Operator) и Loki Helm chart.
 - **Sentry:** self-hosted через Helm либо облачный Sentry.
