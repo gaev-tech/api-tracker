@@ -18,14 +18,15 @@ Before doing anything else, identify which spec files are relevant to the task a
 
 | Task type | Spec files to read |
 |-----------|-------------------|
-| API endpoint, business logic | `specs/api-spec.md`, `specs/architecture.md` |
-| Database table, migration | `specs/db-schema.md`, `specs/architecture.md` |
-| UI screen or component | `specs/ui-spec.md`, `specs/api-spec.md` |
-| Auth, users, PAT | `specs/api-spec.md` section Auth + `specs/architecture.md` identity-service |
+| API endpoint, business logic | `specs/api-spec.md`, `specs/architecture.md`, `specs/architecture-backend.md` |
+| Database table, migration | `specs/db-schema.md`, `specs/architecture-backend.md` |
+| UI screen or component | `specs/ui-spec.md`, `specs/api-spec.md`, `specs/architecture-frontend.md` |
+| Auth, users, PAT | `specs/api-spec.md` section Auth + `specs/architecture-backend.md` identity-service |
 | Billing, tariffs | `specs/api-spec.md` section Billing + `specs/db-schema.md` |
-| Automations | `specs/api-spec.md` section Automations + `specs/architecture.md` |
-| Infrastructure | `specs/architecture.md` |
-| Design tokens, components | `specs/ui-spec.md` |
+| Automations | `specs/api-spec.md` section Automations + `specs/architecture-backend.md` |
+| Infrastructure (I-* tasks) | `specs/architecture-infra.md`, `specs/architecture.md` |
+| Frontend infra (F-74..F-80) | `specs/architecture-frontend.md`, `specs/architecture.md` |
+| Design tokens, components | `specs/ui-spec.md`, `specs/architecture-frontend.md` |
 | Any task | `specs/roadmap.md` — check blockers and what the task depends on |
 
 Read only the relevant sections, not entire files.

@@ -11,7 +11,10 @@ This project is currently in the **specification phase** — only `specs/` exist
 | File | Contents |
 |------|----------|
 | `specs/product-spec.md` | Product overview, entity catalog, feature catalog, tariff system, access rights model |
-| `specs/architecture.md` | Technology stack, service decomposition, communication patterns, DB strategy, infra topology |
+| `specs/architecture.md` | Technology stack, high-level diagram, communication patterns (Kafka/gRPC), security |
+| `specs/architecture-backend.md` | All 7 services (responsibilities, gRPC, Kafka topics, DB), DB strategy, migrations |
+| `specs/architecture-infra.md` | Kubernetes, observability (Prometheus/Grafana/Sentry/Loki), CI/CD, monorepo structure, scaling |
+| `specs/architecture-frontend.md` | Angular Workspace, design system, API-client codegen, multi-auth, WebSocket, Docker/K8s deploy |
 | `specs/api-spec.md` | REST API conventions, complete endpoint catalog, data model definitions, error codes |
 | `specs/db-schema.md` | PostgreSQL/Citus physical schema, all tables with columns/indexes, naming conventions |
 | `specs/ui-spec.md` | Screen layouts, widget catalog, UI principles |
@@ -95,13 +98,12 @@ contracts/
 deploy/
   helm/                 # Helm charts per service
   docker-compose.yml
-  .gitlab-ci.yml
 specs/                  # All specification documents
 ```
 
 ### Infrastructure
 
 - **Kubernetes** (production), **Docker Compose** (local dev)
-- **CI/CD:** GitLab CI + GitLab Container Registry + Helm
+- **CI/CD:** GitHub Actions + GitHub Container Registry (ghcr.io) + Helm
 - **Observability:** Prometheus + Grafana + Sentry + Loki/Promtail
 - **Migrations:** Goose or golang-migrate, embedded per service, run at startup
