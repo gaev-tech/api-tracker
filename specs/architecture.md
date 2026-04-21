@@ -584,8 +584,8 @@ Monorepo разделён на верхнем уровне по экосисте
 2. **Code generation:** `buf generate` для proto → Go-типы.
 3. **Unit-тесты.**
 4. **Integration-тесты:** поднимаются через docker-compose (Postgres, Kafka).
-5. **Build images:** для изменившихся сервисов. Path-based триггеры (`paths:` в workflow): изменение в `services/workspace/` → собирается только workspace. Image tagging: `ghcr.io/<owner>/<repo>/<service>:<commit-sha>`, плюс `:latest` для главной ветки.
-6. **Push в GitHub Container Registry (ghcr.io).**
+5. **Build images:** для изменившихся сервисов. Path-based триггеры (`paths:` в workflow): изменение в `services/workspace/` → собирается только workspace. Image tagging: `ghcr.io/<owner>/<repo>/<service>:<commit-sha>`, плюс `:latest` для главной ветки. Теги branch-name не используются.
+6. **Push в GitHub Container Registry (ghcr.io):** только при мерже в main. В pull request образы собираются (для проверки Dockerfile), но не публикуются. Все Docker-джобы находятся в `.github/workflows/ci-backend.yml` (отдельный файл для Docker не создаётся).
 7. **Deploy на staging** (автоматически после успешного pipeline в main).
 8. **Deploy на production** — ручное подтверждение (`environment: production` с required reviewers).
 
