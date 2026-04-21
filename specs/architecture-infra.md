@@ -149,6 +149,7 @@ Monorepo разделён на верхнем уровне по экосисте
 │
 ├── deploy/                         # всё, связанное с деплоем
 │   ├── helm/                       # Helm-чарты
+│   │   ├── service-template/       # эталонный параметризованный чарт (I-5); копируется для каждого сервиса
 │   │   ├── identity/
 │   │   ├── workspace/
 │   │   ├── automations/
@@ -204,17 +205,51 @@ Monorepo разделён на верхнем уровне по экосисте
 
 ### 3.3. Деплой в Kubernetes
 
-**Инструмент:** `helm upgrade --install <release> helm/<service>` из CI-job.
+**Инструмент:** `helm upgrade --install <release> deploy/helm/<service>` из CI-job.
+
+#### Шаблон чарта (I-5)
+
+Все сервисные Helm-чарты строятся по единому шаблону. Реализован как **reference chart** `deploy/helm/service-template/` — полноценный параметризованный чарт, который копируется для каждого нового сервиса. Не является Helm library chart (`type: library`) — каждый сервисный чарт самостоятелен и не имеет зависимости на `_common`.
+
+Структура шаблона:
+```
+deploy/helm/service-template/
+├── Chart.yaml
+├── values.yaml          # схема значений по умолчанию
+└── templates/
+    ├── deployment.yaml
+    ├── service.yaml
+    ├── hpa.yaml
+    ├── servicemonitor.yaml
+    ├── configmap.yaml
+    ├── secret.yaml
+    └── _helpers.tpl
+```
+
+Параметры `values.yaml` (ключи верхнего уровня):
+- `image.repository`, `image.tag` — образ и тег.
+- `replicaCount` — стартовое число реплик.
+- `hpa.minReplicas`, `hpa.maxReplicas`, `hpa.targetCPUUtilizationPercentage`.
+- `service.port`, `service.grpcPort` — порты HTTP и gRPC.
+- `ingress.enabled`, `ingress.host` — Ingress только для api-gateway (по умолчанию отключён).
+- `env` — список env-переменных (key/value).
+- `envFrom` — ссылки на ConfigMap и Secret (key/value ref).
+- `resources.requests`, `resources.limits` — CPU и память.
+- `serviceMonitor.enabled` — включение ServiceMonitor для Prometheus.
 
 Helm-чарт каждого сервиса содержит:
 - `Deployment` с указанием image-тега.
 - `Service` для внутреннего gRPC/HTTP.
-- `Ingress` (для сервисов с публичным API — фактически только api-gateway).
+- `Ingress` (для сервисов с публичным API — фактически только api-gateway; по умолчанию `ingress.enabled: false`).
 - `HorizontalPodAutoscaler`.
-- `ServiceMonitor` (для Prometheus).
-- ConfigMaps / Secrets.
+- `ServiceMonitor` (для Prometheus; по умолчанию `serviceMonitor.enabled: true`).
+- ConfigMap / Secret (пустые шаблоны; заполняются в values конкретного сервиса).
 
 **Стратегия обновления:** RollingUpdate. Один под обновляется за раз, старый pod'ы работают до готовности нового.
+
+#### Проверка шаблона (I-5)
+
+В рамках I-5 создаётся `deploy/helm/helloworld/` — копия шаблона с минимальным `values.yaml`, деплоится на staging как smoke-test. После прохождения — `helloworld`-релиз удаляется.
 
 ### 3.4. Откат
 
