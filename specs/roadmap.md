@@ -544,8 +544,8 @@ graph TD
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** установить Loki и Promtail через Helm. Подключить Loki как datasource в Grafana. Настроить Promtail как DaemonSet — сбор логов всех pod'ов.
-- **Критерии готовности:** (1) Логи любого pod'а доступны в Grafana через LogQL. (2) Фильтрация по label `service` работает.
+- **Описание:** добавить Loki и Promtail в `deploy/docker-compose.yml` как сервисы для локальной разработки. Конфиг Loki (`loki-config.yml`) и Promtail (`promtail-config.yml`) — в `deploy/monitoring/`. Promtail читает логи Docker-контейнеров через Docker socket. Datasource Loki добавить в Grafana provisioning. В K8s будет Loki Helm chart + Promtail DaemonSet (после I-2).
+- **Критерии готовности:** (1) `docker compose up` поднимает Loki (:3100) и Promtail. (2) Логи docker-compose сервисов видны в Grafana через LogQL. (3) Datasource Loki настроен в Grafana.
 
 ### I-15. Sentry
 
