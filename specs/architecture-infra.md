@@ -96,6 +96,16 @@ deploy/monitoring/
 
 **Sentry** собирает все unhandled-исключения и HTTP 5xx-ошибки из сервисов через Go SDK. Context обогащается: user_id (если аутентифицирован), request_id, service name.
 
+**Локальная разработка (I-15):**
+
+Два варианта (выбирается при реализации I-15):
+- **GlitchTip** (`glitchtip/glitchtip`) — Sentry-совместимый сервер, запускается в docker-compose. Полностью локален, не требует внешней учётной записи.
+- **Облачный Sentry** (sentry.io) — внешний сервис. DSN создаётся вручную, в docker-compose сервис не добавляется.
+
+**Конвенция DSN:** каждый backend-сервис получает отдельный Sentry-проект и DSN. Переменная окружения — `SENTRY_DSN`. Placeholder-значения документируются в `deploy/.env.example`.
+
+В K8s — DSN хранится в Kubernetes Secret `<service>-sentry` с ключом `SENTRY_DSN` (после I-2).
+
 ### 2.3. Логи
 
 **Loki + Promtail.**
