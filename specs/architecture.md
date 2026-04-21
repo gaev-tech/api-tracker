@@ -45,7 +45,7 @@
 - **Контейнеризация:** Docker — все сервисы (backend, frontend-приложения, вспомогательные) собираются в Docker-образы. Локальная разработка — через Docker Compose.
 - **Платёжная интеграция:** ЮKassa.
 - **Observability:** Prometheus (метрики) + Grafana (дашборды) + Sentry (ошибки) + Loki + Promtail (логи).
-- **CI/CD:** GitLab CI + GitLab Container Registry. Push-деплой через `helm upgrade`.
+- **CI/CD:** GitHub Actions + GitHub Container Registry (ghcr.io). Push-деплой через `helm upgrade`.
 - **Организация кода:** monorepo.
 - **Миграции БД:** встроенные в сервис (выполняются при старте перед приёмом трафика).
 
@@ -578,16 +578,16 @@ Monorepo разделён на верхнем уровне по экосисте
 
 ### 7.2. Pipeline
 
-Каждый push/merge запускает в GitLab CI:
+Каждый push/merge запускает в GitHub Actions:
 
 1. **Lint & static check:** `go vet`, `golangci-lint`, `buf lint` для proto-файлов.
 2. **Code generation:** `buf generate` для proto → Go-типы.
 3. **Unit-тесты.**
 4. **Integration-тесты:** поднимаются через docker-compose (Postgres, Kafka).
-5. **Build images:** для изменившихся сервисов. Path-based триггеры: изменение в `services/workspace/` → собирается только workspace. Image tagging: `registry.gitlab/<group>/<project>/<service>:<commit-sha>`, плюс `:latest` для главной ветки.
-6. **Push в GitLab Container Registry.**
+5. **Build images:** для изменившихся сервисов. Path-based триггеры (`paths:` в workflow): изменение в `services/workspace/` → собирается только workspace. Image tagging: `ghcr.io/<owner>/<repo>/<service>:<commit-sha>`, плюс `:latest` для главной ветки.
+6. **Push в GitHub Container Registry (ghcr.io).**
 7. **Deploy на staging** (автоматически после успешного pipeline в main).
-8. **Deploy на production** — ручное подтверждение в GitLab UI.
+8. **Deploy на production** — ручное подтверждение (`environment: production` с required reviewers).
 
 ### 7.3. Деплой в Kubernetes
 
@@ -771,8 +771,8 @@ Lib'ы — независимые модули Angular, импортируемы
 
 #### CI-пайплайн
 
-В GitLab CI path-based триггеры для frontend:
-- Изменения в `frontend/projects/app/` или `frontend/libs/*` — пересборка и деплой web-app.
+В GitHub Actions path-based триггеры для frontend (`paths:` в workflow):
+- Изменения в `frontend/projects/app/` или `frontend/libs/**` — пересборка и деплой web-app.
 - Изменения в `frontend/projects/docs/` или `docs-source/` — пересборка и деплой web-docs.
 - Публикация OpenAPI-спеки backend'ом (в отдельном job после сборки backend) триггерит пересборку docs и регенерацию `frontend/libs/api-client` — чтобы автогенерированные страницы API и TS-клиент всегда соответствовали актуальной спеке.
 

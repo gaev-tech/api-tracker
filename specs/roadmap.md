@@ -19,7 +19,7 @@ graph TD
     classDef design fill:#f8cecc,stroke:#b85450,color:#000
 
     subgraph INFRA [Инфраструктура]
-        I1[I-1<br/>Monorepo + GitLab CI]
+        I1[I-1<br/>Monorepo + GitHub Actions CI]
         I2[I-2<br/>K8s cluster]
         I3[I-3<br/>Nginx Ingress + TLS]
         I4[I-4<br/>Container Registry]
@@ -436,11 +436,11 @@ graph TD
 
 Задачи упорядочены в топологическом порядке от корней графа к листьям.
 
-### I-1. Monorepo и базовая GitLab CI-заготовка
+### I-1. Monorepo и базовая GitHub Actions CI-заготовка
 
 - **Тип:** инфраструктура.
 - **Блокеры:** —
-- **Описание:** создать monorepo-структуру (`/backend`, `/frontend`, `/contracts`, `/deploy`, `/docs-source`, `/tools`), базовый `.gitlab-ci.yml` с job'ами lint, test, build для Go-кода и proto-файлов, общий `Makefile` для локальной разработки. Внутри `/backend` подготовить директории `services/`, `pkg/`, `api-gateway/` и `go.work`.
+- **Описание:** создать monorepo-структуру (`/backend`, `/frontend`, `/contracts`, `/deploy`, `/docs-source`, `/tools`), базовые GitHub Actions workflows с job'ами lint, test, build для Go-кода и proto-файлов, общий `Makefile` для локальной разработки. Внутри `/backend` подготовить директории `services/`, `pkg/`, `api-gateway/` и `go.work`.
 - **Критерии готовности:** (1) Pipeline проходит lint + unit-тесты на пустых шаблонах сервисов. (2) Path-based триггеры работают — изменение в `/backend/services/foo` запускает job только для foo. (3) README с описанием структуры и команд разработки.
 
 ### I-2. Kubernetes-кластер
@@ -457,11 +457,11 @@ graph TD
 - **Описание:** установить Nginx Ingress Controller, cert-manager, создать ClusterIssuer для Let's Encrypt. Настроить wildcard-сертификат для `*.staging.example.com` и `*.example.com`.
 - **Критерии готовности:** (1) Ingress-деплоймент доступен извне. (2) Тестовый сервис с Ingress-ресурсом получает валидный TLS-сертификат автоматически.
 
-### I-4. GitLab Container Registry + шаблоны CI для Docker-сборок
+### I-4. GitHub Container Registry (ghcr.io) + шаблоны CI для Docker-сборок
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-1.
-- **Описание:** настроить GitLab Container Registry, включить в CI build & push образов для сервисов при изменении соответствующего пути. Тегирование образов по commit SHA и `latest` для main-ветки.
+- **Описание:** настроить GitHub Container Registry (ghcr.io), включить в CI build & push образов для сервисов при изменении соответствующего пути. Тегирование образов по commit SHA и `latest` для main-ветки.
 - **Критерии готовности:** (1) Push в main публикует образ в registry. (2) Базовый Go-образ (multistage Dockerfile) собран и запускается.
 
 ### I-5. Helm-шаблон типового сервиса
@@ -1132,7 +1132,7 @@ graph TD
 
 - **Тип:** функция.
 - **Блокеры:** I-1.
-- **Описание:** инициализировать Angular Workspace в `frontend/` с двумя приложениями (`projects/app`, `projects/docs`) и набором пустых `libs` (`design-system`, `api-client`, `shared-widgets`, `shared-utils`, `rsql`, `markdown-editor`). Настроить сборку через Angular builder + Vite. Структура `projects/app` с директориями `pages/`, `core/`, `services/`, `components/`. Multistage Dockerfile (node build → nginx:alpine статика). Добавить frontend-компоненты в GitLab CI с path-based триггерами: изменения в `frontend/projects/app` или `frontend/libs/*` собирают app; в `frontend/projects/docs` — docs.
+- **Описание:** инициализировать Angular Workspace в `frontend/` с двумя приложениями (`projects/app`, `projects/docs`) и набором пустых `libs` (`design-system`, `api-client`, `shared-widgets`, `shared-utils`, `rsql`, `markdown-editor`). Настроить сборку через Angular builder + Vite. Структура `projects/app` с директориями `pages/`, `core/`, `services/`, `components/`. Multistage Dockerfile (node build → nginx:alpine статика). Добавить frontend-компоненты в GitHub Actions с path-based триггерами (`paths:`): изменения в `frontend/projects/app` или `frontend/libs/**` собирают app; в `frontend/projects/docs` — docs.
 - **Критерии готовности:** (1) `ng build app` и `ng build docs` собираются без ошибок. (2) Docker-образы обоих приложений собираются и запускаются. (3) CI автоматически собирает и деплоит оба приложения. (4) Lazy loading страниц работает (в `app` создана тестовая страница, загружается через `loadComponent`).
 
 ### F-75. OpenAPI codegen pipeline
