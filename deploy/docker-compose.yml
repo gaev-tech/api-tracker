@@ -60,8 +60,27 @@ services:
       retries: 5
     # TODO: I-6 — backup policy настраивается при переходе на K8s/managed PostgreSQL
 
+  # ── Nginx API Gateway ────────────────────────────────────────────────────
+  nginx-gateway:
+    build:
+      context: ../backend/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    networks:
+      - backend
+    depends_on:
+      postgres-identity:
+        condition: service_healthy
+      postgres-billing:
+        condition: service_healthy
+      postgres-files:
+        condition: service_healthy
+    # Upstream services (identity-service, workspace-service, etc.) return 502
+    # until implemented. Added in subsequent tasks.
+
   # TODO: I-20 — добавить: Citus (workspace/events/automations), Redis, Kafka, MinIO,
-  #              все backend-сервисы, api-gateway, frontend
+  #              все backend-сервисы, frontend
 
 volumes:
   postgres-identity-data:
