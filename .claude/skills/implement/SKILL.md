@@ -10,6 +10,8 @@ user-invocable: true
 
 Any time a task from the roadmap (I-*, D-*, F-*) or any other feature/fix is being implemented in this project.
 
+**Prerequisites:** The `/review` skill must have completed before this skill is invoked. All three roles (Product Specialist, Technical Architect, Project Manager) must have signed off, and any spec/roadmap changes must already be committed.
+
 ---
 
 ## Step 1 — Read the Specs
@@ -124,6 +126,7 @@ Only after the user approves the plan:
    - Frontend: `npm run build` and `npm run lint` from `frontend/`
 4. If the build/lint fails, diagnose and fix before reporting completion
 5. Report completion with a summary of exactly what was created/modified/removed
+6. Remind the user to run `/review` (Phase 2 — post-implementation) after the PR is merged
 
 ---
 
