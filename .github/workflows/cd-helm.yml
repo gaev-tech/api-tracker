@@ -1,17 +1,14 @@
 name: CD Helm Deploy
 
 on:
-  workflow_run:
-    workflows: ["CI Backend"]
-    types: [completed]
-    branches: [main]
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   deploy-staging:
     name: deploy / staging
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     environment: staging
     steps:
       - uses: actions/checkout@v4
