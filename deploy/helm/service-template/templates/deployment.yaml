@@ -19,6 +19,8 @@ spec:
       labels:
         {{- include "service-template.selectorLabels" . | nindent 8 }}
     spec:
+      imagePullSecrets:
+        - name: ghcr-credentials
       containers:
         - name: {{ include "service-template.fullname" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

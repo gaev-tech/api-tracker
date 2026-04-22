@@ -79,6 +79,15 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
+      - name: Create ghcr image pull secret in staging
+        run: |
+          kubectl create secret docker-registry ghcr-credentials \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace staging \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Clean up stuck releases in staging
         run: |
           for release in $(helm list -n staging --short 2>/dev/null); do
@@ -135,6 +144,15 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
+
+      - name: Create ghcr image pull secret in production
+        run: |
+          kubectl create secret docker-registry ghcr-credentials \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy services to production
         run: |
