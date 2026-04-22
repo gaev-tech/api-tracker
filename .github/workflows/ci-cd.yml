@@ -356,9 +356,15 @@ jobs:
           echo "=== Events ==="
           kubectl get events -n production --sort-by='.lastTimestamp' | tail -30
           echo ""
-          for pod in $(kubectl get pods -n production --field-selector=status.phase!=Running -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+          # Select all pods that are not fully Ready (catches CrashLoopBackOff, Pending, etc.)
+          for pod in $(kubectl get pods -n production -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null | awk '$2 != "true" {print $1}'); do
             echo "=== describe: $pod ==="
             kubectl describe pod "$pod" -n production
-            echo "=== logs: $pod ==="
-            kubectl logs "$pod" -n production --previous 2>/dev/null || kubectl logs "$pod" -n production 2>/dev/null || echo "(no logs)"
+            echo "=== logs (previous): $pod ==="
+            kubectl logs "$pod" -n production --previous 2>/dev/null || true
+            echo "=== logs (current): $pod ==="
+            kubectl logs "$pod" -n production 2>/dev/null || echo "(no logs)"
           done
+          echo ""
+          echo "=== PostgreSQL cluster ==="
+          kubectl get cluster -n production 2>/dev/null || echo "(no CNPG clusters)"
