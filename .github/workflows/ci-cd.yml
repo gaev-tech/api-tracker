@@ -309,6 +309,22 @@ jobs:
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
           rm -f /tmp/jwt_key.pem
 
+      - name: Create DB credential secrets
+        run: |
+          kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic identity-db-credentials \
+            --from-literal=username=identity_user \
+            --from-literal=password=${{ secrets.IDENTITY_DB_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic billing-db-credentials \
+            --from-literal=username=billing_user \
+            --from-literal=password=${{ secrets.BILLING_DB_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic files-db-credentials \
+            --from-literal=username=files_user \
+            --from-literal=password=${{ secrets.FILES_DB_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Create ghcr image pull secret
         run: |
           kubectl create secret docker-registry ghcr-credentials \
