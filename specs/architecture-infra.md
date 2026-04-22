@@ -17,7 +17,7 @@ Kubernetes, observability, CI/CD, масштабирование. Изменяе
 Компоненты кластера:
 - **Ingress:** Nginx Ingress Controller (DaemonSet + hostNetwork на K3s bare-metal). TLS-сертификаты — через cert-manager и Let's Encrypt.
 - **Service Mesh:** на старте не используется; при необходимости добавляется Linkerd (лёгкий аналог Istio).
-- **Kafka:** через Strimzi Operator — декларативное управление кластером Kafka в K8s.
+- **Kafka:** через Strimzi Operator (v0.43) — декларативное управление кластером Kafka в K8s. 3 брокера, KRaft-режим (без Zookeeper), replication factor 1 (single-node K3s — репликация между подами на одном хосте не даёт fault tolerance). В dev-окружении — `apache/kafka:3.9` в docker-compose, 1 брокер, KRaft.
 - **PostgreSQL и Citus:** версия **16**. В dev-окружении — `postgres:16-alpine` в docker-compose. В production — через оператор (Zalando Postgres Operator / CloudNativePG). Citus — через Citus Community Operator.
 - **Redis:** через оператор (Redis Operator).
 - **Prometheus + Grafana + Loki:** через `kube-prometheus-stack` и Loki Helm chart.
@@ -63,7 +63,7 @@ annotations:
 
 **CI-доступ к кластеру:** kubeconfig хранится в GitHub Actions Secret `KUBECONFIG_B64` (base64-encoded), декодируется во временный файл на каждом deploy-job.
 
-Dev-окружение разработчика — Docker Compose с минимальным набором зависимостей (Postgres, Kafka, Redis).
+Dev-окружение разработчика — Docker Compose (`deploy/docker-compose.yml`) со всеми компонентами: PostgreSQL (identity, billing, files), Citus (workspace, events, automations), Kafka (1 брокер KRaft), Redis, MinIO, все backend-сервисы, frontend (Angular, hot-reload на порту 4200), api-gateway (Nginx).
 
 ### 1.3. Секреты
 
