@@ -66,7 +66,7 @@ jobs:
     name: deploy / staging
     runs-on: ubuntu-latest
     needs: setup-cluster
-    environment: ${{ github.event_name == 'pull_request' && 'staging-dry-run' || 'staging' }}
+    environment: staging
     steps:
       - uses: actions/checkout@v4
 
@@ -86,10 +86,17 @@ jobs:
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
             echo "Deploying $service to staging..."
+            # Only override image.tag for charts using our custom ghcr.io images
+            repo=$(grep 'repository:' "$chart/values.yaml" | awk '{print $2}')
+            if echo "$repo" | grep -q "ghcr.io"; then
+              extra_args="--set image.tag=${{ github.sha }}"
+            else
+              extra_args=""
+            fi
             helm upgrade --install "$service" "$chart" \
               --namespace staging \
               --create-namespace \
-              --set image.tag=${{ github.sha }} \
+              $extra_args \
               --wait \
               --timeout 5m
           done
@@ -119,10 +126,16 @@ jobs:
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
             echo "Deploying $service to production..."
+            repo=$(grep 'repository:' "$chart/values.yaml" | awk '{print $2}')
+            if echo "$repo" | grep -q "ghcr.io"; then
+              extra_args="--set image.tag=${{ github.sha }}"
+            else
+              extra_args=""
+            fi
             helm upgrade --install "$service" "$chart" \
               --namespace production \
               --create-namespace \
-              --set image.tag=${{ github.sha }} \
+              $extra_args \
               --wait \
               --timeout 5m
           done
