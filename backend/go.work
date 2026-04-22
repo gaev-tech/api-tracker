@@ -1,11 +1,12 @@
-go 1.26.2
+go 1.23
 
 use (
+	./pkg
+	./services/ping
 	./services/automations-service
 	./services/billing-service
 	./services/events-service
 	./services/files-service
 	./services/identity-service
 	./services/workspace-service
-	./pkg/grpc
 )

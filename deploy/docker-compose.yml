@@ -60,6 +60,25 @@ services:
       retries: 5
     # TODO: I-6 — backup policy настраивается при переходе на K8s/managed PostgreSQL
 
+  # ── PostgreSQL: ping service (reference) ─────────────────────────────────
+  postgres-ping:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ping_db
+      POSTGRES_USER: ping_user
+      POSTGRES_PASSWORD: ping_pass
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-ping-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ping_user -d ping_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ── Nginx API Gateway ────────────────────────────────────────────────────
   nginx-gateway:
     build:
@@ -193,6 +212,7 @@ volumes:
   postgres-identity-data:
   postgres-billing-data:
   postgres-files-data:
+  postgres-ping-data:
   prometheus-data:
   grafana-data:
   loki-data:
