@@ -30,8 +30,6 @@ env:
       secretKeyRef:
         name: identity-db-credentials
         key: password
-  - name: DATABASE_URL
-    value: "postgres://identity_user:$(DB_PASSWORD)@postgres-identity-rw:5432/identity_db?sslmode=disable"
 
 # JWT_PRIVATE_KEY is loaded from the identity-jwt-secret Secret (created in cd-helm.yml)
 envFrom:

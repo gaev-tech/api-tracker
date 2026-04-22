@@ -22,7 +22,14 @@ import (
 
 func main() {
 	port := envOr("PORT", "8080")
-	databaseURL := mustEnv("DATABASE_URL")
+	dbHost := envOr("DB_HOST", "postgres-identity-rw")
+	dbPort := envOr("DB_PORT", "5432")
+	dbUser := envOr("DB_USER", "identity_user")
+	dbPassword := mustEnv("DB_PASSWORD")
+	dbName := envOr("DB_NAME", "identity_db")
+	databaseURL := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPassword, dbName,
+	)
 	jwtPrivateKey := mustEnv("JWT_PRIVATE_KEY")
 	jwtIssuer := envOr("JWT_ISSUER", "api-tracker")
 	sentryDSN := envOr("SENTRY_DSN", "")
