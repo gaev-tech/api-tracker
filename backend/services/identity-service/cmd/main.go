@@ -15,6 +15,7 @@ import (
 	"github.com/gaev-tech/api-tracker/backend/pkg/sentry"
 	identityinternal "github.com/gaev-tech/api-tracker/backend/services/identity-service/internal"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/auth"
+	migrationsfs "github.com/gaev-tech/api-tracker/backend/services/identity-service/migrations"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
 )
@@ -84,9 +85,9 @@ func runMigrations(db *sql.DB, logger *slog.Logger) error {
 	if err := goose.SetDialect("postgres"); err != nil {
 		return err
 	}
-	dir := "migrations"
-	logger.Info("running migrations", "dir", dir)
-	return goose.Up(db, dir)
+	goose.SetBaseFS(migrationsfs.FS)
+	logger.Info("running migrations")
+	return goose.Up(db, ".")
 }
 
 func mustEnv(key string) string {
