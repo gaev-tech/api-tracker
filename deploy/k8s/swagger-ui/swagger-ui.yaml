@@ -1,0 +1,398 @@
+---
+# ConfigMap — openapi.yaml spec (keep in sync with contracts/openapi/openapi.yaml)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openapi-spec
+data:
+  openapi.yaml: |
+    openapi: 3.0.3
+    info:
+      title: api-tracker
+      version: "1.0"
+      description: API-tracker REST API. Base URL — https://api.apitracker.ru
+
+    servers:
+      - url: https://api.apitracker.ru
+        description: Production
+
+    components:
+      securitySchemes:
+        BearerAuth:
+          type: http
+          scheme: bearer
+          description: JWT access token (RS256, 15 min) or PAT (prefix `pat_`).
+
+      schemas:
+        User:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            theme:
+              type: string
+              enum: [light, dark]
+            language:
+              type: string
+              description: ISO 639-1 code
+              example: en
+            parent_user_id:
+              type: string
+              format: uuid
+              nullable: true
+            is_active:
+              type: boolean
+            email_verified_at:
+              type: string
+              format: date-time
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+          required: [id, email, theme, language, is_active, created_at]
+
+        TokenPair:
+          type: object
+          properties:
+            access_token:
+              type: string
+              description: JWT RS256 access token, valid 15 minutes.
+            refresh_token:
+              type: string
+              description: Opaque refresh token, valid 30 days.
+          required: [access_token, refresh_token]
+
+        Error:
+          type: object
+          properties:
+            error:
+              type: object
+              properties:
+                code:
+                  type: string
+                  example: validation_error
+                message:
+                  type: string
+                  example: invalid email format
+                details:
+                  type: object
+                  nullable: true
+              required: [code, message]
+          required: [error]
+
+        JWK:
+          type: object
+          description: JSON Web Key (RSA public key for RS256 verification).
+          properties:
+            kty:
+              type: string
+              example: RSA
+            use:
+              type: string
+              example: sig
+            alg:
+              type: string
+              example: RS256
+            kid:
+              type: string
+              example: "1"
+            n:
+              type: string
+              description: Base64url-encoded RSA modulus.
+            e:
+              type: string
+              description: Base64url-encoded RSA public exponent.
+          required: [kty, use, alg, kid, n, e]
+
+    security:
+      - BearerAuth: []
+
+    paths:
+      /.well-known/jwks.json:
+        get:
+          summary: JWKS — RSA public key set for JWT verification
+          operationId: getJWKS
+          security: []
+          tags: [Auth]
+          responses:
+            "200":
+              description: JSON Web Key Set
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      keys:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/JWK"
+                    required: [keys]
+
+      /auth/register:
+        post:
+          summary: Register — create account
+          operationId: register
+          security: []
+          tags: [Auth]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                    password:
+                      type: string
+                      minLength: 8
+                  required: [email, password]
+          responses:
+            "201":
+              description: Account created
+              content:
+                application/json:
+                  schema:
+                    allOf:
+                      - $ref: "#/components/schemas/TokenPair"
+                      - type: object
+                        properties:
+                          user:
+                            $ref: "#/components/schemas/User"
+                        required: [user]
+            "400":
+              description: Validation error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+            "409":
+              description: Email already taken
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+      /auth/login:
+        post:
+          summary: Login — returns JWT access token + refresh token
+          operationId: login
+          security: []
+          tags: [Auth]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                    password:
+                      type: string
+                  required: [email, password]
+          responses:
+            "200":
+              description: Authenticated
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/TokenPair"
+            "401":
+              description: Invalid credentials or account deactivated
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+      /auth/refresh:
+        post:
+          summary: Refresh — rotate refresh token and get new access token
+          operationId: refreshToken
+          security: []
+          tags: [Auth]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    refresh_token:
+                      type: string
+                  required: [refresh_token]
+          responses:
+            "200":
+              description: New token pair issued
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/TokenPair"
+            "401":
+              description: Refresh token invalid, expired, or revoked
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+      /auth/logout:
+        post:
+          summary: Logout — revoke refresh token
+          operationId: logout
+          tags: [Auth]
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    refresh_token:
+                      type: string
+          responses:
+            "204":
+              description: Logged out
+
+      /auth/password/change:
+        post:
+          summary: Change password (authenticated)
+          operationId: changePassword
+          tags: [Auth]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    current_password:
+                      type: string
+                    new_password:
+                      type: string
+                      minLength: 8
+                  required: [current_password, new_password]
+          responses:
+            "204":
+              description: Password changed; all sessions revoked
+            "401":
+              description: Current password incorrect
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+            "400":
+              description: Validation error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+      /users/me:
+        get:
+          summary: Get own profile
+          operationId: getMe
+          tags: [Users]
+          responses:
+            "200":
+              description: User profile
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/User"
+            "401":
+              description: Unauthorized
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+        patch:
+          summary: Update profile settings (theme, language)
+          operationId: patchMe
+          tags: [Users]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    theme:
+                      type: string
+                      enum: [light, dark]
+                    language:
+                      type: string
+                      description: ISO 639-1 code
+                      example: ru
+          responses:
+            "200":
+              description: Updated profile
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/User"
+            "401":
+              description: Unauthorized
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+---
+# Swagger UI — serves /docs
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swagger-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swagger-ui
+  template:
+    metadata:
+      labels:
+        app: swagger-ui
+    spec:
+      containers:
+        - name: swagger-ui
+          image: swaggerapi/swagger-ui:v5.17.14
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SWAGGER_JSON
+              value: /openapi/openapi.yaml
+            - name: BASE_PATH
+              value: /docs
+          volumeMounts:
+            - name: openapi-spec
+              mountPath: /openapi
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: openapi-spec
+          configMap:
+            name: openapi-spec
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swagger-ui
+spec:
+  selector:
+    app: swagger-ui
+  ports:
+    - port: 8080
+      targetPort: 8080
