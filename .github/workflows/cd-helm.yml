@@ -82,18 +82,25 @@ jobs:
 
       - name: Deploy services to staging
         run: |
-          DRY_RUN=${{ github.event_name == 'pull_request' && '--dry-run' || '' }}
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
-            echo "Deploying $service to staging${DRY_RUN:+ (dry-run)}..."
-            helm upgrade --install "$service" "$chart" \
-              --namespace staging \
-              --create-namespace \
-              --set image.tag=${{ github.sha }} \
-              --wait \
-              --timeout 5m \
-              $DRY_RUN
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "Dry-run $service..."
+              helm upgrade --install "$service" "$chart" \
+                --namespace staging \
+                --create-namespace \
+                --set image.tag=${{ github.sha }} \
+                --dry-run
+            else
+              echo "Deploying $service to staging..."
+              helm upgrade --install "$service" "$chart" \
+                --namespace staging \
+                --create-namespace \
+                --set image.tag=${{ github.sha }} \
+                --wait \
+                --timeout 5m
+            fi
           done
 
   deploy-production:
