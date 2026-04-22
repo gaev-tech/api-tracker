@@ -329,6 +329,7 @@ jobs:
           lint: true
           breaking: false
           push: false
+          inputs: "contracts/proto"
       - name: Install Go codegen plugins
         run: |
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
