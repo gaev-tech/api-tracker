@@ -48,6 +48,13 @@ jobs:
             --wait \
             --timeout 5m
 
+      - name: Wait for ingress-nginx webhook endpoint
+        run: |
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=120s
+
       - name: Wait for cert-manager webhooks
         run: kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
 
