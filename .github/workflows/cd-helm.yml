@@ -30,7 +30,10 @@ jobs:
             --namespace ingress-nginx \
             --create-namespace \
             --version 4.11.3 \
-            --set controller.service.type=LoadBalancer \
+            --set controller.service.type=NodePort \
+            --set controller.service.nodePorts.http=80 \
+            --set controller.service.nodePorts.https=443 \
+            --set controller.hostNetwork=true \
             --wait \
             --timeout 5m
 
