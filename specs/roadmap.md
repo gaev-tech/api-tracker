@@ -496,22 +496,22 @@ graph TD
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** развернуть Citus-кластер (1 coordinator + 3 worker-nodes для начала) через Citus Community Operator или managed-решение. Создать базу `workspace`.
-- **Критерии готовности:** (1) `SELECT * FROM citus_get_active_worker_nodes()` возвращает 3 ноды. (2) Создание distributed-таблицы работает. (3) Backup policy настроена.
+- **Описание:** развернуть Citus-кластер для workspace-service через CloudNativePG (CNPG) оператор. 1 coordinator Cluster + 1 workers Cluster (3 instances). Расширение Citus через `shared_preload_libraries`. Регистрация workers — Job с `citus_add_node()`. База `workspace_db`, роль `workspace_user`. Credentials в K8s Secret `workspace-db-credentials`.
+- **Критерии готовности:** (1) `SELECT * FROM citus_get_active_worker_nodes()` возвращает 3 ноды. (2) Создание distributed-таблицы работает.
 
 ### I-8. Citus-кластер для events-service
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** аналогично I-7, отдельный Citus-кластер для events-service. Настройка партицирования таблицы `events` по `created_at`.
-- **Критерии готовности:** (1) Кластер работает. (2) Создание партиций автоматизировано через pg_partman или аналог.
+- **Описание:** аналогично I-7, отдельный Citus-кластер для events-service через CNPG. 1 coordinator + 3 workers. База `events_db`, роль `events_user`. Credentials в K8s Secret `events-db-credentials`.
+- **Критерии готовности:** (1) Кластер работает, 3 worker-ноды зарегистрированы. (2) Создание distributed-таблицы работает.
 
 ### I-9. Citus-кластер для automations-service
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** аналогично I-7, отдельный Citus-кластер для automations-service.
-- **Критерии готовности:** (1) Кластер работает. (2) Backup policy настроена.
+- **Описание:** аналогично I-7, отдельный Citus-кластер для automations-service через CNPG. 1 coordinator + 3 workers. База `automations_db`, роль `automations_user`. Credentials в K8s Secret `automations-db-credentials`.
+- **Критерии готовности:** (1) Кластер работает, 3 worker-ноды зарегистрированы. (2) Создание distributed-таблицы работает.
 
 ### I-10. Kafka-кластер
 
@@ -524,14 +524,14 @@ graph TD
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** развернуть Redis через plain K8s manifests (Deployment + Service + PVC) в namespace `production`. Persistence через PersistentVolumeClaim. Auth: пароль из K8s Secret `redis-credentials`, создаётся в setup-cluster.yml из GitHub Actions secret `REDIS_PASSWORD`. В docker-compose Redis уже присутствует (без auth, dev-окружение). Сервисы api-gateway и identity-service подключаются через `REDIS_URL=redis://:password@redis:6379/0`.
+- **Описание:** развернуть Redis через OT-Container-Kit Redis Operator (standalone-режим) в namespace `production`. Auth через K8s Secret `redis-credentials` (ключ `password`) из GitHub Actions secret `REDIS_PASSWORD`. В docker-compose Redis уже присутствует (без auth, dev-окружение). Сервисы api-gateway и identity-service подключаются через `REDIS_URL=redis://:password@redis-standalone:6379/0`.
 - **Критерии готовности:** (1) Redis отвечает на PING в namespace production. (2) Подключение из pod'а работает.
 
 ### I-12. S3-совместимое хранилище
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** подключить облачное S3 или развернуть MinIO через оператор. Создать bucket `files-prod`. Настроить IAM-доступ, lifecycle-политики (удаление soft-deleted файлов через 30 дней).
+- **Описание:** развернуть MinIO через официальный MinIO Operator. Tenant с 1 сервером, 1 volume (PVC). Bucket `files-prod` создаётся Job'ом с `mc`. Credentials (`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`) из GitHub Actions secrets → K8s Secret `minio-credentials`. files-service подключается через `S3_ENDPOINT=http://minio:80`, `S3_BUCKET=files-prod`.
 - **Критерии готовности:** (1) Доступ по S3-API из кластера работает. (2) Bucket-политики настроены. (3) Lifecycle-правила активны.
 
 ### I-13. Prometheus + Grafana
