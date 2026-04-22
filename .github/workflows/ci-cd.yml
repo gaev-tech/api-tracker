@@ -203,7 +203,7 @@ jobs:
         run: |
           helm repo add strimzi https://strimzi.io/charts/ && helm repo update
           STRIMZI_STATUS=$(helm status strimzi-kafka-operator -n kafka -o json 2>/dev/null | jq -r '.info.status' || echo "not-found")
-          if [ "$STRIMZI_STATUS" = "failed" ] || [ "$STRIMZI_STATUS" = "pending-upgrade" ] || [ "$STRIMZI_STATUS" = "pending-install" ]; then
+          if [ "$STRIMZI_STATUS" != "deployed" ] && [ "$STRIMZI_STATUS" != "not-found" ]; then
             helm uninstall strimzi-kafka-operator -n kafka --wait || true
           fi
           kubectl delete rolebinding \
@@ -211,10 +211,12 @@ jobs:
             strimzi-cluster-operator-entity-operator-delegation \
             strimzi-cluster-operator-watched \
             -n kafka --ignore-not-found=true
+          for rb in strimzi-cluster-operator strimzi-cluster-operator-entity-operator-delegation strimzi-cluster-operator-watched; do
+            kubectl wait rolebinding/$rb -n kafka --for=delete --timeout=30s 2>/dev/null || true
+          done
           helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
             --namespace kafka --create-namespace --version 0.43.0 \
-            --set watchNamespaces="{kafka}" \
-            --cleanup-on-fail --wait --timeout 10m
+            --wait --timeout 10m
           kubectl apply -f deploy/k8s/kafka/kafka-cluster.yaml
           kubectl wait kafka/kafka -n kafka --for=condition=Ready --timeout=10m
           kubectl apply -f deploy/k8s/kafka/kafka-topics.yaml
