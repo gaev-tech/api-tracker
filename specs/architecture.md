@@ -165,7 +165,7 @@ api-gateway принимает оба типа в заголовке `Authorizat
 
 ### 3.4. Хранение секретов
 
-- `password_hash` в identity-service: Argon2id.
+- `password_hash` в identity-service: bcrypt (cost 12).
 - `value_encrypted` в `project_secrets`: AES-256-GCM; ключ шифрования — в Kubernetes Secret, инжектится в workspace-service.
 - `token` PAT хранится в открытом виде в БД identity-service (по продуктовому требованию: токен всегда видим владельцу через API), под строгим ограничением доступа к БД.
 - **Клиентское хранение токенов.** PAT хранится клиентами в локальном хранилище (в случае UI — `localStorage`). Это осознанный trade-off: PAT доступен JavaScript и теоретически может быть эксфильтрован при XSS-атаке, но взамен поддерживается мультиавторизация и переживание перезагрузки страницы. Защита: строгий CSP, Angular-санитизация, отсутствие небезопасных DOM-операций (`innerHTML`, `eval`), санитизация пользовательского markdown через Milkdown.
