@@ -27,23 +27,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        include:
-          - service: identity-service
-            context: backend/services/identity-service
-          - service: workspace-service
-            context: backend/services/workspace-service
-          - service: automations-service
-            context: backend/services/automations-service
-          - service: events-service
-            context: backend/services/events-service
-          - service: billing-service
-            context: backend/services/billing-service
-          - service: files-service
-            context: backend/services/files-service
-          - service: api-gateway
-            context: backend/api-gateway
     steps:
       - uses: actions/checkout@v4
 
@@ -53,13 +36,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.context }}
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/api-tracker/${{ matrix.service }}:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/api-tracker/${{ matrix.service }}:latest
+      - name: Build and push images
+        run: |
+          declare -A services=(
+            [identity-service]=backend/services/identity-service
+            [workspace-service]=backend/services/workspace-service
+            [automations-service]=backend/services/automations-service
+            [events-service]=backend/services/events-service
+            [billing-service]=backend/services/billing-service
+            [files-service]=backend/services/files-service
+            [api-gateway]=backend/api-gateway
+          )
+          for service in "${!services[@]}"; do
+            context="${services[$service]}"
+            echo "Building $service from $context..."
+            docker build -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}" \
+                         -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest" \
+                         "$context"
+            docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}"
+            docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest"
+          done
 
   deploy-staging:
     name: deploy / staging
