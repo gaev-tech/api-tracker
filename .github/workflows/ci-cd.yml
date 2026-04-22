@@ -202,15 +202,15 @@ jobs:
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           helm repo add strimzi https://strimzi.io/charts/ && helm repo update
+          STRIMZI_STATUS=$(helm status strimzi-kafka-operator -n kafka -o json 2>/dev/null | jq -r '.info.status' || echo "not-found")
+          if [ "$STRIMZI_STATUS" = "failed" ] || [ "$STRIMZI_STATUS" = "pending-upgrade" ] || [ "$STRIMZI_STATUS" = "pending-install" ]; then
+            helm uninstall strimzi-kafka-operator -n kafka --wait || true
+          fi
           kubectl delete rolebinding \
             strimzi-cluster-operator \
             strimzi-cluster-operator-entity-operator-delegation \
             strimzi-cluster-operator-watched \
             -n kafka --ignore-not-found=true
-          STRIMZI_STATUS=$(helm status strimzi-kafka-operator -n kafka -o json 2>/dev/null | jq -r '.info.status' || echo "not-found")
-          if [ "$STRIMZI_STATUS" = "failed" ] || [ "$STRIMZI_STATUS" = "pending-upgrade" ] || [ "$STRIMZI_STATUS" = "pending-install" ]; then
-            helm uninstall strimzi-kafka-operator -n kafka --ignore-not-found
-          fi
           helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
             --namespace kafka --create-namespace --version 0.43.0 \
             --set watchNamespaces="{kafka}" \
