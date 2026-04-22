@@ -62,7 +62,7 @@ jobs:
         run: |
           for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
             echo "=== $svc ==="
-            (cd backend/services/$svc && go build ./...)
+            (cd backend/services/$svc && go build -o /tmp/ ./...)
           done
 
   test:
