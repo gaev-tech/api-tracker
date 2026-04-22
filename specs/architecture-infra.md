@@ -10,15 +10,17 @@ Kubernetes, observability, CI/CD, масштабирование. Изменяе
 
 ### 1.1. Kubernetes
 
+**Реализация:** K3s на bare-metal сервере (одна нода, IP `91.218.114.168`). Managed-кластер (GKE/EKS/Yandex) не используется — выбран K3s как легковесное self-hosted решение.
+
 Все сервисы развёрнуты как Deployments с HorizontalPodAutoscaler. Минимум 2 реплики на сервис в production.
 
 Компоненты кластера:
-- **Ingress:** Nginx Ingress Controller. TLS-сертификаты — через cert-manager и Let's Encrypt.
+- **Ingress:** Nginx Ingress Controller (DaemonSet + hostNetwork на K3s bare-metal). TLS-сертификаты — через cert-manager и Let's Encrypt.
 - **Service Mesh:** на старте не используется; при необходимости добавляется Linkerd (лёгкий аналог Istio).
-- **Kafka:** через Strimzi Operator — декларативное управление кластером Kafka в K8s. Минимум 3 брокера в production.
-- **PostgreSQL и Citus:** версия **16**. В dev-окружении — `postgres:16-alpine` в docker-compose. В production — managed-сервис облачного провайдера (предпочтительно) или через оператор (Zalando Postgres Operator / CloudNativePG) для self-hosted. Citus может быть развёрнут отдельно через Citus Community Operator.
-- **Redis:** через оператор (Redis Operator) или managed-сервис.
-- **Prometheus + Grafana + Loki:** через `kube-prometheus-stack` (Grafana Operator) и Loki Helm chart.
+- **Kafka:** через Strimzi Operator — декларативное управление кластером Kafka в K8s.
+- **PostgreSQL и Citus:** версия **16**. В dev-окружении — `postgres:16-alpine` в docker-compose. В production — через оператор (Zalando Postgres Operator / CloudNativePG). Citus — через Citus Community Operator.
+- **Redis:** через оператор (Redis Operator).
+- **Prometheus + Grafana + Loki:** через `kube-prometheus-stack` и Loki Helm chart.
 - **Sentry:** self-hosted через Helm либо облачный Sentry.
 - **MinIO** (если не managed S3): через MinIO Operator.
 
@@ -53,11 +55,15 @@ annotations:
 
 ### 1.2. Топология окружений
 
-Один кластер Kubernetes, два namespace-а:
-- **`staging`** — для интеграционного тестирования. Деплой происходит автоматически после успешного merge в main.
-- **`production`** — основная среда. Деплой требует ручного подтверждения (`environment: production` с required reviewers в GitHub Actions).
+Один K3s-кластер (bare-metal), два namespace-а:
+- **`staging`** — для интеграционного тестирования. Деплой происходит автоматически при каждом PR и после merge в main (по тегу `v*`).
+- **`production`** — основная среда. Деплой требует ручного подтверждения (`environment: production` с required reviewers в GitHub Actions). Запускается только по тегу `v*`.
 
-Dev-окружение разработчика — локальный Kubernetes (Kind / Minikube / Docker Desktop) либо Docker Compose с минимальным набором зависимостей (Postgres, Kafka, Redis).
+Оба namespace создаются автоматически через `helm upgrade --install --create-namespace` в CD-пайплайне.
+
+**CI-доступ к кластеру:** kubeconfig хранится в GitHub Actions Secret `KUBECONFIG_B64` (base64-encoded), декодируется во временный файл на каждом deploy-job.
+
+Dev-окружение разработчика — Docker Compose с минимальным набором зависимостей (Postgres, Kafka, Redis).
 
 ### 1.3. Секреты
 

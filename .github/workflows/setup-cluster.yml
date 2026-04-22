@@ -1,0 +1,56 @@
+name: Setup Cluster
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-cluster:
+    name: setup / cluster
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: '3.16.0'
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Install ingress-nginx
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --version 4.11.3 \
+            --set controller.kind=DaemonSet \
+            --set controller.hostNetwork=true \
+            --set controller.service.type=ClusterIP \
+            --wait \
+            --timeout 5m
+
+      - name: Install cert-manager
+        run: |
+          helm repo add jetstack https://charts.jetstack.io
+          helm repo update
+          helm upgrade --install cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --create-namespace \
+            --version v1.16.2 \
+            --set installCRDs=true \
+            --wait \
+            --timeout 5m
+
+      - name: Remove ingress-nginx admission webhook
+        run: kubectl delete validatingwebhookconfiguration ingress-nginx-admission --ignore-not-found=true
+
+      - name: Wait for cert-manager webhooks
+        run: kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
+
+      - name: Apply ClusterIssuers
+        run: kubectl apply -f deploy/k8s/

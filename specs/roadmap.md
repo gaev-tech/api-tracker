@@ -460,8 +460,9 @@ graph TD
 
 - **Тип:** инфраструктура.
 - **Блокеры:** —
-- **Описание:** развернуть Kubernetes-кластер (managed: GKE/EKS/Yandex Managed K8s) с двумя namespace: `staging` и `production`. Настроить доступ по `kubectl` для команды разработки.
-- **Критерии готовности:** (1) `kubectl get nodes` возвращает минимум 3 рабочие ноды. (2) Оба namespace созданы. (3) CI имеет ServiceAccount для deployment в staging.
+- **Описание:** развернуть Kubernetes-кластер на bare-metal сервере (K3s, одна нода). Namespaces `staging` и `production` создаются автоматически CD-пайплайном (`helm upgrade --install --create-namespace`). CI деплоит через `KUBECONFIG_B64` (base64-encoded kubeconfig в GitHub Actions Secret).
+- **Критерии готовности:** (1) `kubectl get nodes` возвращает ноду в статусе Ready. (2) Namespaces `staging` и `production` создаются при деплое. (3) CI успешно деплоит через `KUBECONFIG_B64`.
+- **Статус:** выполнено. K3s развёрнут на bare-metal, ingress-nginx + cert-manager установлены (I-3), api-gateway деплоится в staging (I-19).
 
 ### I-3. Nginx Ingress + cert-manager + TLS
 
