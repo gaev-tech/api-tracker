@@ -81,12 +81,12 @@ jobs:
           chmod 600 $HOME/.kube/config
 
       - name: Deploy services to staging
+        id: deploy_staging
         run: |
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
             echo "Deploying $service to staging..."
-            # Only override image.tag for charts using our custom ghcr.io images
             repo=$(grep 'repository:' "$chart/values.yaml" | awk '{print $2}')
             if echo "$repo" | grep -q "ghcr.io"; then
               extra_args="--set image.tag=${{ github.sha }}"
@@ -100,6 +100,16 @@ jobs:
               --wait \
               --timeout 5m
           done
+
+      - name: Diagnose on failure
+        if: failure() && steps.deploy_staging.outcome == 'failure'
+        run: |
+          echo "=== Pods ==="
+          kubectl get pods -n staging
+          echo "=== Describe pods ==="
+          kubectl describe pods -n staging
+          echo "=== Events ==="
+          kubectl get events -n staging --sort-by='.lastTimestamp'
 
   deploy-production:
     name: deploy / production
