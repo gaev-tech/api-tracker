@@ -379,7 +379,8 @@ jobs:
           kubectl get pods -n kafka -o wide 2>/dev/null || echo "(no kafka namespace)"
           kubectl get events -n kafka --sort-by='.lastTimestamp' 2>/dev/null | tail -20 || true
           for pod in $(kubectl get pods -n kafka -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null | awk '$2 != "true" {print $1}'); do
-            echo "=== kafka/$pod ==="
+            echo "=== kafka/$pod describe ==="
             kubectl describe pod "$pod" -n kafka 2>/dev/null | tail -30
-            kubectl logs "$pod" -n kafka --previous 2>/dev/null | tail -20 || true
+            echo "=== kafka/$pod logs (previous, first 80 lines) ==="
+            kubectl logs "$pod" -n kafka --previous 2>/dev/null | head -80 || true
           done
