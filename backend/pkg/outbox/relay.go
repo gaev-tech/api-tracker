@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -99,7 +101,13 @@ func (r *Relay) flush(ctx context.Context) error {
 }
 
 func (r *Relay) markSent(ctx context.Context, ids []int64) error {
-	query := "UPDATE " + r.table + " SET sent_at = NOW() WHERE id = ANY($1)"
-	_, err := r.db.ExecContext(ctx, query, ids)
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	query := "UPDATE " + r.table + " SET sent_at = NOW() WHERE id IN (" + strings.Join(placeholders, ",") + ")"
+	_, err := r.db.ExecContext(ctx, query, args...)
 	return err
 }
