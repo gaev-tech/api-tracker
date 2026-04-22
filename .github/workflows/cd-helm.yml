@@ -80,6 +80,16 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
+      - name: Clean up stuck releases in staging
+        run: |
+          for release in $(helm list -n staging --short 2>/dev/null); do
+            status=$(helm status "$release" -n staging -o json | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['status'])")
+            if [ "$status" = "failed" ] || [ "$status" = "pending-upgrade" ]; then
+              echo "Uninstalling stuck release: $release"
+              helm uninstall "$release" -n staging
+            fi
+          done
+
       - name: Deploy services to staging
         id: deploy_staging
         run: |
@@ -87,16 +97,9 @@ jobs:
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
             echo "Deploying $service to staging..."
-            repo=$(grep 'repository:' "$chart/values.yaml" | awk '{print $2}')
-            if echo "$repo" | grep -q "ghcr.io"; then
-              extra_args="--set image.tag=${{ github.sha }}"
-            else
-              extra_args=""
-            fi
             helm upgrade --install "$service" "$chart" \
               --namespace staging \
               --create-namespace \
-              $extra_args \
               --wait \
               --timeout 5m
           done
@@ -136,16 +139,9 @@ jobs:
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
             echo "Deploying $service to production..."
-            repo=$(grep 'repository:' "$chart/values.yaml" | awk '{print $2}')
-            if echo "$repo" | grep -q "ghcr.io"; then
-              extra_args="--set image.tag=${{ github.sha }}"
-            else
-              extra_args=""
-            fi
             helm upgrade --install "$service" "$chart" \
               --namespace production \
               --create-namespace \
-              $extra_args \
               --wait \
               --timeout 5m
           done
