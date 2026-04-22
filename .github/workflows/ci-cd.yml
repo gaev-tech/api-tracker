@@ -207,12 +207,16 @@ jobs:
             strimzi-cluster-operator-entity-operator-delegation \
             strimzi-cluster-operator-watched \
             -n kafka --ignore-not-found=true
+          STRIMZI_STATUS=$(helm status strimzi-kafka-operator -n kafka -o json 2>/dev/null | jq -r '.info.status' || echo "not-found")
+          if [ "$STRIMZI_STATUS" = "failed" ] || [ "$STRIMZI_STATUS" = "pending-upgrade" ] || [ "$STRIMZI_STATUS" = "pending-install" ]; then
+            helm uninstall strimzi-kafka-operator -n kafka --ignore-not-found
+          fi
           helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
             --namespace kafka --create-namespace --version 0.43.0 \
             --set watchNamespaces="{kafka}" \
-            --wait --timeout 5m
+            --cleanup-on-fail --wait --timeout 10m
           kubectl apply -f deploy/k8s/kafka/kafka-cluster.yaml
-          kubectl wait kafka/kafka -n kafka --for=condition=Ready --timeout=5m
+          kubectl wait kafka/kafka -n kafka --for=condition=Ready --timeout=10m
           kubectl apply -f deploy/k8s/kafka/kafka-topics.yaml
 
       - name: Install CNPG Operator + deploy PostgreSQL
