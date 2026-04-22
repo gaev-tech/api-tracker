@@ -326,10 +326,13 @@ jobs:
       - uses: bufbuild/buf-action@v1
         with:
           version: '1.68.3'
-          lint: true
+          lint: false
+          format: false
           breaking: false
           push: false
-          inputs: "contracts/proto"
+      - name: buf lint
+        working-directory: contracts/proto
+        run: buf lint
       - name: Install Go codegen plugins
         run: |
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
