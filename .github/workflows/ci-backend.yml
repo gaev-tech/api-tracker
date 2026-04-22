@@ -46,6 +46,7 @@ jobs:
           lint: true
           breaking: false
           push: false
+          comment: false
 
   build:
     name: build
