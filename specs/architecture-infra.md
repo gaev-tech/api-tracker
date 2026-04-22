@@ -41,7 +41,13 @@ annotations:
   nginx.ingress.kubernetes.io/ssl-redirect: "true"
 ```
 
-**Домены:** настраиваются через `ingress.host` в Helm values каждого сервиса. Публичный Ingress создаётся только для api-gateway.
+**Установка:** ingress-nginx и cert-manager устанавливаются через Helm в GitHub Actions (job `setup-cluster` в `cd-helm.yml`), который запускается перед деплоем сервисов. Использует `helm upgrade --install` — идемпотентно, безопасно запускать при каждом деплое.
+
+**Домен:** `apitracker.ru`. API доступен на `api.apitracker.ru`. Let's Encrypt email: `gaev93@ya.ru`.
+
+**ClusterIssuer-манифесты** хранятся в `deploy/k8s/` и применяются через `kubectl apply` в том же job `setup-cluster` после установки cert-manager.
+
+**Публичный Ingress** создаётся только для api-gateway (`api.apitracker.ru`). Остальные сервисы общаются внутри кластера.
 
 ### 1.2. Топология окружений
 
