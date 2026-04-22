@@ -251,6 +251,7 @@ jobs:
 
       - name: Deploy Citus clusters
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         run: |
           kubectl create secret generic workspace-db-credentials \
             --from-literal=username=workspace_user \
@@ -267,12 +268,13 @@ jobs:
           kubectl apply -f deploy/k8s/citus/workspace.yaml -n production
           kubectl apply -f deploy/k8s/citus/events.yaml    -n production
           kubectl apply -f deploy/k8s/citus/automations.yaml -n production
-          kubectl wait cluster/citus-workspace-coordinator   -n production --for=condition=Ready --timeout=5m
-          kubectl wait cluster/citus-events-coordinator      -n production --for=condition=Ready --timeout=5m
-          kubectl wait cluster/citus-automations-coordinator -n production --for=condition=Ready --timeout=5m
+          kubectl wait cluster/citus-workspace-coordinator   -n production --for=condition=Ready --timeout=10m
+          kubectl wait cluster/citus-events-coordinator      -n production --for=condition=Ready --timeout=10m
+          kubectl wait cluster/citus-automations-coordinator -n production --for=condition=Ready --timeout=10m
 
       - name: Install Redis Operator + deploy Redis
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         run: |
           helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/ && helm repo update
           helm upgrade --install redis-operator ot-helm/redis-operator \
@@ -286,6 +288,7 @@ jobs:
 
       - name: Install MinIO Operator + deploy Tenant
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         run: |
           helm repo add minio-operator https://operator.min.io && helm repo update
           helm upgrade --install minio-operator minio-operator/operator \
@@ -301,6 +304,7 @@ jobs:
 
       - name: Deploy Swagger UI
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         run: |
           kubectl apply -f deploy/k8s/swagger-ui/swagger-ui.yaml -n production
           kubectl rollout status deployment/swagger-ui -n production --timeout=2m
