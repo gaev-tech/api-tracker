@@ -130,6 +130,21 @@ Only after the user approves the plan:
 
 ---
 
+## Step 4.5 — Sync OpenAPI Spec
+
+**Any time an API endpoint is added, removed, or its contract changes** (routes, request/response schemas, error codes, auth requirements):
+
+1. Update `contracts/openapi/openapi.yaml`:
+   - Add a new `paths` entry for each new route
+   - Update existing path schemas for changed request/response shapes
+   - Add new `components/schemas` entries for new data models
+2. Mirror the change in `deploy/k8s/swagger-ui/swagger-ui.yaml` — the `openapi-spec` ConfigMap embeds the same spec; keep them in sync
+3. These changes belong in the **same commit** as the implementation — never open a PR where the spec and code are out of sync
+
+**Why:** The OpenAPI spec drives Swagger UI at `/docs`, the Angular API-client codegen, and serves as machine-readable contract documentation. Drift between code and spec silently breaks clients.
+
+---
+
 ## Rules
 
 - **Never skip Step 1** (read specs) — even for "obvious" tasks

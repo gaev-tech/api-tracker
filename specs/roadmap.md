@@ -734,9 +734,9 @@ graph TD
 
 - **Тип:** функция.
 - **Блокеры:** I-6, I-16, I-19.
-- **Описание:** создать identity-service по шаблону I-16. Миграции таблицы `users` (минимальный набор: id, email, password_hash, theme, language, created_at, updated_at; поля для managed и email_verified добавляются в F-4 и F-54). Реализовать endpoint'ы `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/password/change`, `PATCH /users/me`, `GET /users/me`.
-- **Критерии готовности:** (1) Регистрация создаёт пользователя. (2) Логин возвращает PAT (пока как строка, полноценная модель PAT — F-2). (3) Меняется пароль. (4) Меняется тема и язык.
-- **Заглушки:** на этом этапе PAT генерируется простейшим образом, полноценный CRUD PAT — в F-2. Email верифицировать не требуется (добавляется в F-4); поле `email_verified_at` пока не используется.
+- **Описание:** создать identity-service по шаблону I-16. Миграции таблиц `users` и `refresh_tokens`. Реализовать JWT RS256 (access 15 мин + refresh 30 дней). RSA ключевая пара из env `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY`. Endpoint'ы: `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `POST /auth/refresh`, `POST /auth/password/change`, `GET /users/me`, `PATCH /users/me`, `GET /.well-known/jwks.json`. PAT — отдельная задача F-2.
+- **Критерии готовности:** (1) Регистрация создаёт пользователя и возвращает access+refresh token. (2) Логин возвращает access+refresh token. (3) Refresh обновляет access token. (4) Logout отзывает refresh token. (5) Меняется пароль. (6) Меняется тема и язык.
+- **Заглушки:** `email_verified_at` устанавливается в `now()` при регистрации (реальная верификация — F-4). PAT — F-2.
 
 ### F-2. identity-service: PAT CRUD + gRPC ValidatePAT
 

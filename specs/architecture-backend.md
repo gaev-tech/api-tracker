@@ -14,6 +14,7 @@
 
 **Владеет таблицами:**
 - `users` (включая `parent_user_id`, `is_active`, `email_verified_at`, `email_verification_token`)
+- `refresh_tokens` — JWT refresh tokens (id, user_id, token_hash, expires_at, revoked_at, created_at)
 - `pats`
 - `password_reset_tokens`
 
@@ -25,6 +26,8 @@
 - Смена темы и языка пользователя.
 - Поиск пользователей.
 - Удаление собственного аккаунта.
+
+**JWT:** RS256. Приватный ключ генерируется при деплое, хранится в K8s Secret `identity-jwt-keys`, инжектится в env `JWT_PRIVATE_KEY` (PEM). Публичный ключ экспонируется через `GET /.well-known/jwks.json` — api-gateway загружает при старте для локальной верификации JWT.
 
 **Внутренние функции через gRPC:**
 - Валидация PAT → возврат `user_id`, `is_active`, `parent_user_id` (вызывается api-gateway).

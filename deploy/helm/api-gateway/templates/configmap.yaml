@@ -49,6 +49,20 @@ data:
             proxy_set_header X-Parent-User-Id "";
             proxy_set_header X-Is-Active "";
 
+            # ── API docs (Swagger UI) ─────────────────────────────────────────
+            location /docs {
+                set $upstream swagger-ui:8080;
+                proxy_pass http://$upstream;
+                proxy_set_header Host $host;
+            }
+
+            # ── JWKS (JWT public key discovery) ───────────────────────────────
+            location = /.well-known/jwks.json {
+                set $upstream identity-service:8080;
+                proxy_pass http://$upstream;
+                proxy_set_header Host $host;
+            }
+
             # ── Health check ─────────────────────────────────────────────────
             location = /healthz {
                 access_log off;

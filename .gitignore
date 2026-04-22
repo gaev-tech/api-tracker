@@ -3,3 +3,4 @@ vendor/
 *.exe
 *.test
 backend/services/*/cmd/server
+.superpowers

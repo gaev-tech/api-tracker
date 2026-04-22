@@ -8,13 +8,19 @@ Markdown-каталог API-эндпоинтов и моделей данных.
 
 **Формат данных:** JSON (`Content-Type: application/json`) для всех тел запросов и ответов, кроме импорта CSV (`multipart/form-data`).
 
-**Аутентификация:** Bearer-токен в заголовке `Authorization`. В качестве токена используется PAT.
+**Аутентификация:** Bearer-токен в заголовке `Authorization`. Принимаются два типа токенов:
 
 ```
+Authorization: Bearer <jwt_access_token>
 Authorization: Bearer pat_a1b2c3d4e5f6...
 ```
 
-Исключения: endpoint'ы `/auth/register`, `/auth/login`, `/auth/password-reset` — без аутентификации.
+- **JWT access token** — выдаётся при логине/регистрации, срок 15 мин, RS256. Для браузерных клиентов и API.
+- **PAT** — Personal Access Token, долгоживущий, управляется через `/pats`. Начинается с префикса `pat_`. Для API/CLI-клиентов.
+
+api-gateway определяет тип по префиксу: `pat_` → PAT-валидация через gRPC, иначе → JWT RS256 локально.
+
+Исключения: endpoint'ы `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/password-reset` — без аутентификации.
 
 **Идентификаторы:** UUID v4 в виде строки `550e8400-e29b-41d4-a716-446655440000`.
 
@@ -384,16 +390,16 @@ Authorization: Bearer pat_a1b2c3d4e5f6...
 ```json
 {
   "user": { /* User */ },
-  "pat": { /* PAT */ }
+  "access_token": "string",
+  "refresh_token": "string"
 }
 ```
-При регистрации создаётся дефолтный PAT для первичного доступа.
 
 Ошибки: `validation_error` (некорректный email, слабый пароль), `409 conflict` (email уже занят).
 
 ### POST /auth/login
 
-Вход. Возвращает PAT для последующих вызовов.
+Вход. Возвращает JWT access token + refresh token.
 
 **Без аутентификации.**
 
@@ -408,13 +414,44 @@ Authorization: Bearer pat_a1b2c3d4e5f6...
 Ответ `200`:
 ```json
 {
-  "pat": { /* PAT */ }
+  "access_token": "string",
+  "refresh_token": "string"
 }
 ```
 
+### POST /auth/refresh
+
+Обновить access token по refresh token.
+
+**Без аутентификации.**
+
+Тело запроса:
+```json
+{
+  "refresh_token": "string"
+}
+```
+
+Ответ `200`:
+```json
+{
+  "access_token": "string",
+  "refresh_token": "string"
+}
+```
+
+Ошибки: `401 unauthorized` — refresh token недействителен, истёк или отозван.
+
 ### POST /auth/logout
 
-Отзыв текущего PAT, использованного для вызова.
+Отзыв текущего refresh token (по Bearer JWT или телу запроса).
+
+Тело (опционально):
+```json
+{
+  "refresh_token": "string"
+}
+```
 
 Ответ `204`.
 

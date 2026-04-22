@@ -59,6 +59,12 @@ jobs:
         run: |
           helm repo add strimzi https://strimzi.io/charts/
           helm repo update
+          # Remove orphaned RoleBindings that block Helm install on re-runs
+          kubectl delete rolebinding \
+            strimzi-cluster-operator \
+            strimzi-cluster-operator-entity-operator-delegation \
+            strimzi-cluster-operator-watched \
+            -n kafka --ignore-not-found=true
           helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
             --namespace kafka \
             --create-namespace \
@@ -85,6 +91,38 @@ jobs:
             --version 0.23.0 \
             --wait \
             --timeout 5m
+
+      - name: Create PostgreSQL credentials secrets in production
+        run: |
+          kubectl create secret generic identity-db-credentials \
+            --from-literal=username=identity_user \
+            --from-literal=password=${{ secrets.IDENTITY_DB_PASSWORD }} \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic billing-db-credentials \
+            --from-literal=username=billing_user \
+            --from-literal=password=${{ secrets.BILLING_DB_PASSWORD }} \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic files-db-credentials \
+            --from-literal=username=files_user \
+            --from-literal=password=${{ secrets.FILES_DB_PASSWORD }} \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy PostgreSQL clusters
+        run: |
+          kubectl apply -f deploy/k8s/postgres/identity.yaml -n production
+          kubectl apply -f deploy/k8s/postgres/billing.yaml -n production
+          kubectl apply -f deploy/k8s/postgres/files.yaml -n production
+          kubectl wait cluster/postgres-identity -n production \
+            --for=condition=Ready --timeout=5m
+          kubectl wait cluster/postgres-billing -n production \
+            --for=condition=Ready --timeout=5m
+          kubectl wait cluster/postgres-files -n production \
+            --for=condition=Ready --timeout=5m
 
       - name: Create Citus DB credentials secrets in production
         run: |
@@ -166,3 +204,8 @@ jobs:
           kubectl apply -f deploy/k8s/minio/tenant.yaml
           kubectl wait tenant/minio -n minio \
             --for=condition=Initialized --timeout=5m
+
+      - name: Deploy Swagger UI
+        run: |
+          kubectl apply -f deploy/k8s/swagger-ui/swagger-ui.yaml -n production
+          kubectl rollout status deployment/swagger-ui -n production --timeout=2m

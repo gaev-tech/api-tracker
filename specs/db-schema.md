@@ -75,7 +75,24 @@ Personal Access Tokens.
 - `UNIQUE` на `token` — для быстрой аутентификации.
 - `idx_pats_user_id` на `user_id`.
 
-### 2.3. `password_reset_tokens`
+### 2.3. `refresh_tokens`
+
+JWT Refresh tokens.
+
+| Колонка | Тип | Ограничения | Описание |
+|---|---|---|---|
+| `id` | `UUID` | PK, `DEFAULT gen_random_uuid()` | |
+| `user_id` | `UUID` | NOT NULL, FK → `users.id` ON DELETE CASCADE | Владелец |
+| `token_hash` | `VARCHAR(128)` | NOT NULL, UNIQUE | SHA-256 хеш токена. Клиенту возвращается открытый токен |
+| `expires_at` | `TIMESTAMPTZ` | NOT NULL | Срок истечения (+30 дней от создания) |
+| `revoked_at` | `TIMESTAMPTZ` | NULL | Момент отзыва (NULL = активен) |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT `now()` | |
+
+Индексы:
+- `UNIQUE` на `token_hash`.
+- `idx_refresh_tokens_user_id` на `user_id`.
+
+### 2.4. `password_reset_tokens`
 
 Токены для восстановления пароля через email-ссылку.
 

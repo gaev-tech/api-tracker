@@ -1,0 +1,6 @@
+apiVersion: v2
+name: identity-service
+description: identity-service — auth, users, PAT
+type: application
+version: 0.1.0
+appVersion: "latest"

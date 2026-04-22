@@ -69,6 +69,17 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
+      - name: Create identity-service JWT secret
+        env:
+          JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$JWT_PRIVATE_KEY" > /tmp/jwt_key.pem
+          kubectl create secret generic identity-jwt-secret \
+            --from-file=JWT_PRIVATE_KEY=/tmp/jwt_key.pem \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
+          rm -f /tmp/jwt_key.pem
+
       - name: Create ghcr image pull secret in production
         run: |
           kubectl create secret docker-registry ghcr-credentials \
