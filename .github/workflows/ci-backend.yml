@@ -6,335 +6,124 @@ on:
     paths:
       - 'backend/**'
       - 'contracts/proto/**'
+      - 'deploy/helm/**'
   pull_request:
     paths:
       - 'backend/**'
       - 'contracts/proto/**'
+      - 'deploy/helm/**'
 
 jobs:
-  identity-service:
-    name: identity-service
+  lint:
+    name: lint
     runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/identity-service') ||
-      contains(github.event.head_commit.added, 'backend/services/identity-service') ||
-      github.event_name == 'pull_request'
-    defaults:
-      run:
-        working-directory: backend/services/identity-service
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
-          cache-dependency-path: backend/services/identity-service/go.sum
-      - run: go vet ./...
-      - run: go build ./...
-      - run: go test ./...
+          cache-dependency-path: backend/services/*/go.sum
 
-  workspace-service:
-    name: workspace-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/workspace-service') ||
-      contains(github.event.head_commit.added, 'backend/services/workspace-service') ||
-      github.event_name == 'pull_request'
-    defaults:
-      run:
-        working-directory: backend/services/workspace-service
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-          cache-dependency-path: backend/services/workspace-service/go.sum
-      - run: go vet ./...
-      - run: go build ./...
-      - run: go test ./...
+      - name: Go vet — all services
+        run: |
+          for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
+            echo "=== $svc ==="
+            (cd backend/services/$svc && go vet ./...)
+          done
 
-  automations-service:
-    name: automations-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/automations-service') ||
-      contains(github.event.head_commit.added, 'backend/services/automations-service') ||
-      github.event_name == 'pull_request'
-    defaults:
-      run:
-        working-directory: backend/services/automations-service
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-          cache-dependency-path: backend/services/automations-service/go.sum
-      - run: go vet ./...
-      - run: go build ./...
-      - run: go test ./...
-
-  events-service:
-    name: events-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/events-service') ||
-      contains(github.event.head_commit.added, 'backend/services/events-service') ||
-      github.event_name == 'pull_request'
-    defaults:
-      run:
-        working-directory: backend/services/events-service
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-          cache-dependency-path: backend/services/events-service/go.sum
-      - run: go vet ./...
-      - run: go build ./...
-      - run: go test ./...
-
-  billing-service:
-    name: billing-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/billing-service') ||
-      contains(github.event.head_commit.added, 'backend/services/billing-service') ||
-      github.event_name == 'pull_request'
-    defaults:
-      run:
-        working-directory: backend/services/billing-service
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-          cache-dependency-path: backend/services/billing-service/go.sum
-      - run: go vet ./...
-      - run: go build ./...
-      - run: go test ./...
-
-  files-service:
-    name: files-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/files-service') ||
-      contains(github.event.head_commit.added, 'backend/services/files-service') ||
-      github.event_name == 'pull_request'
-    defaults:
-      run:
-        working-directory: backend/services/files-service
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-          cache-dependency-path: backend/services/files-service/go.sum
-      - run: go vet ./...
-      - run: go build ./...
-      - run: go test ./...
-
-  docker-identity-service:
-    name: docker / identity-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/identity-service') ||
-      contains(github.event.head_commit.added, 'backend/services/identity-service') ||
-      github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: backend/services/identity-service
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/api-tracker/identity-service:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/api-tracker/identity-service:latest
-
-  docker-workspace-service:
-    name: docker / workspace-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/workspace-service') ||
-      contains(github.event.head_commit.added, 'backend/services/workspace-service') ||
-      github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: backend/services/workspace-service
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/api-tracker/workspace-service:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/api-tracker/workspace-service:latest
-
-  docker-automations-service:
-    name: docker / automations-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/automations-service') ||
-      contains(github.event.head_commit.added, 'backend/services/automations-service') ||
-      github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: backend/services/automations-service
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/api-tracker/automations-service:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/api-tracker/automations-service:latest
-
-  docker-events-service:
-    name: docker / events-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/events-service') ||
-      contains(github.event.head_commit.added, 'backend/services/events-service') ||
-      github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: backend/services/events-service
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/api-tracker/events-service:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/api-tracker/events-service:latest
-
-  docker-billing-service:
-    name: docker / billing-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/billing-service') ||
-      contains(github.event.head_commit.added, 'backend/services/billing-service') ||
-      github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: backend/services/billing-service
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/api-tracker/billing-service:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/api-tracker/billing-service:latest
-
-  docker-files-service:
-    name: docker / files-service
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/services/files-service') ||
-      contains(github.event.head_commit.added, 'backend/services/files-service') ||
-      github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: backend/services/files-service
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/api-tracker/files-service:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/api-tracker/files-service:latest
-
-  docker-api-gateway:
-    name: docker / api-gateway
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'backend/api-gateway') ||
-      contains(github.event.head_commit.added, 'backend/api-gateway') ||
-      github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: backend/api-gateway
-          push: ${{ github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/api-tracker/api-gateway:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/api-tracker/api-gateway:latest
-
-  helm-lint:
-    name: helm / lint
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'deploy/helm') ||
-      contains(github.event.head_commit.added, 'deploy/helm') ||
-      github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
         with:
           version: '3.16.0'
-      - name: Lint service-template chart
-        run: helm lint deploy/helm/service-template
-      - name: Template service-template chart
-        run: helm template test-release deploy/helm/service-template
-      - name: Lint api-gateway chart
-        run: helm lint deploy/helm/api-gateway
-      - name: Template api-gateway chart
-        run: helm template test-release deploy/helm/api-gateway
 
-  proto:
-    name: proto / lint + codegen
-    runs-on: ubuntu-latest
-    if: >
-      contains(github.event.head_commit.modified, 'contracts/proto') ||
-      contains(github.event.head_commit.added, 'contracts/proto') ||
-      github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
+      - name: Helm lint
+        run: |
+          for chart in deploy/helm/*/; do
+            echo "=== $(basename $chart) ==="
+            helm lint "$chart"
+            helm template test-release "$chart" > /dev/null
+          done
+
       - uses: bufbuild/buf-action@v1
         with:
           version: '1.68.3'
           lint: true
           breaking: false
           push: false
-      - name: Install Go codegen plugins
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/*/go.sum
+
+      - name: Go build — all services
         run: |
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-      - name: Run buf generate
-        working-directory: contracts/proto
-        run: buf generate
-      - name: Check generated files are up to date
-        run: git diff --exit-code contracts/proto
+          for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
+            echo "=== $svc ==="
+            (cd backend/services/$svc && go build ./...)
+          done
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/*/go.sum
+
+      - name: Go test — all services
+        run: |
+          for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
+            echo "=== $svc ==="
+            (cd backend/services/$svc && go test ./...)
+          done
+
+  push:
+    name: push
+    runs-on: ubuntu-latest
+    needs: [lint, build, test]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push — all services
+        run: |
+          declare -A services=(
+            [identity-service]=backend/services/identity-service
+            [workspace-service]=backend/services/workspace-service
+            [automations-service]=backend/services/automations-service
+            [events-service]=backend/services/events-service
+            [billing-service]=backend/services/billing-service
+            [files-service]=backend/services/files-service
+            [api-gateway]=backend/api-gateway
+          )
+          PUSH=${{ github.ref == 'refs/heads/main' }}
+          for service in "${!services[@]}"; do
+            context="${services[$service]}"
+            echo "=== $service ==="
+            docker build \
+              -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}" \
+              -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest" \
+              "$context"
+            if [ "$PUSH" = "true" ]; then
+              docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}"
+              docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest"
+            fi
+          done
