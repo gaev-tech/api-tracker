@@ -15,3 +15,15 @@ func NewWriter(brokers []string, topic string) *kafka.Writer {
 		AllowAutoTopicCreation: false,
 	}
 }
+
+// NewMultiWriter creates a Kafka producer without a fixed topic.
+// Each kafka.Message must set its own Topic field.
+// Used by the outbox relay which writes to multiple topics.
+func NewMultiWriter(brokers []string) *kafka.Writer {
+	return &kafka.Writer{
+		Addr:                   kafka.TCP(brokers...),
+		Balancer:               &kafka.LeastBytes{},
+		RequiredAcks:           kafka.RequireAll,
+		AllowAutoTopicCreation: false,
+	}
+}
