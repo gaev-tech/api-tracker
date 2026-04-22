@@ -40,8 +40,11 @@ jobs:
 
       - name: Docker build and push — all services
         run: |
-          declare -A services=(
-            [identity-service]=backend/services/identity-service
+          # context: build context directory
+          # dockerfile: path to Dockerfile (relative to repo root)
+          # Services that depend on backend/pkg use repo root as context
+          declare -A context=(
+            [identity-service]=.
             [workspace-service]=backend/services/workspace-service
             [automations-service]=backend/services/automations-service
             [events-service]=backend/services/events-service
@@ -49,14 +52,23 @@ jobs:
             [files-service]=backend/services/files-service
             [api-gateway]=backend/api-gateway
           )
+          declare -A dockerfile=(
+            [identity-service]=backend/services/identity-service/Dockerfile
+            [workspace-service]=backend/services/workspace-service/Dockerfile
+            [automations-service]=backend/services/automations-service/Dockerfile
+            [events-service]=backend/services/events-service/Dockerfile
+            [billing-service]=backend/services/billing-service/Dockerfile
+            [files-service]=backend/services/files-service/Dockerfile
+            [api-gateway]=backend/api-gateway/Dockerfile
+          )
           PUSH=${{ github.event_name != 'pull_request' }}
-          for service in "${!services[@]}"; do
-            context="${services[$service]}"
+          for service in "${!context[@]}"; do
             echo "=== $service ==="
             docker build \
+              -f "${dockerfile[$service]}" \
               -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}" \
               -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest" \
-              "$context"
+              "${context[$service]}"
             if [ "$PUSH" = "true" ]; then
               docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}"
               docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest"
