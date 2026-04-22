@@ -47,6 +47,6 @@ resources:
     memory: 512Mi
 
 serviceMonitor:
-  enabled: true
+  enabled: false
   interval: 30s
   path: /metrics
