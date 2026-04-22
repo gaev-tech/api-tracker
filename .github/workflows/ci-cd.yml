@@ -215,7 +215,7 @@ jobs:
             kubectl wait rolebinding/$rb -n kafka --for=delete --timeout=30s 2>/dev/null || true
           done
           helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
-            --namespace kafka --create-namespace --version 0.43.0 \
+            --namespace kafka --create-namespace --version 0.40.0 \
             --wait --timeout 10m
           kubectl apply -f deploy/k8s/kafka/kafka-cluster.yaml
           kubectl wait kafka/kafka -n kafka --for=condition=Ready --timeout=10m
