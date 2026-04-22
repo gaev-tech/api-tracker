@@ -87,8 +87,8 @@ jobs:
             (cd backend/services/$svc && go test ./...)
           done
 
-  push:
-    name: push
+  deploy:
+    name: deploy
     runs-on: ubuntu-latest
     needs: [lint, build, test]
     permissions:
