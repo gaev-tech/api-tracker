@@ -1,0 +1,22 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-identity
+spec:
+  instances: 1
+  bootstrap:
+    initdb:
+      database: identity_db
+      owner: identity_user
+      secret:
+        name: identity-db-credentials
+  storage:
+    storageClass: local-path
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

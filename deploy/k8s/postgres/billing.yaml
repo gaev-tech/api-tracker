@@ -1,0 +1,22 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-billing
+spec:
+  instances: 1
+  bootstrap:
+    initdb:
+      database: billing_db
+      owner: billing_user
+      secret:
+        name: billing-db-credentials
+  storage:
+    storageClass: local-path
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

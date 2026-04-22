@@ -1,0 +1,22 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-files
+spec:
+  instances: 1
+  bootstrap:
+    initdb:
+      database: files_db
+      owner: files_user
+      secret:
+        name: files-db-credentials
+  storage:
+    storageClass: local-path
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
