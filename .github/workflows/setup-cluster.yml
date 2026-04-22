@@ -53,4 +53,24 @@ jobs:
         run: kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
 
       - name: Apply ClusterIssuers
-        run: kubectl apply -f deploy/k8s/
+        run: kubectl apply -f deploy/k8s/ --recursive=false
+
+      - name: Install Strimzi Operator
+        run: |
+          helm repo add strimzi https://strimzi.io/charts/
+          helm repo update
+          helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
+            --namespace kafka \
+            --create-namespace \
+            --version 0.43.0 \
+            --set watchNamespaces="{kafka}" \
+            --wait \
+            --timeout 5m
+
+      - name: Deploy Kafka cluster and topics
+        run: |
+          kubectl apply -f deploy/k8s/kafka/kafka-cluster.yaml
+          kubectl wait kafka/kafka -n kafka \
+            --for=condition=Ready \
+            --timeout=5m
+          kubectl apply -f deploy/k8s/kafka/kafka-topics.yaml
