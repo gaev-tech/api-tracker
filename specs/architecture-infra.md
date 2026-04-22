@@ -43,6 +43,8 @@ annotations:
 
 **Установка:** ingress-nginx и cert-manager устанавливаются через Helm в GitHub Actions (job `setup-cluster` в `cd-helm.yml`), который запускается перед деплоем сервисов. Использует `helm upgrade --install` — идемпотентно, безопасно запускать при каждом деплое.
 
+**Режим работы ingress-nginx на K3s bare-metal:** `controller.kind=DaemonSet`, `controller.hostNetwork=true`, `controller.service.type=ClusterIP`. Это позволяет контроллеру слушать порты 80/443 напрямую на хосте, минуя LoadBalancer (который не работает без облачного провайдера). `LoadBalancer` и `NodePort` на порты <30000 не применимы на bare-metal K3s.
+
 **Домен:** `apitracker.ru`. API доступен на `api.apitracker.ru`. Let's Encrypt email: `gaev93@ya.ru`.
 
 **ClusterIssuer-манифесты** хранятся в `deploy/k8s/` и применяются через `kubectl apply` в том же job `setup-cluster` после установки cert-manager.
