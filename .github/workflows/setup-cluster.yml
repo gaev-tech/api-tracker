@@ -59,6 +59,12 @@ jobs:
         run: |
           helm repo add strimzi https://strimzi.io/charts/
           helm repo update
+          # Remove orphaned RoleBindings that block Helm install on re-runs
+          kubectl delete rolebinding \
+            strimzi-cluster-operator \
+            strimzi-cluster-operator-entity-operator-delegation \
+            strimzi-cluster-operator-watched \
+            -n kafka --ignore-not-found=true
           helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
             --namespace kafka \
             --create-namespace \
