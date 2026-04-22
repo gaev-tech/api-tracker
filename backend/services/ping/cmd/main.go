@@ -8,10 +8,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	kafkapkg "github.com/gaev-tech/api-tracker/backend/pkg/kafka"
 	"github.com/gaev-tech/api-tracker/backend/pkg/logging"
+	"github.com/gaev-tech/api-tracker/backend/pkg/outbox"
 	"github.com/gaev-tech/api-tracker/backend/pkg/sentry"
 	pinginternal "github.com/gaev-tech/api-tracker/backend/services/ping/internal"
 	_ "github.com/lib/pq"
@@ -21,6 +24,7 @@ import (
 func main() {
 	port := envOr("PORT", "8080")
 	databaseURL := mustEnv("DATABASE_URL")
+	kafkaBrokers := mustEnv("KAFKA_BROKERS")
 	sentryDSN := envOr("SENTRY_DSN", "")
 
 	logger := logging.New("ping")
@@ -40,6 +44,16 @@ func main() {
 		logger.Error("migrations failed", "error", err)
 		os.Exit(1)
 	}
+
+	brokers := strings.Split(kafkaBrokers, ",")
+	writer := kafkapkg.NewMultiWriter(brokers)
+	defer writer.Close() //nolint:errcheck
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	relay := outbox.New(db, writer, "ping_outbox", logger)
+	go relay.Start(ctx)
 
 	router := pinginternal.NewRouter(logger, db)
 
@@ -61,10 +75,12 @@ func main() {
 	<-quit
 
 	logger.Info("shutting down")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	shutCtx, shutCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutCancel()
+
+	if err := srv.Shutdown(shutCtx); err != nil {
 		logger.Error("shutdown error", "error", err)
 	}
 	logger.Info("stopped")

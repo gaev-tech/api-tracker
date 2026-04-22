@@ -332,11 +332,14 @@ services:
     environment:
       PORT: "8080"
       DATABASE_URL: postgres://ping_user:ping_pass@postgres-ping:5432/ping_db?sslmode=disable
+      KAFKA_BROKERS: kafka:9092
       SENTRY_DSN: ""
     networks:
       - backend
     depends_on:
       postgres-ping:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   # ── Nginx API Gateway ────────────────────────────────────────────────────
