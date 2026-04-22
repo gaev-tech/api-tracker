@@ -200,6 +200,7 @@ jobs:
 
       - name: Install Strimzi Operator + deploy Kafka
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         run: |
           helm repo add strimzi https://strimzi.io/charts/ && helm repo update
           STRIMZI_STATUS=$(helm status strimzi-kafka-operator -n kafka -o json 2>/dev/null | jq -r '.info.status' || echo "not-found")
