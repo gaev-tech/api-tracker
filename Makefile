@@ -1,24 +1,22 @@
-.PHONY: build test lint help
+.PHONY: build up down test lint help
 
-SERVICES := identity-service workspace-service automations-service events-service billing-service files-service
+COMPOSE := docker compose -f deploy/docker-compose.yml
+GO_RUN  := docker run --rm -v $(shell pwd)/backend:/app -w /app golang:1.23-alpine
 
-build: ## Build all backend services
-	@for svc in $(SERVICES); do \
-		echo "==> build $$svc"; \
-		cd backend/services/$$svc && go build ./... && cd ../../..; \
-	done
+build: ## Build all Docker images
+	$(COMPOSE) build
 
-test: ## Run tests for all backend services
-	@for svc in $(SERVICES); do \
-		echo "==> test $$svc"; \
-		cd backend/services/$$svc && go test ./... && cd ../../..; \
-	done
+up: ## Start all services
+	$(COMPOSE) up -d
 
-lint: ## Run go vet for all backend services
-	@for svc in $(SERVICES); do \
-		echo "==> vet $$svc"; \
-		cd backend/services/$$svc && go vet ./... && cd ../../..; \
-	done
+down: ## Stop all services
+	$(COMPOSE) down
+
+test: ## Run tests for all services inside Docker
+	$(GO_RUN) go test ./...
+
+lint: ## Run go vet for all services inside Docker
+	$(GO_RUN) go vet ./...
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
