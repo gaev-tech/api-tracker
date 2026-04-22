@@ -24,7 +24,6 @@ jobs:
   build:
     name: build / images
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         include:
@@ -94,15 +93,14 @@ jobs:
       - name: Deploy services to staging
         id: deploy_staging
         run: |
-          IMAGE_TAG="${{ github.event_name == 'workflow_dispatch' && github.sha || 'latest' }}"
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
-            echo "Deploying $service to staging (image tag: $IMAGE_TAG)..."
+            echo "Deploying $service to staging (image tag: ${{ github.sha }})..."
             helm upgrade --install "$service" "$chart" \
               --namespace staging \
               --create-namespace \
-              --set image.tag="$IMAGE_TAG" \
+              --set image.tag=${{ github.sha }} \
               --wait \
               --timeout 5m
           done
@@ -141,15 +139,14 @@ jobs:
 
       - name: Deploy services to production
         run: |
-          IMAGE_TAG="${{ github.event_name == 'workflow_dispatch' && github.sha || 'latest' }}"
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
-            echo "Deploying $service to production (image tag: $IMAGE_TAG)..."
+            echo "Deploying $service to production (image tag: ${{ github.sha }})..."
             helm upgrade --install "$service" "$chart" \
               --namespace production \
               --create-namespace \
-              --set image.tag="$IMAGE_TAG" \
+              --set image.tag=${{ github.sha }} \
               --wait \
               --timeout 5m
           done
