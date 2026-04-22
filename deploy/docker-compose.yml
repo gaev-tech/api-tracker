@@ -18,7 +18,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # TODO: I-6 — backup policy настраивается при переходе на K8s/managed PostgreSQL
 
   # ── PostgreSQL: billing-service ───────────────────────────────────────────
   postgres-billing:
@@ -38,7 +37,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # TODO: I-6 — backup policy настраивается при переходе на K8s/managed PostgreSQL
 
   # ── PostgreSQL: files-service ─────────────────────────────────────────────
   postgres-files:
@@ -58,7 +56,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # TODO: I-6 — backup policy настраивается при переходе на K8s/managed PostgreSQL
 
   # ── PostgreSQL: ping service (reference) ─────────────────────────────────
   postgres-ping:
@@ -79,6 +76,269 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Citus: workspace-service ──────────────────────────────────────────────
+  citus-workspace:
+    image: citusdata/citus:12.1
+    environment:
+      POSTGRES_DB: workspace_db
+      POSTGRES_USER: workspace_user
+      POSTGRES_PASSWORD: workspace_pass
+    ports:
+      - "5436:5432"
+    volumes:
+      - citus-workspace-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workspace_user -d workspace_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Citus: events-service ─────────────────────────────────────────────────
+  citus-events:
+    image: citusdata/citus:12.1
+    environment:
+      POSTGRES_DB: events_db
+      POSTGRES_USER: events_user
+      POSTGRES_PASSWORD: events_pass
+    ports:
+      - "5437:5432"
+    volumes:
+      - citus-events-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U events_user -d events_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Citus: automations-service ───────────────────────────────────────────
+  citus-automations:
+    image: citusdata/citus:12.1
+    environment:
+      POSTGRES_DB: automations_db
+      POSTGRES_USER: automations_user
+      POSTGRES_PASSWORD: automations_pass
+    ports:
+      - "5438:5432"
+    volumes:
+      - citus-automations-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U automations_user -d automations_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Kafka (KRaft, single broker for dev) ──────────────────────────────────
+  kafka:
+    image: apache/kafka:3.9.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      CLUSTER_ID: dev-cluster-id-0000001
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO ─────────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio-data:/data
+    networks:
+      - backend
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ── identity-service ──────────────────────────────────────────────────────
+  identity-service:
+    build:
+      context: ../backend/services/identity-service
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://identity_user:identity_pass@postgres-identity:5432/identity_db?sslmode=disable
+      KAFKA_BROKERS: kafka:9092
+      SENTRY_DSN: ""
+    networks:
+      - backend
+    depends_on:
+      postgres-identity:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ── workspace-service ─────────────────────────────────────────────────────
+  workspace-service:
+    build:
+      context: ../backend/services/workspace-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://workspace_user:workspace_pass@citus-workspace:5432/workspace_db?sslmode=disable
+      KAFKA_BROKERS: kafka:9092
+      SENTRY_DSN: ""
+    networks:
+      - backend
+    depends_on:
+      citus-workspace:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ── automations-service ───────────────────────────────────────────────────
+  automations-service:
+    build:
+      context: ../backend/services/automations-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://automations_user:automations_pass@citus-automations:5432/automations_db?sslmode=disable
+      KAFKA_BROKERS: kafka:9092
+      SENTRY_DSN: ""
+    networks:
+      - backend
+    depends_on:
+      citus-automations:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ── events-service ────────────────────────────────────────────────────────
+  events-service:
+    build:
+      context: ../backend/services/events-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://events_user:events_pass@citus-events:5432/events_db?sslmode=disable
+      KAFKA_BROKERS: kafka:9092
+      SENTRY_DSN: ""
+    networks:
+      - backend
+    depends_on:
+      citus-events:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ── billing-service ───────────────────────────────────────────────────────
+  billing-service:
+    build:
+      context: ../backend/services/billing-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://billing_user:billing_pass@postgres-billing:5432/billing_db?sslmode=disable
+      KAFKA_BROKERS: kafka:9092
+      SENTRY_DSN: ""
+    networks:
+      - backend
+    depends_on:
+      postgres-billing:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ── files-service ─────────────────────────────────────────────────────────
+  files-service:
+    build:
+      context: ../backend/services/files-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://files_user:files_pass@postgres-files:5432/files_db?sslmode=disable
+      KAFKA_BROKERS: kafka:9092
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: files-dev
+      SENTRY_DSN: ""
+    networks:
+      - backend
+    depends_on:
+      postgres-files:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  # ── ping (reference service) ──────────────────────────────────────────────
+  ping:
+    build:
+      context: ../backend/services/ping
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://ping_user:ping_pass@postgres-ping:5432/ping_db?sslmode=disable
+      SENTRY_DSN: ""
+    networks:
+      - backend
+    depends_on:
+      postgres-ping:
+        condition: service_healthy
+
   # ── Nginx API Gateway ────────────────────────────────────────────────────
   nginx-gateway:
     build:
@@ -89,14 +349,24 @@ services:
     networks:
       - backend
     depends_on:
-      postgres-identity:
-        condition: service_healthy
-      postgres-billing:
-        condition: service_healthy
-      postgres-files:
-        condition: service_healthy
-    # Upstream services (identity-service, workspace-service, etc.) return 502
-    # until implemented. Added in subsequent tasks.
+      - identity-service
+      - workspace-service
+      - billing-service
+      - files-service
+      - events-service
+
+  # ── Frontend (Angular, hot-reload) ────────────────────────────────────────
+  # TODO: I-20 — раскомментировать после инициализации Angular workspace в frontend/
+  # frontend:
+  #   image: node:20-alpine
+  #   working_dir: /app
+  #   volumes:
+  #     - ../frontend:/app
+  #   command: sh -c "npm install --registry https://registry.npmjs.org/ && npm run start -- --host 0.0.0.0 --poll 500"
+  #   ports:
+  #     - "4200:4200"
+  #   networks:
+  #     - backend
 
   # ── Prometheus ────────────────────────────────────────────────────────────
   prometheus:
@@ -205,14 +475,17 @@ services:
     depends_on:
       - loki
 
-  # TODO: I-20 — добавить: Citus (workspace/events/automations), Redis, Kafka, MinIO,
-  #              все backend-сервисы, frontend
-
 volumes:
   postgres-identity-data:
   postgres-billing-data:
   postgres-files-data:
   postgres-ping-data:
+  citus-workspace-data:
+  citus-events-data:
+  citus-automations-data:
+  kafka-data:
+  redis-data:
+  minio-data:
   prometheus-data:
   grafana-data:
   loki-data:

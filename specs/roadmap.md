@@ -517,7 +517,7 @@ graph TD
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** установить Strimzi Operator, развернуть Kafka-кластер (3 брокера, KRaft-режим без Zookeeper), создать базовые топики: `user-events`, `task-events`, `project-events`, `team-events`, `automation-events`, `file-events`, `tariff-events`, `blocking-events`.
+- **Описание:** установить Strimzi Operator (v0.43) в namespace `kafka`, развернуть Kafka-кластер (3 брокера, KRaft-режим без Zookeeper, RF=1 для single-node K3s), создать базовые топики: `user-events`, `task-events`, `project-events`, `team-events`, `automation-events`, `file-events`, `tariff-events`, `blocking-events` (3 партиции, RF=1). Манифесты в `deploy/k8s/kafka/`, установка Strimzi в `setup-cluster.yml`.
 - **Критерии готовности:** (1) Kafka-кластер зелёный в Strimzi. (2) Все топики созданы с корректными настройками (партиции, replication factor). (3) Тестовое сообщение публикуется и читается.
 
 ### I-11. Redis для PAT-кеша
