@@ -8,10 +8,6 @@ on:
       - 'contracts/proto/**'
       - 'deploy/helm/**'
   pull_request:
-    paths:
-      - 'backend/**'
-      - 'contracts/proto/**'
-      - 'deploy/helm/**'
 
 jobs:
   lint:
