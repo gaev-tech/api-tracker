@@ -48,8 +48,8 @@ jobs:
             docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest"
           done
 
-  deploy-production:
-    name: deploy / production
+  deploy:
+    name: deploy
     runs-on: ubuntu-latest
     needs: [build]
     if: |
