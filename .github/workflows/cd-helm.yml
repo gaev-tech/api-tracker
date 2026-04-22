@@ -85,22 +85,13 @@ jobs:
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-              echo "Dry-run $service..."
-              helm upgrade --install "$service" "$chart" \
-                --namespace staging \
-                --create-namespace \
-                --set image.tag=${{ github.sha }} \
-                --dry-run
-            else
-              echo "Deploying $service to staging..."
-              helm upgrade --install "$service" "$chart" \
-                --namespace staging \
-                --create-namespace \
-                --set image.tag=${{ github.sha }} \
-                --wait \
-                --timeout 5m
-            fi
+            echo "Deploying $service to staging..."
+            helm upgrade --install "$service" "$chart" \
+              --namespace staging \
+              --create-namespace \
+              --set image.tag=${{ github.sha }} \
+              --wait \
+              --timeout 5m
           done
 
   deploy-production:
