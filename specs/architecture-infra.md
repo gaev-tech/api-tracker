@@ -163,16 +163,15 @@ Monorepo разделён на верхнем уровне по экосисте
 │   │   ├── billing/
 │   │   └── files/
 │   ├── api-gateway/                # Nginx-конфиг + auth-sidecar для PAT-валидации
-│   ├── pkg/                        # shared Go-модули
-│   │   ├── service-template/       # базовый шаблон сервиса
-│   │   ├── outbox/                 # transactional outbox relay
+│   ├── pkg/                        # shared Go-модули (единый go.mod: backend/pkg/go.mod)
+│   │   ├── logging/                # структурированное логирование (slog)
+│   │   ├── metrics/                # Prometheus-middleware для Gin
+│   │   ├── sentry/                 # Sentry-интеграция (стаб до I-15)
 │   │   ├── grpc/                   # клиент/сервер обёртки
-│   │   ├── kafka/                  # producer/consumer обёртки
-│   │   ├── logging/                # структурированное логирование
-│   │   ├── metrics/                # Prometheus-middleware
-│   │   ├── sentry/                 # Sentry-интеграция
-│   │   └── rsql/                   # парсер RSQL для backend
-│   └── go.work                     # Go workspace для всех модулей
+│   │   ├── kafka/                  # producer/consumer обёртки (segmentio/kafka-go)
+│   │   ├── outbox/                 # transactional outbox relay
+│   │   └── rsql/                   # парсер RSQL → SQL
+│   └── go.work                     # Go workspace: включает backend/pkg + каждый сервис
 │
 ├── frontend/                       # Angular Workspace целиком
 │   ├── angular.json
