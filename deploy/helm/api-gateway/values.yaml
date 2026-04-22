@@ -1,8 +1,8 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/gaev-tech/api-tracker/api-gateway
-  tag: latest
+  repository: nginx
+  tag: stable
   pullPolicy: IfNotPresent
 
 service:
