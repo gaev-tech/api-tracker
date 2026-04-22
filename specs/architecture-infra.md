@@ -22,6 +22,27 @@ Kubernetes, observability, CI/CD, масштабирование. Изменяе
 - **Sentry:** self-hosted через Helm либо облачный Sentry.
 - **MinIO** (если не managed S3): через MinIO Operator.
 
+### 1.1.1. Nginx Ingress Controller + cert-manager
+
+**Nginx Ingress Controller** устанавливается через официальный Helm chart (`ingress-nginx`). Слушает порты 80 и 443 снаружи кластера.
+
+**cert-manager** устанавливается через Helm chart (`jetstack/cert-manager`). Управляет TLS-сертификатами через Let's Encrypt.
+
+**Challenge type:** HTTP-01 (для отдельных доменов без wildcard). Для HTTP-01 не нужен доступ к DNS API — cert-manager отвечает на challenge через Ingress.
+
+**ClusterIssuer** создаётся в namespace `cert-manager`:
+- `letsencrypt-staging` — для тестирования (использует staging ACME сервер Let's Encrypt, не выдаёт доверенный сертификат, но нет rate limit'ов).
+- `letsencrypt-prod` — для production (выдаёт доверенный сертификат, rate limit: 5 сертификатов на домен в неделю).
+
+**Аннотации Ingress:**
+```yaml
+annotations:
+  cert-manager.io/cluster-issuer: letsencrypt-prod
+  nginx.ingress.kubernetes.io/ssl-redirect: "true"
+```
+
+**Домены:** настраиваются через `ingress.host` в Helm values каждого сервиса. Публичный Ingress создаётся только для api-gateway.
+
 ### 1.2. Топология окружений
 
 Один кластер Kubernetes, два namespace-а:
