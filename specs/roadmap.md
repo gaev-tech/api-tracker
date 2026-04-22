@@ -460,15 +460,15 @@ graph TD
 
 - **Тип:** инфраструктура.
 - **Блокеры:** —
-- **Описание:** развернуть Kubernetes-кластер на bare-metal сервере (K3s, одна нода). Namespaces `staging` и `production` создаются автоматически CD-пайплайном (`helm upgrade --install --create-namespace`). CI деплоит через `KUBECONFIG_B64` (base64-encoded kubeconfig в GitHub Actions Secret).
-- **Критерии готовности:** (1) `kubectl get nodes` возвращает ноду в статусе Ready. (2) Namespaces `staging` и `production` создаются при деплое. (3) CI успешно деплоит через `KUBECONFIG_B64`.
-- **Статус:** выполнено. K3s развёрнут на bare-metal, ingress-nginx + cert-manager установлены (I-3), api-gateway деплоится в staging (I-19).
+- **Описание:** развернуть Kubernetes-кластер на bare-metal сервере (K3s, одна нода). Namespace `production` создаётся автоматически CD-пайплайном (`helm upgrade --install --create-namespace`). CI деплоит через `KUBECONFIG_B64` (base64-encoded kubeconfig в GitHub Actions Secret).
+- **Критерии готовности:** (1) `kubectl get nodes` возвращает ноду в статусе Ready. (2) Namespace `production` создаётся при деплое. (3) CI успешно деплоит через `KUBECONFIG_B64`.
+- **Статус:** выполнено. K3s развёрнут на bare-metal, ingress-nginx + cert-manager установлены (I-3), api-gateway деплоится в production (I-19).
 
 ### I-3. Nginx Ingress + cert-manager + TLS
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** установить Nginx Ingress Controller, cert-manager, создать ClusterIssuer для Let's Encrypt. Настроить wildcard-сертификат для `*.staging.example.com` и `*.example.com`.
+- **Описание:** установить Nginx Ingress Controller, cert-manager, создать ClusterIssuer для Let's Encrypt. Настроить сертификат для `apitracker.ru` и `api.apitracker.ru`.
 - **Критерии готовности:** (1) Ingress-деплоймент доступен извне. (2) Тестовый сервис с Ingress-ресурсом получает валидный TLS-сертификат автоматически.
 
 ### I-4. GitHub Container Registry (ghcr.io) + шаблоны CI для Docker-сборок
@@ -483,7 +483,7 @@ graph TD
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2, I-3, I-4.
 - **Описание:** реализовать общий Helm-чарт для сервиса (Deployment, Service, HPA, ServiceMonitor, ConfigMap, Secret). Параметризация через values.yaml. CI-job для `helm upgrade --install`.
-- **Критерии готовности:** (1) Чарт проходит `helm lint`. (2) Deploy `helloworld`-сервиса на staging успешен, сервис доступен через Ingress. (3) HPA и ServiceMonitor созданы в K8s.
+- **Критерии готовности:** (1) Чарт проходит `helm lint`. (2) Deploy `helloworld`-сервиса на production успешен, сервис доступен через Ingress. (3) HPA и ServiceMonitor созданы в K8s.
 
 ### I-6. PostgreSQL-инстансы (identity, billing, files)
 
@@ -524,14 +524,14 @@ graph TD
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** установить Redis (через оператор или managed), доступ из api-gateway и identity-service. Настроить persistence.
-- **Критерии готовности:** (1) Redis отвечает на PING. (2) Подключение из pod'а работает.
+- **Описание:** развернуть Redis через plain K8s manifests (Deployment + Service + PVC) в namespace `production`. Persistence через PersistentVolumeClaim. Auth: пароль из K8s Secret `redis-credentials`, создаётся в setup-cluster.yml из GitHub Actions secret `REDIS_PASSWORD`. В docker-compose Redis уже присутствует (без auth, dev-окружение). Сервисы api-gateway и identity-service подключаются через `REDIS_URL=redis://:password@redis:6379/0`.
+- **Критерии готовности:** (1) Redis отвечает на PING в namespace production. (2) Подключение из pod'а работает.
 
 ### I-12. S3-совместимое хранилище
 
 - **Тип:** инфраструктура.
 - **Блокеры:** I-2.
-- **Описание:** подключить облачное S3 или развернуть MinIO через оператор. Создать bucket'ы: `files-prod` и `files-staging`. Настроить IAM-доступ, lifecycle-политики (удаление soft-deleted файлов через 30 дней).
+- **Описание:** подключить облачное S3 или развернуть MinIO через оператор. Создать bucket `files-prod`. Настроить IAM-доступ, lifecycle-политики (удаление soft-deleted файлов через 30 дней).
 - **Критерии готовности:** (1) Доступ по S3-API из кластера работает. (2) Bucket-политики настроены. (3) Lifecycle-правила активны.
 
 ### I-13. Prometheus + Grafana

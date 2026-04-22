@@ -74,3 +74,15 @@ jobs:
             --for=condition=Ready \
             --timeout=5m
           kubectl apply -f deploy/k8s/kafka/kafka-topics.yaml
+
+      - name: Create Redis credentials secret in production
+        run: |
+          kubectl create secret generic redis-credentials \
+            --from-literal=password=${{ secrets.REDIS_PASSWORD }} \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Redis to production
+        run: |
+          kubectl apply -f deploy/k8s/redis/redis.yaml -n production
+          kubectl rollout status deployment/redis -n production --timeout=2m
