@@ -326,15 +326,19 @@ jobs:
       - uses: bufbuild/buf-action@v1
         with:
           version: '1.68.3'
-          lint: true
+          lint: false
+          format: false
           breaking: false
           push: false
+          pr_comment: false
+      - name: buf lint
+        run: buf lint
       - name: Install Go codegen plugins
         run: |
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - name: Run buf generate
-        working-directory: contracts/proto
-        run: buf generate
+        run: buf generate --template contracts/proto/buf.gen.yaml contracts/proto
       - name: Check generated files are up to date
         run: git diff --exit-code contracts/proto

@@ -1,5 +1,5 @@
 syntax = "proto3";
-
+// Reference service proto for testing CI pipeline.
 package ping.v1;
 
 option go_package = "github.com/gaev-tech/api-tracker/contracts/proto/ping/gen;pingv1";
