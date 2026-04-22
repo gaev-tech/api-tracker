@@ -18,11 +18,11 @@ Kubernetes, observability, CI/CD, масштабирование. Изменяе
 - **Ingress:** Nginx Ingress Controller (DaemonSet + hostNetwork на K3s bare-metal). TLS-сертификаты — через cert-manager и Let's Encrypt.
 - **Service Mesh:** на старте не используется; при необходимости добавляется Linkerd (лёгкий аналог Istio).
 - **Kafka:** через Strimzi Operator (v0.43) — декларативное управление кластером Kafka в K8s. 3 брокера, KRaft-режим (без Zookeeper), replication factor 1 (single-node K3s — репликация между подами на одном хосте не даёт fault tolerance). В dev-окружении — `apache/kafka:3.9` в docker-compose, 1 брокер, KRaft.
-- **PostgreSQL и Citus:** версия **16**. В dev-окружении — `postgres:16-alpine` в docker-compose. В production — через оператор (Zalando Postgres Operator / CloudNativePG). Citus — через Citus Community Operator.
-- **Redis:** plain K8s manifests (Deployment + Service + PVC) в namespace `production`. Auth через K8s Secret `redis-credentials`.
+- **PostgreSQL и Citus:** версия **16**. В dev-окружении — `postgres:16-alpine` / `citusdata/citus:12.1` в docker-compose. В production — PostgreSQL через CloudNativePG (CNPG) оператор. Citus-кластеры (workspace, events, automations) — через CloudNativePG с расширением Citus: 1 coordinator + 3 workers на кластер. Регистрация workers — Job с `citus_add_node()`.
+- **Redis:** через OT-Container-Kit Redis Operator (`ot-helm/redis-operator`). Standalone-режим, 1 pod. Auth через Secret `redis-credentials`.
 - **Prometheus + Grafana + Loki:** через `kube-prometheus-stack` и Loki Helm chart.
 - **Sentry:** self-hosted через Helm либо облачный Sentry.
-- **MinIO** (если не managed S3): через MinIO Operator.
+- **MinIO:** через официальный MinIO Operator. Tenant с 1 сервером, 1 volume. Bucket `files-prod` создаётся через Job с `mc`.
 
 ### 1.1.1. Nginx Ingress Controller + cert-manager
 
