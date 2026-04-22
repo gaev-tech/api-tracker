@@ -75,6 +75,60 @@ jobs:
             --timeout=5m
           kubectl apply -f deploy/k8s/kafka/kafka-topics.yaml
 
+      - name: Install CloudNativePG (CNPG) Operator
+        run: |
+          helm repo add cnpg https://cloudnative-pg.github.io/charts
+          helm repo update
+          helm upgrade --install cnpg cnpg/cloudnative-pg \
+            --namespace cnpg-system \
+            --create-namespace \
+            --version 0.23.0 \
+            --wait \
+            --timeout 5m
+
+      - name: Create Citus DB credentials secrets in production
+        run: |
+          kubectl create secret generic workspace-db-credentials \
+            --from-literal=username=workspace_user \
+            --from-literal=password=${{ secrets.CITUS_WORKSPACE_PASSWORD }} \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic events-db-credentials \
+            --from-literal=username=events_user \
+            --from-literal=password=${{ secrets.CITUS_EVENTS_PASSWORD }} \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic automations-db-credentials \
+            --from-literal=username=automations_user \
+            --from-literal=password=${{ secrets.CITUS_AUTOMATIONS_PASSWORD }} \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Citus clusters
+        run: |
+          kubectl apply -f deploy/k8s/citus/workspace.yaml -n production
+          kubectl apply -f deploy/k8s/citus/events.yaml -n production
+          kubectl apply -f deploy/k8s/citus/automations.yaml -n production
+          kubectl wait cluster/citus-workspace-coordinator -n production \
+            --for=condition=Ready --timeout=5m
+          kubectl wait cluster/citus-events-coordinator -n production \
+            --for=condition=Ready --timeout=5m
+          kubectl wait cluster/citus-automations-coordinator -n production \
+            --for=condition=Ready --timeout=5m
+
+      - name: Install OT-Container-Kit Redis Operator
+        run: |
+          helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/
+          helm repo update
+          helm upgrade --install redis-operator ot-helm/redis-operator \
+            --namespace ot-operators \
+            --create-namespace \
+            --version 0.15.1 \
+            --wait \
+            --timeout 5m
+
       - name: Create Redis credentials secret in production
         run: |
           kubectl create secret generic redis-credentials \
@@ -85,4 +139,30 @@ jobs:
       - name: Deploy Redis to production
         run: |
           kubectl apply -f deploy/k8s/redis/redis.yaml -n production
-          kubectl rollout status deployment/redis -n production --timeout=2m
+          kubectl rollout status statefulset/redis-standalone -n production --timeout=2m
+
+      - name: Install MinIO Operator
+        run: |
+          helm repo add minio-operator https://operator.min.io
+          helm repo update
+          helm upgrade --install minio-operator minio-operator/operator \
+            --namespace minio-operator \
+            --create-namespace \
+            --version 6.0.4 \
+            --wait \
+            --timeout 5m
+
+      - name: Create MinIO credentials secret
+        run: |
+          CONFIG_ENV="export MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }}\nexport MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}"
+          kubectl create namespace minio --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic minio-credentials \
+            --from-literal=config.env="$(printf "$CONFIG_ENV")" \
+            --namespace minio \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy MinIO Tenant
+        run: |
+          kubectl apply -f deploy/k8s/minio/tenant.yaml
+          kubectl wait tenant/minio -n minio \
+            --for=condition=Initialized --timeout=5m
