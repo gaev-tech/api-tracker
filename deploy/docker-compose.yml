@@ -206,7 +206,8 @@ services:
     environment:
       PORT: "8080"
       DATABASE_URL: postgres://identity_user:identity_pass@postgres-identity:5432/identity_db?sslmode=disable
-      KAFKA_BROKERS: kafka:9092
+      JWT_PRIVATE_KEY: "${JWT_PRIVATE_KEY}"
+      JWT_ISSUER: "api-tracker"
       SENTRY_DSN: ""
     networks:
       - backend
