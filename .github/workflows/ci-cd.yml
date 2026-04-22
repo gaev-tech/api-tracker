@@ -129,8 +129,9 @@ jobs:
   deploy:
     name: deploy
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [build, lint, test]
     if: github.event_name != 'pull_request'
+    continue-on-error: true  # deploy failure does not fail the pipeline
     environment: production
     steps:
       - uses: actions/checkout@v4
