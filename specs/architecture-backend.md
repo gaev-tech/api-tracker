@@ -346,3 +346,5 @@ Endpoints:
 4. Запускает миграции (`goose up` против `DATABASE_URL`).
 5. Стартует HTTP-сервер.
 6. Graceful shutdown по `SIGTERM`/`SIGINT` с таймаутом 30s.
+
+Для локальной разработки — собственный PostgreSQL-контейнер `postgres-ping` в docker-compose (порт `:5435`, DB `ping_db`, user `ping_user`). Naming conventions из architecture-infra.md section 1.4.
