@@ -19,7 +19,7 @@ Kubernetes, observability, CI/CD, масштабирование. Изменяе
 - **Service Mesh:** на старте не используется; при необходимости добавляется Linkerd (лёгкий аналог Istio).
 - **Kafka:** через Strimzi Operator (v0.43) — декларативное управление кластером Kafka в K8s. 3 брокера, KRaft-режим (без Zookeeper), replication factor 1 (single-node K3s — репликация между подами на одном хосте не даёт fault tolerance). В dev-окружении — `apache/kafka:3.9` в docker-compose, 1 брокер, KRaft.
 - **PostgreSQL и Citus:** версия **16**. В dev-окружении — `postgres:16-alpine` в docker-compose. В production — через оператор (Zalando Postgres Operator / CloudNativePG). Citus — через Citus Community Operator.
-- **Redis:** через оператор (Redis Operator).
+- **Redis:** plain K8s manifests (Deployment + Service + PVC) в namespace `production`. Auth через K8s Secret `redis-credentials`.
 - **Prometheus + Grafana + Loki:** через `kube-prometheus-stack` и Loki Helm chart.
 - **Sentry:** self-hosted через Helm либо облачный Sentry.
 - **MinIO** (если не managed S3): через MinIO Operator.
@@ -55,11 +55,10 @@ annotations:
 
 ### 1.2. Топология окружений
 
-Один K3s-кластер (bare-metal), два namespace-а:
-- **`staging`** — для интеграционного тестирования. Деплой происходит автоматически при каждом PR и после merge в main (по тегу `v*`).
-- **`production`** — основная среда. Деплой требует ручного подтверждения (`environment: production` с required reviewers в GitHub Actions). Запускается только по тегу `v*`.
+Один K3s-кластер (bare-metal), один namespace:
+- **`production`** — единственная среда. Деплой происходит автоматически при push тега `v*` или через `workflow_dispatch`. Требует подтверждения (`environment: production` с required reviewers в GitHub Actions).
 
-Оба namespace создаются автоматически через `helm upgrade --install --create-namespace` в CD-пайплайне.
+Namespace создаётся автоматически через `helm upgrade --install --create-namespace` в CD-пайплайне.
 
 **CI-доступ к кластеру:** kubeconfig хранится в GitHub Actions Secret `KUBECONFIG_B64` (base64-encoded), декодируется во временный файл на каждом deploy-job.
 
@@ -277,7 +276,7 @@ Monorepo разделён на верхнем уровне по экосисте
 ├── .github/
 │   └── workflows/
 │       ├── ci-backend.yml          # lint, test, build, push images
-│       └── cd-helm.yml             # helm deploy на staging (авто) и production (ручное)
+│       └── cd-helm.yml             # helm deploy на production (авто по тегу / ручной dispatch)
 ├── Makefile
 └── README.md
 ```
@@ -300,8 +299,7 @@ Monorepo разделён на верхнем уровне по экосисте
 4. **Integration-тесты:** поднимаются через docker-compose (Postgres, Kafka).
 5. **Build images:** для изменившихся сервисов. Path-based триггеры (`paths:` в workflow): изменение в `services/workspace/` → собирается только workspace. Image tagging: `ghcr.io/<owner>/<repo>/<service>:<commit-sha>`, плюс `:latest` для главной ветки. Теги branch-name не используются.
 6. **Push в GitHub Container Registry (ghcr.io):** только при мерже в main. В pull request образы собираются (для проверки Dockerfile), но не публикуются. Все Docker-джобы находятся в `.github/workflows/ci-backend.yml` (отдельный файл для Docker не создаётся).
-7. **Deploy на staging** — автоматически после успешного pipeline в main. Реализован в отдельном workflow `.github/workflows/cd-helm.yml`. Kubeconfig кластера хранится в GitHub Actions Secret `KUBECONFIG_B64` (base64-encoded), на каждом deploy-job декодируется во временный файл.
-8. **Deploy на production** — ручное подтверждение (`environment: production` с required reviewers). Тот же `cd-helm.yml`, отдельный job с `environment: production`.
+7. **Deploy на production** — автоматически при push тега `v*` или вручную через `workflow_dispatch`. Реализован в `.github/workflows/cd-helm.yml`. Требует подтверждения (`environment: production`). Kubeconfig кластера хранится в GitHub Actions Secret `KUBECONFIG_B64` (base64-encoded), декодируется во временный файл на каждом deploy-job.
 
 ### 3.3. Деплой в Kubernetes
 
@@ -349,7 +347,7 @@ Helm-чарт каждого сервиса содержит:
 
 #### Проверка шаблона (I-5)
 
-В рамках I-5 создаётся `deploy/helm/helloworld/` — копия шаблона с минимальным `values.yaml`, деплоится на staging как smoke-test. После прохождения — `helloworld`-релиз удаляется.
+В рамках I-5 создаётся `deploy/helm/helloworld/` — копия шаблона с минимальным `values.yaml`, деплоится на production как smoke-test. После прохождения — `helloworld`-релиз удаляется.
 
 ### 3.4. Откат
 
