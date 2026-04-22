@@ -1,0 +1,332 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # ── 1. Build ────────────────────────────────────────────────────────────────
+  # Compiles Go binaries and builds Docker images.
+  # Pushes to ghcr.io only on main branch or tag (not on PRs).
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/*/go.sum
+
+      - name: Go build — all services
+        run: |
+          for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
+            echo "=== $svc ==="
+            (cd backend/services/$svc && go build -o /tmp/ ./...)
+          done
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker build and push — all services
+        run: |
+          # context: build context directory
+          # dockerfile: path to Dockerfile (relative to repo root)
+          # Services that depend on backend/pkg use repo root as context
+          declare -A context=(
+            [identity-service]=.
+            [workspace-service]=backend/services/workspace-service
+            [automations-service]=backend/services/automations-service
+            [events-service]=backend/services/events-service
+            [billing-service]=backend/services/billing-service
+            [files-service]=backend/services/files-service
+            [api-gateway]=backend/api-gateway
+          )
+          declare -A dockerfile=(
+            [identity-service]=backend/services/identity-service/Dockerfile
+            [workspace-service]=backend/services/workspace-service/Dockerfile
+            [automations-service]=backend/services/automations-service/Dockerfile
+            [events-service]=backend/services/events-service/Dockerfile
+            [billing-service]=backend/services/billing-service/Dockerfile
+            [files-service]=backend/services/files-service/Dockerfile
+            [api-gateway]=backend/api-gateway/Dockerfile
+          )
+          PUSH=${{ github.event_name != 'pull_request' }}
+          for service in "${!context[@]}"; do
+            echo "=== $service ==="
+            docker build \
+              -f "${dockerfile[$service]}" \
+              -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}" \
+              -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest" \
+              "${context[$service]}"
+            if [ "$PUSH" = "true" ]; then
+              docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}"
+              docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest"
+            fi
+          done
+
+  # ── 2. Lint (parallel with test) ───────────────────────────────────────────
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/*/go.sum
+
+      - name: Go vet — all services
+        run: |
+          for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
+            echo "=== $svc ==="
+            (cd backend/services/$svc && go vet ./...)
+          done
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: '3.16.0'
+
+      - name: Helm lint
+        run: |
+          for chart in deploy/helm/*/; do
+            echo "=== $(basename $chart) ==="
+            helm lint "$chart"
+            helm template test-release "$chart" > /dev/null
+          done
+
+      - uses: bufbuild/buf-action@v1
+        with:
+          version: '1.68.3'
+          lint: true
+          breaking: false
+          push: false
+          pr_comment: false
+
+  # ── 3. Test (parallel with lint) ───────────────────────────────────────────
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: backend/services/*/go.sum
+
+      - name: Go test — all services
+        run: |
+          for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
+            echo "=== $svc ==="
+            (cd backend/services/$svc && go test ./...)
+          done
+
+  # ── 4. Deploy ───────────────────────────────────────────────────────────────
+  # Runs on main/tag only (not PRs). Runs cluster setup automatically when
+  # deploy/k8s/** changes; on workflow_dispatch setup always runs.
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    needs: [build, lint, test]
+    if: github.event_name != 'pull_request'
+    continue-on-error: true  # deploy failure does not fail the pipeline
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: '3.16.0'
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            infra:
+              - 'deploy/k8s/**'
+
+      # ── Cluster setup steps (conditional) ──────────────────────────────────
+      - name: Install ingress-nginx
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx && helm repo update
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx --create-namespace --version 4.11.3 \
+            --set controller.kind=DaemonSet \
+            --set controller.hostNetwork=true \
+            --set controller.service.type=ClusterIP \
+            --wait --timeout 5m
+
+      - name: Install cert-manager
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          helm repo add jetstack https://charts.jetstack.io && helm repo update
+          helm upgrade --install cert-manager jetstack/cert-manager \
+            --namespace cert-manager --create-namespace --version v1.16.2 \
+            --set installCRDs=true \
+            --wait --timeout 5m
+
+      - name: Remove ingress-nginx admission webhook
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: kubectl delete validatingwebhookconfiguration ingress-nginx-admission --ignore-not-found=true
+
+      - name: Wait for cert-manager webhooks
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
+
+      - name: Apply ClusterIssuers
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: kubectl apply -f deploy/k8s/ --recursive=false
+
+      - name: Install Strimzi Operator + deploy Kafka
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          helm repo add strimzi https://strimzi.io/charts/ && helm repo update
+          kubectl delete rolebinding \
+            strimzi-cluster-operator \
+            strimzi-cluster-operator-entity-operator-delegation \
+            strimzi-cluster-operator-watched \
+            -n kafka --ignore-not-found=true
+          helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
+            --namespace kafka --create-namespace --version 0.43.0 \
+            --set watchNamespaces="{kafka}" \
+            --wait --timeout 5m
+          kubectl apply -f deploy/k8s/kafka/kafka-cluster.yaml
+          kubectl wait kafka/kafka -n kafka --for=condition=Ready --timeout=5m
+          kubectl apply -f deploy/k8s/kafka/kafka-topics.yaml
+
+      - name: Install CNPG Operator + deploy PostgreSQL
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          helm repo add cnpg https://cloudnative-pg.github.io/charts && helm repo update
+          helm upgrade --install cnpg cnpg/cloudnative-pg \
+            --namespace cnpg-system --create-namespace --version 0.23.0 \
+            --wait --timeout 5m
+          kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic identity-db-credentials \
+            --from-literal=username=identity_user \
+            --from-literal=password=${{ secrets.IDENTITY_DB_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic billing-db-credentials \
+            --from-literal=username=billing_user \
+            --from-literal=password=${{ secrets.BILLING_DB_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic files-db-credentials \
+            --from-literal=username=files_user \
+            --from-literal=password=${{ secrets.FILES_DB_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f deploy/k8s/postgres/identity.yaml -n production
+          kubectl apply -f deploy/k8s/postgres/billing.yaml  -n production
+          kubectl apply -f deploy/k8s/postgres/files.yaml    -n production
+          kubectl wait cluster/postgres-identity -n production --for=condition=Ready --timeout=5m
+          kubectl wait cluster/postgres-billing  -n production --for=condition=Ready --timeout=5m
+          kubectl wait cluster/postgres-files    -n production --for=condition=Ready --timeout=5m
+
+      - name: Deploy Citus clusters
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          kubectl create secret generic workspace-db-credentials \
+            --from-literal=username=workspace_user \
+            --from-literal=password=${{ secrets.CITUS_WORKSPACE_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic events-db-credentials \
+            --from-literal=username=events_user \
+            --from-literal=password=${{ secrets.CITUS_EVENTS_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic automations-db-credentials \
+            --from-literal=username=automations_user \
+            --from-literal=password=${{ secrets.CITUS_AUTOMATIONS_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f deploy/k8s/citus/workspace.yaml -n production
+          kubectl apply -f deploy/k8s/citus/events.yaml    -n production
+          kubectl apply -f deploy/k8s/citus/automations.yaml -n production
+          kubectl wait cluster/citus-workspace-coordinator   -n production --for=condition=Ready --timeout=5m
+          kubectl wait cluster/citus-events-coordinator      -n production --for=condition=Ready --timeout=5m
+          kubectl wait cluster/citus-automations-coordinator -n production --for=condition=Ready --timeout=5m
+
+      - name: Install Redis Operator + deploy Redis
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/ && helm repo update
+          helm upgrade --install redis-operator ot-helm/redis-operator \
+            --namespace ot-operators --create-namespace --version 0.15.1 \
+            --wait --timeout 5m
+          kubectl create secret generic redis-credentials \
+            --from-literal=password=${{ secrets.REDIS_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f deploy/k8s/redis/redis.yaml -n production
+          kubectl rollout status statefulset/redis-standalone -n production --timeout=2m
+
+      - name: Install MinIO Operator + deploy Tenant
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          helm repo add minio-operator https://operator.min.io && helm repo update
+          helm upgrade --install minio-operator minio-operator/operator \
+            --namespace minio-operator --create-namespace --version 6.0.4 \
+            --wait --timeout 5m
+          CONFIG_ENV="export MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }}\nexport MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}"
+          kubectl create namespace minio --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic minio-credentials \
+            --from-literal=config.env="$(printf "$CONFIG_ENV")" \
+            --namespace minio --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f deploy/k8s/minio/tenant.yaml
+          kubectl wait tenant/minio -n minio --for=condition=Initialized --timeout=5m
+
+      - name: Deploy Swagger UI
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          kubectl apply -f deploy/k8s/swagger-ui/swagger-ui.yaml -n production
+          kubectl rollout status deployment/swagger-ui -n production --timeout=2m
+
+      # ── Application deploy (always on main/tag) ─────────────────────────────
+      - name: Create identity-service JWT secret
+        env:
+          JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$JWT_PRIVATE_KEY" > /tmp/jwt_key.pem
+          kubectl create secret generic identity-jwt-secret \
+            --from-file=JWT_PRIVATE_KEY=/tmp/jwt_key.pem \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+          rm -f /tmp/jwt_key.pem
+
+      - name: Create ghcr image pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-credentials \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Helm deploy — all services
+        run: |
+          for chart in deploy/helm/*/; do
+            service=$(basename "$chart")
+            [ "$service" = "service-template" ] && continue
+            echo "=== $service ==="
+            helm upgrade --install "$service" "$chart" \
+              --namespace production \
+              --create-namespace \
+              --set image.tag=${{ github.sha }} \
+              --wait \
+              --timeout 5m
+          done
