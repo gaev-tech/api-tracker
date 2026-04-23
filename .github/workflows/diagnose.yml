@@ -73,5 +73,24 @@ jobs:
           kubectl get pods -n ingress-nginx
           kubectl get ingress -n production -o wide
 
+      - name: swagger-ui pod status and logs
+        run: |
+          echo "=== swagger-ui pods ==="
+          kubectl get pods -n production -l app=swagger-ui -o wide
+          SWPOD=$(kubectl get pods -n production -l app=swagger-ui -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -n "$SWPOD" ]; then
+            echo "=== swagger-ui logs ==="
+            kubectl logs -n production $SWPOD --tail=20 2>&1 || true
+            echo "=== swagger-ui nginx.conf ==="
+            kubectl exec -n production $SWPOD -- cat /etc/nginx/nginx.conf 2>/dev/null || \
+              kubectl exec -n production $SWPOD -- cat /etc/nginx/conf.d/default.conf 2>/dev/null || true
+            echo "=== listening ports in swagger-ui ==="
+            kubectl exec -n production $SWPOD -- sh -c 'ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || cat /proc/net/tcp6' 2>/dev/null || true
+            echo "=== curl / from inside swagger-ui (port 8080) ==="
+            kubectl exec -n production $SWPOD -- wget -qO- http://127.0.0.1:8080/ 2>&1 | head -10 || true
+            echo "=== curl / from inside swagger-ui (port 80) ==="
+            kubectl exec -n production $SWPOD -- wget -qO- http://127.0.0.1:80/ 2>&1 | head -10 || true
+          fi
+
       - name: events
         run: kubectl get events -n production --sort-by='.lastTimestamp' | tail -30
