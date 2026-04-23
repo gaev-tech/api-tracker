@@ -366,10 +366,11 @@ spec:
           ports:
             - containerPort: 8080
           env:
-            - name: SWAGGER_JSON
-              value: /openapi/openapi.yaml
-            - name: BASE_PATH
-              value: /swagger
+            # SWAGGER_JSON_URL is a browser-side URL — swagger-ui fetches it via HTTP.
+            # api-gateway proxies /swagger/* → swagger-ui with prefix stripped,
+            # so /swagger/openapi.yaml → /openapi.yaml (served from /openapi/ mount).
+            - name: SWAGGER_JSON_URL
+              value: /swagger/openapi.yaml
           volumeMounts:
             - name: openapi-spec
               mountPath: /openapi
