@@ -1,0 +1,32 @@
+name: Diagnose
+on:
+  workflow_dispatch:
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: api-gateway pods
+        run: kubectl get pods -n production -l app=api-gateway -o wide
+
+      - name: api-gateway logs
+        run: kubectl logs -n production -l app=api-gateway --tail=50 --prefix=true 2>&1 || true
+
+      - name: api-gateway previous logs
+        run: kubectl logs -n production -l app=api-gateway --tail=50 --prefix=true --previous 2>&1 || true
+
+      - name: api-gateway describe
+        run: kubectl describe pods -n production -l app=api-gateway
+
+      - name: api-gateway helm state
+        run: |
+          kubectl get secret -n production -l owner=helm,name=api-gateway --sort-by='.metadata.creationTimestamp' | tail -5
+
+      - name: events
+        run: kubectl get events -n production --sort-by='.lastTimestamp' | tail -30
