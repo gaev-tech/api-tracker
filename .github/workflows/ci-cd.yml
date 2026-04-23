@@ -375,9 +375,11 @@ jobs:
       - name: Remove PostMVP services from cluster
         run: |
           for svc in automations-service files-service; do
-            if helm status "$svc" --namespace production &>/dev/null; then
+            if helm status "$svc" --namespace production >/dev/null 2>&1; then
               echo "Uninstalling $svc"
               helm uninstall "$svc" --namespace production
+            else
+              echo "$svc not installed, skipping"
             fi
           done
 
