@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/auth"
+	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/email"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/middleware"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/store"
 	"github.com/gin-gonic/gin"
@@ -20,14 +21,22 @@ type AuthHandler struct {
 	users         *store.UserStore
 	refreshTokens *store.RefreshTokenStore
 	jwtSvc        *auth.Service
+	emailSender   *email.Sender
+	appBaseURL    string
 }
 
-func NewAuthHandler(users *store.UserStore, refreshTokens *store.RefreshTokenStore, jwtSvc *auth.Service) *AuthHandler {
-	return &AuthHandler{users: users, refreshTokens: refreshTokens, jwtSvc: jwtSvc}
+func NewAuthHandler(users *store.UserStore, refreshTokens *store.RefreshTokenStore, jwtSvc *auth.Service, emailSender *email.Sender, appBaseURL string) *AuthHandler {
+	return &AuthHandler{
+		users:         users,
+		refreshTokens: refreshTokens,
+		jwtSvc:        jwtSvc,
+		emailSender:   emailSender,
+		appBaseURL:    appBaseURL,
+	}
 }
 
 // Register godoc: POST /auth/register
-func (h *AuthHandler) Register(c *gin.Context) {
+func (handler *AuthHandler) Register(c *gin.Context) {
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -54,7 +63,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.users.Create(c.Request.Context(), req.Email, string(passwordHash), verificationToken)
+	user, err := handler.users.Create(c.Request.Context(), req.Email, string(passwordHash), verificationToken)
 	if err == store.ErrConflict {
 		c.JSON(http.StatusConflict, apiErr("conflict", "email already taken", nil))
 		return
@@ -64,15 +73,17 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// TODO: replace with real email delivery when email service is available.
-	// For now the token is logged so it can be used in local/staging environments.
-	fmt.Printf("[identity] email verification token for %s: %s\n", user.Email, verificationToken)
+	verificationURL := fmt.Sprintf("%s/auth/email/verify?token=%s", handler.appBaseURL, verificationToken)
+	if err := handler.emailSender.SendVerification(user.Email, verificationURL); err != nil {
+		// Non-fatal: user is created, email delivery failed. Client should retry via resend endpoint.
+		fmt.Printf("[identity] failed to send verification email to %s: %v\n", user.Email, err)
+	}
 
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
 
 // VerifyEmail godoc: POST /auth/email/verify
-func (h *AuthHandler) VerifyEmail(c *gin.Context) {
+func (handler *AuthHandler) VerifyEmail(c *gin.Context) {
 	var req struct {
 		Token string `json:"token"`
 	}
@@ -81,7 +92,7 @@ func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	user, err := h.users.VerifyEmail(c.Request.Context(), req.Token)
+	user, err := handler.users.VerifyEmail(c.Request.Context(), req.Token)
 	if err == store.ErrNotFound {
 		c.JSON(http.StatusUnprocessableEntity, apiErr("invalid_token", "verification token is invalid or already used", nil))
 		return
@@ -95,7 +106,7 @@ func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 }
 
 // Login godoc: POST /auth/login
-func (h *AuthHandler) Login(c *gin.Context) {
+func (handler *AuthHandler) Login(c *gin.Context) {
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -105,7 +116,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	user, passwordHash, err := h.users.FindByEmail(c.Request.Context(), req.Email)
+	user, passwordHash, err := handler.users.FindByEmail(c.Request.Context(), req.Email)
 	if err == store.ErrNotFound {
 		c.JSON(http.StatusUnauthorized, apiErr("unauthorized", "invalid credentials", nil))
 		return
@@ -127,7 +138,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := h.issueTokenPair(c, user.ID)
+	accessToken, refreshToken, err := handler.issueTokenPair(c, user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to issue tokens", nil))
 		return
@@ -140,7 +151,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // Refresh godoc: POST /auth/refresh
-func (h *AuthHandler) Refresh(c *gin.Context) {
+func (handler *AuthHandler) Refresh(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -150,7 +161,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	}
 
 	tokenHash := hashToken(req.RefreshToken)
-	userID, err := h.refreshTokens.FindByHash(c.Request.Context(), tokenHash)
+	userID, err := handler.refreshTokens.FindByHash(c.Request.Context(), tokenHash)
 	if err == store.ErrNotFound {
 		c.JSON(http.StatusUnauthorized, apiErr("unauthorized", "refresh token invalid or expired", nil))
 		return
@@ -161,12 +172,12 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	}
 
 	// Rotate: revoke old token
-	if err := h.refreshTokens.Revoke(c.Request.Context(), tokenHash); err != nil {
+	if err := handler.refreshTokens.Revoke(c.Request.Context(), tokenHash); err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to revoke token", nil))
 		return
 	}
 
-	accessToken, newRefreshToken, err := h.issueTokenPair(c, userID)
+	accessToken, newRefreshToken, err := handler.issueTokenPair(c, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to issue tokens", nil))
 		return
@@ -179,7 +190,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 }
 
 // Logout godoc: POST /auth/logout
-func (h *AuthHandler) Logout(c *gin.Context) {
+func (handler *AuthHandler) Logout(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -188,12 +199,12 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 	if req.RefreshToken != "" {
 		tokenHash := hashToken(req.RefreshToken)
-		_ = h.refreshTokens.Revoke(c.Request.Context(), tokenHash)
+		_ = handler.refreshTokens.Revoke(c.Request.Context(), tokenHash)
 	} else {
 		// Revoke all sessions for the authenticated user
 		userID, _ := c.Get(middleware.UserIDKey)
 		if uid, ok := userID.(string); ok && uid != "" {
-			_ = h.refreshTokens.RevokeAllForUser(c.Request.Context(), uid)
+			_ = handler.refreshTokens.RevokeAllForUser(c.Request.Context(), uid)
 		}
 	}
 
@@ -201,7 +212,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 }
 
 // ChangePassword godoc: POST /auth/password/change
-func (h *AuthHandler) ChangePassword(c *gin.Context) {
+func (handler *AuthHandler) ChangePassword(c *gin.Context) {
 	userID, _ := c.Get(middleware.UserIDKey)
 	uid, _ := userID.(string)
 
@@ -214,7 +225,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	currentHash, err := h.users.GetPasswordHash(c.Request.Context(), uid)
+	currentHash, err := handler.users.GetPasswordHash(c.Request.Context(), uid)
 	if err == store.ErrNotFound {
 		c.JSON(http.StatusUnauthorized, apiErr("unauthorized", "user not found", nil))
 		return
@@ -237,20 +248,20 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to hash password", nil))
 		return
 	}
-	if err := h.users.UpdatePassword(c.Request.Context(), uid, string(newHash)); err != nil {
+	if err := handler.users.UpdatePassword(c.Request.Context(), uid, string(newHash)); err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to update password", nil))
 		return
 	}
 
 	// Revoke all refresh tokens (force re-login everywhere)
-	_ = h.refreshTokens.RevokeAllForUser(c.Request.Context(), uid)
+	_ = handler.refreshTokens.RevokeAllForUser(c.Request.Context(), uid)
 
 	c.Status(http.StatusNoContent)
 }
 
 // issueTokenPair creates a new access + refresh token pair and stores the refresh token hash.
-func (h *AuthHandler) issueTokenPair(c *gin.Context, userID string) (accessToken, refreshToken string, err error) {
-	accessToken, err = h.jwtSvc.GenerateAccessToken(userID)
+func (handler *AuthHandler) issueTokenPair(c *gin.Context, userID string) (accessToken, refreshToken string, err error) {
+	accessToken, err = handler.jwtSvc.GenerateAccessToken(userID)
 	if err != nil {
 		return
 	}
@@ -259,7 +270,7 @@ func (h *AuthHandler) issueTokenPair(c *gin.Context, userID string) (accessToken
 	if err != nil {
 		return
 	}
-	err = h.refreshTokens.Create(c.Request.Context(), userID, tokenHash, auth.RefreshTokenExpiry())
+	err = handler.refreshTokens.Create(c.Request.Context(), userID, tokenHash, auth.RefreshTokenExpiry())
 	return
 }
 

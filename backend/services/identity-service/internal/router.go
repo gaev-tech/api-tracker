@@ -8,13 +8,14 @@ import (
 	"github.com/gaev-tech/api-tracker/backend/pkg/logging"
 	"github.com/gaev-tech/api-tracker/backend/pkg/metrics"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/auth"
+	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/email"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/handler"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/middleware"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/store"
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(logger *slog.Logger, db *sql.DB, jwtSvc *auth.Service) *gin.Engine {
+func NewRouter(logger *slog.Logger, db *sql.DB, jwtSvc *auth.Service, emailSender *email.Sender, appBaseURL string) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 
@@ -25,7 +26,7 @@ func NewRouter(logger *slog.Logger, db *sql.DB, jwtSvc *auth.Service) *gin.Engin
 	userStore := store.NewUserStore(db)
 	refreshStore := store.NewRefreshTokenStore(db)
 
-	authH := handler.NewAuthHandler(userStore, refreshStore, jwtSvc)
+	authH := handler.NewAuthHandler(userStore, refreshStore, jwtSvc, emailSender, appBaseURL)
 	userH := handler.NewUserHandler(userStore)
 
 	r.GET("/healthz", func(c *gin.Context) { c.String(http.StatusOK, "ok") })

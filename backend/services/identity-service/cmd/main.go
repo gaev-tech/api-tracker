@@ -15,6 +15,7 @@ import (
 	"github.com/gaev-tech/api-tracker/backend/pkg/sentry"
 	identityinternal "github.com/gaev-tech/api-tracker/backend/services/identity-service/internal"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/auth"
+	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/email"
 	migrationsfs "github.com/gaev-tech/api-tracker/backend/services/identity-service/migrations"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
@@ -33,6 +34,11 @@ func main() {
 	jwtPrivateKey := mustEnv("JWT_PRIVATE_KEY")
 	jwtIssuer := envOr("JWT_ISSUER", "api-tracker")
 	sentryDSN := envOr("SENTRY_DSN", "")
+	smtpHost := envOr("SMTP_HOST", "")
+	smtpPort := envOr("SMTP_PORT", "587")
+	smtpFrom := envOr("SMTP_FROM", "")
+	smtpPassword := envOr("SMTP_PASSWORD", "")
+	appBaseURL := envOr("APP_BASE_URL", "http://localhost:3000")
 
 	logger := logging.New("identity")
 
@@ -58,7 +64,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	router := identityinternal.NewRouter(logger, db, jwtSvc)
+	emailSender := email.NewSender(smtpHost, smtpPort, smtpFrom, smtpPassword)
+	router := identityinternal.NewRouter(logger, db, jwtSvc, emailSender, appBaseURL)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),

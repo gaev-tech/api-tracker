@@ -40,7 +40,7 @@
 
 | ID | Задача | Зависит от | Блокирует | Milestone |
 |----|--------|-----------|-----------|-----------|
-| API-8 | Регистрация, подтверждение email, логин, логаут, refresh token | API-1, API-2, API-5, INFRA-5 | API-9, API-10, API-11, API-12, API-49 | mvp |
+| API-8 | Регистрация, подтверждение email (SMTP через identity-service: `SMTP_HOST/PORT/FROM/PASSWORD`), логин, логаут, refresh token | API-1, API-2, API-5, INFRA-5 | API-9, API-10, API-11, API-12, API-49 | mvp |
 | API-9 | PAT: создание, список, получение по ID, обновление, отзыв | API-8 | API-42 | mvp |
 | API-10 | Профиль: получение, обновление (name, theme, language), смена пароля, удаление аккаунта | API-8 | — | mvp |
 | API-11 | Поиск пользователей по email (префикс) | API-8 | — | mvp |
