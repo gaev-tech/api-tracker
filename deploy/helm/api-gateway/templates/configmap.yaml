@@ -32,7 +32,8 @@ data:
 
             # K3s kube-dns resolver — defers upstream DNS resolution to
             # request time (avoids startup failure when upstream pods are not
-            # yet running)
+            # yet running). FQDNs required: nginx uses the resolver directly
+            # and does not apply /etc/resolv.conf search domains.
             resolver 10.43.0.10 valid=30s ipv6=off;
 
             # Propagate / generate request ID through the chain
@@ -54,14 +55,14 @@ data:
                 return 301 /swagger/;
             }
             location /swagger/ {
-                set $upstream swagger-ui:8080;
+                set $upstream swagger-ui.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
             }
 
             # ── JWKS (JWT public key discovery) ───────────────────────────────
             location = /.well-known/jwks.json {
-                set $upstream identity-service:8080;
+                set $upstream identity-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
             }
@@ -84,7 +85,7 @@ data:
             # ── Auth / Identity — unauthenticated (per-IP rate limit) ─────────
             location ~ ^/auth/ {
                 limit_req zone=per_ip burst=20 nodelay;
-                set $upstream identity-service:8080;
+                set $upstream identity-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
             }
@@ -92,7 +93,7 @@ data:
             # ── Identity — authenticated (per-PAT rate limit) ──────────────────
             location ~ ^/(users|pats|managed-users)/ {
                 limit_req zone=per_pat burst=200 nodelay;
-                set $upstream identity-service:8080;
+                set $upstream identity-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
             }
@@ -100,7 +101,7 @@ data:
             # ── Workspace ──────────────────────────────────────────────────────
             location ~ ^/(tasks|projects|teams|invitations|ownership-transfers)/ {
                 limit_req zone=per_pat burst=200 nodelay;
-                set $upstream workspace-service:8080;
+                set $upstream workspace-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
             }
@@ -108,7 +109,7 @@ data:
             # ── Billing ────────────────────────────────────────────────────────
             location ~ ^/(tariffs|payments)/ {
                 limit_req zone=per_pat burst=200 nodelay;
-                set $upstream billing-service:8080;
+                set $upstream billing-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
             }
@@ -116,7 +117,7 @@ data:
             # ── Files ──────────────────────────────────────────────────────────
             location ~ ^/files/ {
                 limit_req zone=per_pat burst=200 nodelay;
-                set $upstream files-service:8080;
+                set $upstream files-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
             }
@@ -124,7 +125,7 @@ data:
             # ── Events: WebSocket (sticky routing by PAT token query param) ────
             location = /events/stream {
                 limit_req zone=per_pat burst=50 nodelay;
-                set $upstream_ws events-service:8080;
+                set $upstream_ws events-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream_ws;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
@@ -136,7 +137,7 @@ data:
             # ── Events: regular HTTP ────────────────────────────────────────────
             location ~ ^/events {
                 limit_req zone=per_pat burst=200 nodelay;
-                set $upstream events-service:8080;
+                set $upstream events-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
             }
