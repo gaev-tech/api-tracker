@@ -369,7 +369,7 @@ spec:
             - name: SWAGGER_JSON
               value: /openapi/openapi.yaml
             - name: BASE_PATH
-              value: /docs
+              value: /swagger
           volumeMounts:
             - name: openapi-spec
               mountPath: /openapi

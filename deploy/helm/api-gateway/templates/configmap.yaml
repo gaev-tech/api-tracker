@@ -50,7 +50,7 @@ data:
             proxy_set_header X-Is-Active "";
 
             # ── API docs (Swagger UI) ─────────────────────────────────────────
-            location /docs {
+            location /swagger {
                 set $upstream swagger-ui:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
