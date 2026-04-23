@@ -166,6 +166,21 @@ jobs:
               - 'deploy/k8s/**'
 
       # ── Cluster setup steps (conditional) ──────────────────────────────────
+      - name: Disable K3s traefik (frees ports 80/443 for ingress-nginx)
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
+        run: |
+          # K3s ships traefik by default; it holds host ports 80/443 which
+          # prevents ingress-nginx (hostNetwork=true) from being scheduled.
+          # Deleting the HelmChart CR stops K3s from managing traefik.
+          kubectl delete helmchart traefik traefik-crd -n kube-system --ignore-not-found=true
+          kubectl delete namespace traefik --ignore-not-found=true
+          # Also remove the traefik deployment/daemonset if still present
+          kubectl delete deployment,daemonset -l app.kubernetes.io/name=traefik \
+            -n kube-system --ignore-not-found=true 2>/dev/null || true
+          # Wait briefly for ports to be released
+          sleep 10
+
       - name: Install ingress-nginx
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
         run: |
