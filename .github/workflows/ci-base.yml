@@ -1,0 +1,32 @@
+name: CI Base Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/Dockerfile.ci'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build and push ci-base
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ci-base
+        run: |
+          docker build \
+            -f .github/Dockerfile.ci \
+            -t ghcr.io/${{ github.repository_owner }}/api-tracker/ci-base:latest \
+            .github/
+          docker push ghcr.io/${{ github.repository_owner }}/api-tracker/ci-base:latest

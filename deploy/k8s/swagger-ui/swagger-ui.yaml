@@ -373,7 +373,8 @@ spec:
               value: /swagger/openapi.yaml
           volumeMounts:
             - name: openapi-spec
-              mountPath: /openapi
+              mountPath: /usr/share/nginx/html/openapi.yaml
+              subPath: openapi.yaml
           resources:
             requests:
               cpu: 10m

@@ -1,0 +1,13 @@
+FROM golang:1.23-bookworm
+
+# Helm
+RUN curl -fsSL https://get.helm.sh/helm-v3.16.0-linux-amd64.tar.gz \
+    | tar xz -C /usr/local/bin --strip-components=1 linux-amd64/helm
+
+# buf
+RUN curl -fsSL https://github.com/bufbuild/buf/releases/download/v1.68.3/buf-Linux-x86_64 \
+    -o /usr/local/bin/buf && chmod +x /usr/local/bin/buf
+
+# kubectl
+RUN curl -fsSL https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl \
+    -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
