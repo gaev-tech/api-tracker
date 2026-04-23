@@ -257,16 +257,10 @@ jobs:
             --from-literal=username=billing_user \
             --from-literal=password=${{ secrets.BILLING_DB_PASSWORD }} \
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
-          kubectl create secret generic files-db-credentials \
-            --from-literal=username=files_user \
-            --from-literal=password=${{ secrets.FILES_DB_PASSWORD }} \
-            --namespace production --dry-run=client -o yaml | kubectl apply -f -
           kubectl apply -f deploy/k8s/postgres/identity.yaml -n production
           kubectl apply -f deploy/k8s/postgres/billing.yaml  -n production
-          kubectl apply -f deploy/k8s/postgres/files.yaml    -n production
           kubectl wait cluster/postgres-identity -n production --for=condition=Ready --timeout=5m
           kubectl wait cluster/postgres-billing  -n production --for=condition=Ready --timeout=5m
-          kubectl wait cluster/postgres-files    -n production --for=condition=Ready --timeout=5m
 
       - name: Deploy Citus clusters
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
@@ -280,46 +274,10 @@ jobs:
             --from-literal=username=events_user \
             --from-literal=password=${{ secrets.CITUS_EVENTS_PASSWORD }} \
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
-          kubectl create secret generic automations-db-credentials \
-            --from-literal=username=automations_user \
-            --from-literal=password=${{ secrets.CITUS_AUTOMATIONS_PASSWORD }} \
-            --namespace production --dry-run=client -o yaml | kubectl apply -f -
           kubectl apply -f deploy/k8s/citus/workspace.yaml -n production
           kubectl apply -f deploy/k8s/citus/events.yaml    -n production
-          kubectl apply -f deploy/k8s/citus/automations.yaml -n production
           kubectl wait cluster/citus-workspace-coordinator   -n production --for=condition=Ready --timeout=10m
           kubectl wait cluster/citus-events-coordinator      -n production --for=condition=Ready --timeout=10m
-          kubectl wait cluster/citus-automations-coordinator -n production --for=condition=Ready --timeout=10m
-
-      - name: Install Redis Operator + deploy Redis
-        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
-        continue-on-error: true
-        run: |
-          helm repo add ot-helm https://ot-container-kit.github.io/helm-charts/ && helm repo update
-          helm upgrade --install redis-operator ot-helm/redis-operator \
-            --namespace ot-operators --create-namespace --version 0.15.1 \
-            --wait --timeout 5m
-          kubectl create secret generic redis-credentials \
-            --from-literal=password=${{ secrets.REDIS_PASSWORD }} \
-            --namespace production --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -f deploy/k8s/redis/redis.yaml -n production
-          kubectl rollout status statefulset/redis-standalone -n production --timeout=2m
-
-      - name: Install MinIO Operator + deploy Tenant
-        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
-        continue-on-error: true
-        run: |
-          helm repo add minio-operator https://operator.min.io && helm repo update
-          helm upgrade --install minio-operator minio-operator/operator \
-            --namespace minio-operator --create-namespace --version 6.0.4 \
-            --wait --timeout 5m
-          CONFIG_ENV="export MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }}\nexport MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}"
-          kubectl create namespace minio --dry-run=client -o yaml | kubectl apply -f -
-          kubectl create secret generic minio-credentials \
-            --from-literal=config.env="$(printf "$CONFIG_ENV")" \
-            --namespace minio --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -f deploy/k8s/minio/tenant.yaml
-          kubectl wait tenant/minio -n minio --for=condition=Initialized --timeout=5m
 
       - name: Deploy Swagger UI
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
@@ -350,10 +308,6 @@ jobs:
             --from-literal=username=billing_user \
             --from-literal=password=${{ secrets.BILLING_DB_PASSWORD }} \
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
-          kubectl create secret generic files-db-credentials \
-            --from-literal=username=files_user \
-            --from-literal=password=${{ secrets.FILES_DB_PASSWORD }} \
-            --namespace production --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create identity SMTP secret
         run: |
@@ -371,17 +325,6 @@ jobs:
             --docker-username=${{ github.actor }} \
             --docker-password=${{ secrets.GITHUB_TOKEN }} \
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Remove PostMVP services from cluster
-        run: |
-          for svc in automations-service files-service; do
-            if helm status "$svc" --namespace production >/dev/null 2>&1; then
-              echo "Uninstalling $svc"
-              helm uninstall "$svc" --namespace production
-            else
-              echo "$svc not installed, skipping"
-            fi
-          done
 
       - name: Helm deploy — all services
         run: |
