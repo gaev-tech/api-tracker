@@ -27,7 +27,7 @@ jobs:
 
       - name: Go build — all services
         run: |
-          for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
+          for svc in identity-service workspace-service events-service billing-service; do
             echo "=== $svc ==="
             (cd backend/services/$svc && go build -o /tmp/ ./...)
           done
@@ -46,19 +46,15 @@ jobs:
           declare -A context=(
             [identity-service]=.
             [workspace-service]=backend/services/workspace-service
-            [automations-service]=backend/services/automations-service
             [events-service]=backend/services/events-service
             [billing-service]=backend/services/billing-service
-            [files-service]=backend/services/files-service
             [api-gateway]=backend/api-gateway
           )
           declare -A dockerfile=(
             [identity-service]=backend/services/identity-service/Dockerfile
             [workspace-service]=backend/services/workspace-service/Dockerfile
-            [automations-service]=backend/services/automations-service/Dockerfile
             [events-service]=backend/services/events-service/Dockerfile
             [billing-service]=backend/services/billing-service/Dockerfile
-            [files-service]=backend/services/files-service/Dockerfile
             [api-gateway]=backend/api-gateway/Dockerfile
           )
           PUSH=${{ github.event_name != 'pull_request' }}
@@ -98,7 +94,7 @@ jobs:
 
       - name: Go vet — all services
         run: |
-          for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
+          for svc in identity-service workspace-service events-service billing-service; do
             echo "=== $svc ==="
             (cd backend/services/$svc && go vet ./...)
           done
@@ -138,7 +134,7 @@ jobs:
 
       - name: Go test — all services
         run: |
-          for svc in identity-service workspace-service automations-service events-service billing-service files-service; do
+          for svc in identity-service workspace-service events-service billing-service; do
             echo "=== $svc ==="
             (cd backend/services/$svc && go test ./...)
           done
@@ -366,6 +362,15 @@ jobs:
             --docker-username=${{ github.actor }} \
             --docker-password=${{ secrets.GITHUB_TOKEN }} \
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Remove PostMVP services from cluster
+        run: |
+          for svc in automations-service files-service; do
+            if helm status "$svc" --namespace production &>/dev/null; then
+              echo "Uninstalling $svc"
+              helm uninstall "$svc" --namespace production
+            fi
+          done
 
       - name: Helm deploy — all services
         run: |

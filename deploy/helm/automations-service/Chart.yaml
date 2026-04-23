@@ -1,6 +1,0 @@
-apiVersion: v2
-name: automations-service
-description: automations-service — automations, project secrets
-type: application
-version: 0.1.0
-appVersion: "latest"
