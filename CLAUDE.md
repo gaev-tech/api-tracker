@@ -10,15 +10,12 @@ This project is currently in the **specification phase** — only `specs/` exist
 
 | File | Contents |
 |------|----------|
-| `specs/product-spec.md` | Product overview, entity catalog, feature catalog, tariff system, access rights model |
-| `specs/architecture.md` | Technology stack, high-level diagram, communication patterns (Kafka/gRPC), security |
-| `specs/architecture-backend.md` | All 7 services (responsibilities, gRPC, Kafka topics, DB), DB strategy, migrations |
-| `specs/architecture-infra.md` | Kubernetes, observability (Prometheus/Grafana/Sentry/Loki), CI/CD, monorepo structure, scaling |
-| `specs/architecture-frontend.md` | Angular Workspace, design system, API-client codegen, multi-auth, WebSocket, Docker/K8s deploy |
+| `specs/product-spec.md` | Product overview, clients, requirements (MVP + PostMVP), tariffs, access model, events, RSQL, function catalog, UI functions, CLI commands |
+| `specs/architecture-api.md` | Microservices, tech stack, services responsibilities, Kafka/gRPC communication, security, DB strategy, infra, observability, CI/CD |
+| `specs/architecture-ui.md` | Angular Workspace (app + docs), libs, design system, API client codegen, multi-auth, WebSocket, routing, UI patterns |
+| `specs/architecture-cli.md` | CLI structure, auth, config, output formats, pagination, distribution |
 | `specs/api-spec.md` | REST API conventions, complete endpoint catalog, data model definitions, error codes |
-| `specs/db-schema.md` | PostgreSQL/Citus physical schema, all tables with columns/indexes, naming conventions |
-| `specs/ui-spec.md` | Screen layouts, widget catalog, UI principles |
-| `specs/roadmap.md` | DAG of implementation tasks (I-*, D-*, F-* prefixes) with dependencies and topological order |
+| `specs/roadmap.md` | Implementation tasks grouped by area (INFRA, API, CLI, DOCS, UI) with dependencies and MVP/PostMVP labels |
 
 ## Planned Build Commands
 
@@ -52,58 +49,12 @@ docker compose up  # from deploy/
 
 ## Architecture Overview
 
-API-first microservices system. All functionality is available through REST API; UI is secondary validation surface.
-
-### Services
-
-| Service | Responsibility | Database |
-|---------|---------------|----------|
-| `identity-service` | Auth, PATs, managed users | PostgreSQL |
-| `workspace-service` | Projects, teams, tasks, access control | Citus (sharded on author/owner ID) |
-| `automations-service` | Event-triggered automations with RSQL conditions + HTTP actions | Citus |
-| `events-service` | Event log storage + event feed API | Citus (partitioned by month) |
-| `billing-service` | Tariffs, subscriptions, usage counters, ЮKassa payments | PostgreSQL |
-| `files-service` | File uploads/downloads to S3-compatible storage | PostgreSQL |
-| `api-gateway` | Nginx reverse proxy — PAT validation via `auth_request`, rate limiting | — |
-
-### Communication Patterns
-
-- **Async:** Kafka with transactional outbox pattern. Services publish domain events; consumers maintain denormalized caches (`users_cache` in workspace, `tasks_cache` in automations).
-- **Sync:** gRPC with 5s timeouts; retries only for idempotent operations.
-- **Public:** HTTP/JSON via api-gateway with Bearer PAT token.
-- **Observability:** `request_id` propagates through all HTTP, gRPC, and Kafka calls.
+API-first microservices system (Go + Kafka + gRPC + PostgreSQL/Citus). UI and CLI are plain API clients with no privileges. See `specs/architecture-api.md`, `specs/architecture-ui.md`, `specs/architecture-cli.md` for details.
 
 ### Key Domain Concepts
 
-- **Task access** = union of personal rights + team-based rights + direct (task-level) rights — 14 distinct rights (R-1..R-14).
-- **Tasks are not required to belong to a project** — they can exist standalone via direct access.
-- **Tariff system** blocks entities (tasks, projects, etc.) when usage limits are exceeded; blocked state fires Kafka events that can trigger automations.
-- **RSQL** (REST Query String Language) is used for all list/filter endpoints.
-- **Cursor-based pagination** throughout the API (no offset pagination).
-
-### Monorepo Layout (planned)
-
-```
-backend/
-  services/<service>/   # per-service Go module + Dockerfile + migrations/
-  pkg/                  # shared Go libs (outbox, grpc, kafka, logging, service-template)
-  go.work
-frontend/
-  projects/app/         # Angular app
-  projects/docs/        # Documentation landing
-  libs/                 # Shared Angular libs (design-system, api-client, rsql, etc.)
-contracts/
-  proto/                # gRPC .proto files
-  openapi/              # Generated openapi.yaml
-deploy/
-  helm/                 # Helm charts per service
-  docker-compose.yml
-specs/                  # All specification documents
-```
-
-### Infrastructure
-
-- **Kubernetes** (production), **Docker Compose** (local dev)
-- **CI/CD:** GitHub Actions + GitHub Container Registry (ghcr.io) + Helm
-- **Observability:** Prometheus + Grafana + Sentry + Loki/Promtail
-- **Migrations:** Goose or golang-migrate, embedded per service, run at startup
+- **Task access** = union of personal rights + team-based rights + direct (task-level) rights — 14 distinct rights (R-1..R-14). Reading is determined by context, not a separate right.
+- **Tasks exist** while attached to at least one project OR having at least one direct access with any right.
+- **Tariff system** freezes entities (newest first by `created_at`) when usage limits are exceeded.
+- **RSQL** is used for all list/filter endpoints; supports `me` literal for `assignee`/`author`.
+- **Cursor-based pagination** throughout the API; tasks always sorted `created_at asc`.

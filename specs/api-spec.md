@@ -125,7 +125,7 @@ api-gateway определяет тип по префиксу: `pat_` → PAT-в
   "id": "uuid",
   "name": "string",
   "owner_id": "uuid",
-  "is_blocked_by_tariff": false,
+  "is_frozen_by_tariff": false,
   "created_at": "ISO 8601"
 }
 ```
@@ -137,7 +137,7 @@ api-gateway определяет тип по префиксу: `pat_` → PAT-в
   "user_id": "uuid",
   "email": "string",
   "is_admin": true,
-  "is_blocked_by_tariff": false,
+  "is_frozen_by_tariff": false,
   "joined_at": "ISO 8601"
 }
 ```
@@ -149,7 +149,7 @@ api-gateway определяет тип по префиксу: `pat_` → PAT-в
   "id": "uuid",
   "name": "string",
   "owner_id": "uuid",
-  "is_blocked_by_tariff": false,
+  "is_frozen_by_tariff": false,
   "created_at": "ISO 8601"
 }
 ```
@@ -201,7 +201,7 @@ api-gateway определяет тип по префиксу: `pat_` → PAT-в
   "user_id": "uuid",
   "email": "string",
   "permissions": { /* ProjectPermissions */ },
-  "is_blocked_by_tariff": false,
+  "is_frozen_by_tariff": false,
   "joined_at": "ISO 8601"
 }
 ```
@@ -232,7 +232,7 @@ api-gateway определяет тип по префиксу: `pat_` → PAT-в
   "project_ids": ["uuid"],
   "blocking_task_ids": ["uuid"],
   "blocked_task_ids": ["uuid"],
-  "is_blocked_by_tariff": false,
+  "is_frozen_by_tariff": false,
   "created_at": "ISO 8601",
   "updated_at": "ISO 8601"
 }
@@ -270,7 +270,7 @@ api-gateway определяет тип по префиксу: `pat_` → PAT-в
   },
   "is_enabled": true,
   "consecutive_failures": 0,
-  "is_blocked_by_tariff": false,
+  "is_frozen_by_tariff": false,
   "created_at": "ISO 8601",
   "updated_at": "ISO 8601"
 }
@@ -1561,7 +1561,7 @@ wss://api.<domain>/v1/events/stream?token=<PAT>
 - Немедленно после установки соединения.
 - При изменении счётчика (новое приглашение пользователю, принятие/отклонение существующего приглашения, отзыв приглашения инициатором).
 
-В будущем набор типов сообщений может быть расширен (например, `automation.auto_disabled`, `entity.blocked_by_tariff` для push-нотификаций). Клиент должен игнорировать незнакомые типы сообщений.
+В будущем набор типов сообщений может быть расширен (например, `automation.auto_disabled`, `entity.frozen_by_tariff` для push-нотификаций). Клиент должен игнорировать незнакомые типы сообщений.
 
 #### Сообщения от клиента
 
@@ -1598,8 +1598,7 @@ WebSocket-соединения хранятся в памяти events-service. 
         "teams_owned": 3,
         "automations_per_project": 3,
         "members_per_project_or_team": 10,
-        "managed_users": 3,
-        "storage_bytes": 524288000
+        "managed_users": 3
       },
       "pricing": {
         "monthly": null,
@@ -1615,8 +1614,7 @@ WebSocket-соединения хранятся в памяти events-service. 
         "teams_owned": 20,
         "automations_per_project": 20,
         "members_per_project_or_team": 50,
-        "managed_users": 20,
-        "storage_bytes": 10737418240
+        "managed_users": 20
       },
       "pricing": {
         "monthly": { "amount": 490, "currency": "RUB" },
@@ -1628,7 +1626,7 @@ WebSocket-соединения хранятся в памяти events-service. 
 }
 ```
 
-`null` в поле limit означает unlimited. Значения `storage_bytes` — в байтах (500 МБ, 10 ГБ соответственно для Free и Pro; на Team — 107374182400, на Enterprise — `null`).
+`null` в поле limit означает unlimited.
 
 ### GET /tariffs/subscription
 
@@ -1655,12 +1653,11 @@ WebSocket-соединения хранятся в памяти events-service. 
   "members_per_team": {
     "worst_case": { "team_id": "uuid", "used": 6, "limit": 10 }
   },
-  "managed_users": { "used": 1, "limit": 3 },
-  "storage_bytes": { "used": 104857600, "limit": 524288000 }
+  "managed_users": { "used": 1, "limit": 3 }
 }
 ```
 
-`null` в `limit` означает unlimited. Для `managed_users` и `storage_bytes` значения общего пула (родитель + все его managed).
+`null` в `limit` означает unlimited. Для `managed_users` значения общего пула (родитель + все его managed).
 
 ### GET /tariffs/history
 
@@ -1790,13 +1787,13 @@ Callback от ЮKassa для обновления статуса платежа.
 
 Полный перечень значений `type` в `Event` и `trigger_event_type` в `Automation`:
 
-**Task:** `task.created`, `task.title_changed`, `task.description_changed`, `task.status_changed`, `task.assignee_changed`, `task.tags_changed`, `task.blockers_changed`, `task.attached_to_project`, `task.detached_from_project`, `task.access_granted`, `task.access_revoked`, `task.access_changed`, `task.deleted`, `task.blocked_by_tariff`, `task.unblocked_by_tariff`.
+**Task:** `task.created`, `task.title_changed`, `task.description_changed`, `task.status_changed`, `task.assignee_changed`, `task.tags_changed`, `task.blockers_changed`, `task.attached_to_project`, `task.detached_from_project`, `task.access_granted`, `task.access_revoked`, `task.access_changed`, `task.deleted`, `task.frozen_by_tariff`, `task.unfrozen_by_tariff`.
 
-**Project:** `project.created`, `project.renamed`, `project.member_added`, `project.member_removed`, `project.member_access_changed`, `project.owner_changed`, `project.deleted`, `project.blocked_by_tariff`, `project.unblocked_by_tariff`.
+**Project:** `project.created`, `project.renamed`, `project.member_added`, `project.member_removed`, `project.member_access_changed`, `project.owner_changed`, `project.deleted`, `project.frozen_by_tariff`, `project.unfrozen_by_tariff`.
 
-**Team:** `team.created`, `team.renamed`, `team.member_added`, `team.member_removed`, `team.admin_granted`, `team.admin_revoked`, `team.owner_changed`, `team.deleted`, `team.blocked_by_tariff`, `team.unblocked_by_tariff`, `team.frozen_in_project`, `team.unfrozen_in_project`.
+**Team:** `team.created`, `team.renamed`, `team.member_added`, `team.member_removed`, `team.admin_granted`, `team.admin_revoked`, `team.owner_changed`, `team.deleted`, `team.frozen_by_tariff`, `team.unfrozen_by_tariff`, `team.frozen_in_project`, `team.unfrozen_in_project`.
 
-**Automation:** `automation.enabled`, `automation.disabled`, `automation.auto_disabled`, `automation.blocked_by_tariff`, `automation.unblocked_by_tariff`.
+**Automation:** `automation.enabled`, `automation.disabled`, `automation.auto_disabled`, `automation.frozen_by_tariff`, `automation.unfrozen_by_tariff`.
 
 **User / Tariff:** `user.tariff_changed`, `user.tariff_bank_applied`, `user.managed_created`, `user.managed_email_verified`, `user.managed_deactivated`, `user.managed_reactivated`, `user.managed_password_reset`, `user.deleted`.
 
