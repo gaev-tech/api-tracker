@@ -355,6 +355,15 @@ jobs:
             --from-literal=password=${{ secrets.FILES_DB_PASSWORD }} \
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Create identity SMTP secret
+        run: |
+          kubectl create secret generic identity-smtp-credentials \
+            --from-literal=SMTP_HOST=${{ secrets.SMTP_HOST }} \
+            --from-literal=SMTP_PORT=${{ secrets.SMTP_PORT || '587' }} \
+            --from-literal=SMTP_FROM=${{ secrets.SMTP_FROM }} \
+            --from-literal=SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }} \
+            --namespace production --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Create ghcr image pull secret
         run: |
           kubectl create secret docker-registry ghcr-credentials \

@@ -25,11 +25,33 @@ env:
     value: "8080"
   - name: JWT_ISSUER
     value: "api-tracker"
+  - name: APP_BASE_URL
+    value: "https://api.gaev.tech"
   - name: DB_PASSWORD
     valueFrom:
       secretKeyRef:
         name: identity-db-credentials
         key: password
+  - name: SMTP_HOST
+    valueFrom:
+      secretKeyRef:
+        name: identity-smtp-credentials
+        key: SMTP_HOST
+  - name: SMTP_PORT
+    valueFrom:
+      secretKeyRef:
+        name: identity-smtp-credentials
+        key: SMTP_PORT
+  - name: SMTP_FROM
+    valueFrom:
+      secretKeyRef:
+        name: identity-smtp-credentials
+        key: SMTP_FROM
+  - name: SMTP_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: identity-smtp-credentials
+        key: SMTP_PASSWORD
 
 # JWT_PRIVATE_KEY is loaded from the identity-jwt-secret Secret (created in cd-helm.yml)
 envFrom:
