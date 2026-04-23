@@ -47,5 +47,25 @@ jobs:
           echo "=== Endpoints ==="
           kubectl get endpoints -n production api-gateway -o yaml
 
+      - name: Test connectivity from inside cluster
+        run: |
+          SVC_IP=$(kubectl get service -n production api-gateway -o jsonpath='{.spec.clusterIP}')
+          echo "api-gateway ClusterIP: $SVC_IP"
+          # try from swagger-ui pod (if exists)
+          SWPOD=$(kubectl get pods -n production -l app=swagger-ui -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -n "$SWPOD" ]; then
+            echo "=== curl from swagger-ui pod ==="
+            kubectl exec -n production $SWPOD -- wget -qO- --timeout=3 http://$SVC_IP/healthz 2>&1 || true
+          fi
+
+      - name: ingress-nginx controller logs
+        run: |
+          kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx --tail=30 2>&1 | grep -E "(api-gateway|api.apitracker|error|Error|upstream|404)" | tail -20 || true
+
+      - name: ingress-nginx backend status
+        run: |
+          kubectl get pods -n ingress-nginx
+          kubectl get ingress -n production -o wide
+
       - name: events
         run: kubectl get events -n production --sort-by='.lastTimestamp' | tail -30
