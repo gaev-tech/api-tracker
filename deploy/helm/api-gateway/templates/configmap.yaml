@@ -55,7 +55,6 @@ data:
                 return 301 /swagger/;
             }
             location /swagger/ {
-                rewrite ^/swagger/(.*)$ /$1 break;
                 set $upstream swagger-ui.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
