@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strings"
@@ -40,13 +42,19 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to hash password", nil))
 		return
 	}
 
-	user, err := h.users.Create(c.Request.Context(), req.Email, string(hash))
+	verificationToken, err := generateVerificationToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to generate token", nil))
+		return
+	}
+
+	user, err := h.users.Create(c.Request.Context(), req.Email, string(passwordHash), verificationToken)
 	if err == store.ErrConflict {
 		c.JSON(http.StatusConflict, apiErr("conflict", "email already taken", nil))
 		return
@@ -56,17 +64,34 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := h.issueTokenPair(c, user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to issue tokens", nil))
+	// TODO: replace with real email delivery when email service is available.
+	// For now the token is logged so it can be used in local/staging environments.
+	fmt.Printf("[identity] email verification token for %s: %s\n", user.Email, verificationToken)
+
+	c.JSON(http.StatusCreated, gin.H{"user": user})
+}
+
+// VerifyEmail godoc: POST /auth/email/verify
+func (h *AuthHandler) VerifyEmail(c *gin.Context) {
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Token == "" {
+		c.JSON(http.StatusBadRequest, apiErr("bad_request", "token required", nil))
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"user":          user,
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-	})
+	user, err := h.users.VerifyEmail(c.Request.Context(), req.Token)
+	if err == store.ErrNotFound {
+		c.JSON(http.StatusUnprocessableEntity, apiErr("invalid_token", "verification token is invalid or already used", nil))
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
 // Login godoc: POST /auth/login
@@ -263,4 +288,12 @@ func apiErr(code, message string, details interface{}) gin.H {
 		e["details"] = details
 	}
 	return gin.H{"error": e}
+}
+
+func generateVerificationToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }

@@ -26,24 +26,25 @@ const userColumns = `id, email, theme, language, parent_user_id, is_active, emai
 func scanUser(row interface {
 	Scan(dest ...any) error
 }) (*domain.User, error) {
-	u := &domain.User{}
+	user := &domain.User{}
 	err := row.Scan(
-		&u.ID, &u.Email, &u.Theme, &u.Language,
-		&u.ParentUserID, &u.IsActive, &u.EmailVerifiedAt, &u.CreatedAt,
+		&user.ID, &user.Email, &user.Theme, &user.Language,
+		&user.ParentUserID, &user.IsActive, &user.EmailVerifiedAt, &user.CreatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
-	return u, err
+	return user, err
 }
 
-func (s *UserStore) Create(ctx context.Context, email, passwordHash string) (*domain.User, error) {
+// Create inserts a new unverified user with an email verification token.
+func (store *UserStore) Create(ctx context.Context, email, passwordHash, verificationToken string) (*domain.User, error) {
 	now := time.Now()
-	row := s.db.QueryRowContext(ctx, `
-		INSERT INTO users (email, password_hash, email_verified_at, created_at, updated_at)
+	row := store.db.QueryRowContext(ctx, `
+		INSERT INTO users (email, password_hash, email_verification_token, created_at, updated_at)
 		VALUES (LOWER($1), $2, $3, $4, $4)
 		RETURNING `+userColumns,
-		email, passwordHash, now, now,
+		email, passwordHash, verificationToken, now,
 	)
 	u, err := scanUser(row)
 	if err != nil && isPgUniqueViolation(err) {
@@ -52,32 +53,49 @@ func (s *UserStore) Create(ctx context.Context, email, passwordHash string) (*do
 	return u, err
 }
 
-func (s *UserStore) FindByEmail(ctx context.Context, email string) (*domain.User, string, error) {
+// VerifyEmail confirms a user's email using the verification token.
+// Returns the updated user on success, ErrNotFound if the token is invalid.
+func (store *UserStore) VerifyEmail(ctx context.Context, token string) (*domain.User, error) {
+	row := store.db.QueryRowContext(ctx, `
+		UPDATE users
+		SET email_verified_at = now(), email_verification_token = NULL, updated_at = now()
+		WHERE email_verification_token = $1 AND email_verified_at IS NULL
+		RETURNING `+userColumns,
+		token,
+	)
+	u, err := scanUser(row)
+	if errors.Is(err, ErrNotFound) {
+		return nil, ErrNotFound
+	}
+	return u, err
+}
+
+func (store *UserStore) FindByEmail(ctx context.Context, email string) (*domain.User, string, error) {
 	var passwordHash string
-	row := s.db.QueryRowContext(ctx, `
+	row := store.db.QueryRowContext(ctx, `
 		SELECT `+userColumns+`, password_hash
 		FROM users WHERE LOWER(email) = LOWER($1)`, email)
 
-	u := &domain.User{}
+	user := &domain.User{}
 	err := row.Scan(
-		&u.ID, &u.Email, &u.Theme, &u.Language,
-		&u.ParentUserID, &u.IsActive, &u.EmailVerifiedAt, &u.CreatedAt,
+		&user.ID, &user.Email, &user.Theme, &user.Language,
+		&user.ParentUserID, &user.IsActive, &user.EmailVerifiedAt, &user.CreatedAt,
 		&passwordHash,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, "", ErrNotFound
 	}
-	return u, passwordHash, err
+	return user, passwordHash, err
 }
 
-func (s *UserStore) FindByID(ctx context.Context, id string) (*domain.User, error) {
-	row := s.db.QueryRowContext(ctx, `
+func (store *UserStore) FindByID(ctx context.Context, id string) (*domain.User, error) {
+	row := store.db.QueryRowContext(ctx, `
 		SELECT `+userColumns+` FROM users WHERE id = $1`, id)
 	return scanUser(row)
 }
 
-func (s *UserStore) UpdateProfile(ctx context.Context, id, theme, language string) (*domain.User, error) {
-	row := s.db.QueryRowContext(ctx, `
+func (store *UserStore) UpdateProfile(ctx context.Context, id, theme, language string) (*domain.User, error) {
+	row := store.db.QueryRowContext(ctx, `
 		UPDATE users SET theme = $2, language = $3, updated_at = now()
 		WHERE id = $1
 		RETURNING `+userColumns,
@@ -86,15 +104,15 @@ func (s *UserStore) UpdateProfile(ctx context.Context, id, theme, language strin
 	return scanUser(row)
 }
 
-func (s *UserStore) UpdatePassword(ctx context.Context, id, newHash string) error {
-	_, err := s.db.ExecContext(ctx, `
+func (store *UserStore) UpdatePassword(ctx context.Context, id, newHash string) error {
+	_, err := store.db.ExecContext(ctx, `
 		UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`, id, newHash)
 	return err
 }
 
-func (s *UserStore) GetPasswordHash(ctx context.Context, id string) (string, error) {
+func (store *UserStore) GetPasswordHash(ctx context.Context, id string) (string, error) {
 	var hash string
-	err := s.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id = $1`, id).Scan(&hash)
+	err := store.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id = $1`, id).Scan(&hash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrNotFound
 	}

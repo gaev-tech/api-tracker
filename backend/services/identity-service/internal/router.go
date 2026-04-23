@@ -46,6 +46,7 @@ func NewRouter(logger *slog.Logger, db *sql.DB, jwtSvc *auth.Service) *gin.Engin
 	authGroup.POST("/register", authH.Register)
 	authGroup.POST("/login", authH.Login)
 	authGroup.POST("/refresh", authH.Refresh)
+	authGroup.POST("/email/verify", authH.VerifyEmail)
 
 	// Authenticated auth endpoints
 	authed := r.Group("/", middleware.RequireAuth(jwtSvc))
