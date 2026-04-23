@@ -26,7 +26,7 @@ env:
   - name: JWT_ISSUER
     value: "api-tracker"
   - name: APP_BASE_URL
-    value: "https://api.gaev.tech"
+    value: "https://apitracker.ru"
   - name: DB_PASSWORD
     valueFrom:
       secretKeyRef:
