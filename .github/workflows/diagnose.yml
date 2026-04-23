@@ -28,5 +28,24 @@ jobs:
         run: |
           kubectl get secret -n production -l owner=helm,name=api-gateway --sort-by='.metadata.creationTimestamp' | tail -5
 
+      - name: Check nginx.conf inside pod and listening ports
+        run: |
+          POD=$(kubectl get pods -n production -l app=api-gateway -o jsonpath='{.items[0].metadata.name}')
+          echo "=== /etc/nginx/nginx.conf ==="
+          kubectl exec -n production $POD -- cat /etc/nginx/nginx.conf
+          echo "=== listening ports ==="
+          kubectl exec -n production $POD -- sh -c 'ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || cat /proc/net/tcp'
+          echo "=== curl healthz from inside ==="
+          kubectl exec -n production $POD -- wget -qO- http://127.0.0.1/healthz
+
+      - name: Check ingress and service endpoints
+        run: |
+          echo "=== Ingress ==="
+          kubectl get ingress -n production api-gateway -o yaml
+          echo "=== Service ==="
+          kubectl get service -n production api-gateway -o yaml
+          echo "=== Endpoints ==="
+          kubectl get endpoints -n production api-gateway -o yaml
+
       - name: events
         run: kubectl get events -n production --sort-by='.lastTimestamp' | tail -30
