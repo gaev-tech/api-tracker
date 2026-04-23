@@ -25,12 +25,6 @@ data:
             default $http_x_request_id;
         }
 
-        # ── Real scheme (TLS is terminated at ingress-nginx) ─────────────────
-        map $http_x_forwarded_proto $real_scheme {
-            default $scheme;
-            https   https;
-        }
-
         # ── Server ───────────────────────────────────────────────────────────
         server {
             listen 80;
@@ -56,11 +50,8 @@ data:
             proxy_set_header X-Is-Active "";
 
             # ── API docs (Swagger UI) ─────────────────────────────────────────
-            # Redirect /swagger → /swagger/ preserving the original scheme so
-            # the browser doesn't downgrade from HTTPS to HTTP (TLS is
-            # terminated at ingress-nginx which forwards X-Forwarded-Proto).
             location = /swagger {
-                return 301 $real_scheme://$host/swagger/;
+                return 301 /swagger/;
             }
             location /swagger/ {
                 set $upstream swagger-ui:8080;
