@@ -1,0 +1,50 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/gaev-tech/api-tracker/billing-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8080
+  grpcPort: 9090
+
+hpa:
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: false
+
+env:
+  - name: PORT
+    value: "8080"
+  - name: GRPC_PORT
+    value: "9090"
+  - name: KAFKA_BROKERS
+    value: "kafka-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: billing-db-credentials
+        key: password
+  - name: DATABASE_URL
+    value: "postgres://billing_user:$(DB_PASSWORD)@postgres-billing-rw:5432/billing_db"
+
+envFrom:
+  configMapRef: ""
+  secretRef: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  path: /metrics

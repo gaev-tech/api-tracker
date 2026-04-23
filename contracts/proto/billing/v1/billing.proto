@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package billing.v1;
+
+option go_package = "github.com/gaev-tech/api-tracker/contracts/proto/billing/gen;billingv1";
+
+// BillingService is called by workspace-service before creating any entity.
+service BillingService {
+  // CheckLimit returns whether the user is allowed to create one more entity of the given type.
+  // Called by workspace-service before creating tasks, projects, teams.
+  rpc CheckLimit(CheckLimitRequest) returns (CheckLimitResponse);
+}
+
+// EntityType mirrors the entity types tracked in usage_counters.
+enum EntityType {
+  ENTITY_TYPE_UNSPECIFIED  = 0;
+  ENTITY_TYPE_TASK         = 1;
+  ENTITY_TYPE_PROJECT      = 2;
+  ENTITY_TYPE_TEAM         = 3;
+  ENTITY_TYPE_AUTOMATION   = 4;
+  ENTITY_TYPE_MEMBER       = 5;
+}
+
+message CheckLimitRequest {
+  string     user_id     = 1;
+  EntityType entity_type = 2;
+}
+
+message CheckLimitResponse {
+  bool allowed = 1;
+}

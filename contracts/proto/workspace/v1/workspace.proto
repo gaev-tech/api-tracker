@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package workspace.v1;
+
+option go_package = "github.com/gaev-tech/api-tracker/contracts/proto/workspace/gen;workspacev1";
+
+// WorkspaceService is called by automations-service.
+service WorkspaceService {
+  // GetTaskRights returns the effective rights bitmask for a user on a task.
+  // Called by automations-service to evaluate RSQL conditions against task access.
+  rpc GetTaskRights(GetTaskRightsRequest) returns (GetTaskRightsResponse);
+
+  // GetProjectMembers returns all members of a project with their roles.
+  // Called by automations-service to resolve project membership.
+  rpc GetProjectMembers(GetProjectMembersRequest) returns (GetProjectMembersResponse);
+}
+
+message GetTaskRightsRequest {
+  string user_id = 1;
+  string task_id = 2;
+}
+
+message GetTaskRightsResponse {
+  // rights is a bitmask of R-1..R-14 as defined in the access model.
+  // Bit N-1 corresponds to right R-N (e.g. bit 0 = R-1, bit 13 = R-14).
+  uint32 rights = 1;
+}
+
+message GetProjectMembersRequest {
+  string project_id = 1;
+}
+
+message GetProjectMembersResponse {
+  repeated ProjectMember members = 1;
+}
+
+message ProjectMember {
+  string user_id = 1;
+  // role is the member's role in the project (e.g. "owner", "admin", "member").
+  string role    = 2;
+}

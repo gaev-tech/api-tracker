@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package identity.v1;
+
+option go_package = "github.com/gaev-tech/api-tracker/contracts/proto/identity/gen;identityv1";
+
+// IdentityService is called by api-gateway (ValidateToken) and workspace-service (GetUser).
+service IdentityService {
+  // ValidateToken validates a Bearer PAT and returns the owner's user_id.
+  // Called by api-gateway on every request via auth_request.
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // GetUser returns public profile data for a given user.
+  // Called by workspace-service to hydrate users_cache.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  string user_id = 1;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  string user_id  = 1;
+  string email    = 2;
+  string name     = 3;
+}

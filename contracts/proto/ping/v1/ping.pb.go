@@ -4,6 +4,8 @@
 // 	protoc        (unknown)
 // source: ping/v1/ping.proto
 
+// Reference service proto for testing CI pipeline.
+
 package pingv1
 
 import (
