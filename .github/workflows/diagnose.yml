@@ -47,6 +47,12 @@ jobs:
           echo "=== Endpoints ==="
           kubectl get endpoints -n production api-gateway -o yaml
 
+      - name: Why is ingress-nginx Pending
+        run: |
+          kubectl describe pods -n ingress-nginx 2>&1 | grep -A 20 "Events:"
+          kubectl get nodes -o wide
+          kubectl describe nodes 2>&1 | grep -E "(Taints|Allocatable|cpu:|memory:)" | head -20
+
       - name: Test connectivity from inside cluster
         run: |
           SVC_IP=$(kubectl get service -n production api-gateway -o jsonpath='{.spec.clusterIP}')
