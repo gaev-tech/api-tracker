@@ -46,5 +46,25 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 	authed.POST("/tasks/:id/projects", taskH.AttachProject)
 	authed.DELETE("/tasks/:id/projects/:project_id", taskH.DetachProject)
 
+	// Project endpoints
+	projectStore := store.NewProjectStore(db)
+	projectH := handler.NewProjectHandler(projectStore, db)
+
+	authed.POST("/projects", projectH.CreateProject)
+	authed.GET("/projects", projectH.ListProjects)
+	authed.GET("/projects/:id", projectH.GetProject)
+	authed.PATCH("/projects/:id", projectH.UpdateProject)
+	authed.DELETE("/projects/:id", projectH.DeleteProject)
+
+	// Team endpoints
+	teamStore := store.NewTeamStore(db)
+	teamH := handler.NewTeamHandler(teamStore, db)
+
+	authed.POST("/teams", teamH.CreateTeam)
+	authed.GET("/teams", teamH.ListTeams)
+	authed.GET("/teams/:id", teamH.GetTeam)
+	authed.PATCH("/teams/:id", teamH.UpdateTeam)
+	authed.DELETE("/teams/:id", teamH.DeleteTeam)
+
 	return r
 }

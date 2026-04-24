@@ -112,6 +112,48 @@ data:
               description: Base64url-encoded RSA public exponent.
           required: [kty, use, alg, kid, n, e]
 
+        Project:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            description:
+              type: string
+            owner_id:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+          required: [id, name, description, owner_id, created_at, updated_at]
+
+        Team:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            description:
+              type: string
+            owner_id:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+          required: [id, name, description, owner_id, created_at, updated_at]
+
         Task:
           type: object
           properties:
@@ -621,6 +663,302 @@ data:
               description: PAT revoked
             "404":
               description: PAT not found or already revoked
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+      /projects:
+        get:
+          summary: List own projects (cursor pagination)
+          operationId: listProjects
+          tags: [Projects]
+          parameters:
+            - name: cursor
+              in: query
+              schema:
+                type: string
+            - name: limit
+              in: query
+              schema:
+                type: integer
+                default: 50
+                maximum: 100
+          responses:
+            "200":
+              description: Paginated project list
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Project"
+                      next_cursor:
+                        type: string
+                        nullable: true
+                      total:
+                        type: integer
+                    required: [items, total]
+
+        post:
+          summary: Create a project
+          operationId: createProject
+          tags: [Projects]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+                  required: [name]
+          responses:
+            "201":
+              description: Project created
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Project"
+            "400":
+              description: Validation error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+      /projects/{id}:
+        get:
+          summary: Get project by ID
+          operationId: getProject
+          tags: [Projects]
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+                format: uuid
+          responses:
+            "200":
+              description: Project
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Project"
+            "404":
+              description: Project not found
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+        patch:
+          summary: Update project fields
+          operationId: updateProject
+          tags: [Projects]
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+                format: uuid
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+          responses:
+            "200":
+              description: Updated project
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Project"
+            "404":
+              description: Project not found
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+        delete:
+          summary: Delete project
+          operationId: deleteProject
+          tags: [Projects]
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+                format: uuid
+          responses:
+            "204":
+              description: Project deleted
+            "404":
+              description: Project not found
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+      /teams:
+        get:
+          summary: List own teams (cursor pagination)
+          operationId: listTeams
+          tags: [Teams]
+          parameters:
+            - name: cursor
+              in: query
+              schema:
+                type: string
+            - name: limit
+              in: query
+              schema:
+                type: integer
+                default: 50
+                maximum: 100
+          responses:
+            "200":
+              description: Paginated team list
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Team"
+                      next_cursor:
+                        type: string
+                        nullable: true
+                      total:
+                        type: integer
+                    required: [items, total]
+
+        post:
+          summary: Create a team
+          operationId: createTeam
+          tags: [Teams]
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+                  required: [name]
+          responses:
+            "201":
+              description: Team created
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Team"
+            "400":
+              description: Validation error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+      /teams/{id}:
+        get:
+          summary: Get team by ID
+          operationId: getTeam
+          tags: [Teams]
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+                format: uuid
+          responses:
+            "200":
+              description: Team
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Team"
+            "404":
+              description: Team not found
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+        patch:
+          summary: Update team fields
+          operationId: updateTeam
+          tags: [Teams]
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+                format: uuid
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+          responses:
+            "200":
+              description: Updated team
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Team"
+            "404":
+              description: Team not found
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+        delete:
+          summary: Delete team
+          operationId: deleteTeam
+          tags: [Teams]
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+                format: uuid
+          responses:
+            "204":
+              description: Team deleted
+            "404":
+              description: Team not found
               content:
                 application/json:
                   schema:
