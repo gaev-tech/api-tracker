@@ -45,7 +45,7 @@ jobs:
           # Services that depend on backend/pkg use repo root as context
           declare -A context=(
             [identity-service]=.
-            [workspace-service]=backend/services/workspace-service
+            [workspace-service]=.
             [events-service]=backend/services/events-service
             [billing-service]=.
             [api-gateway]=backend/api-gateway

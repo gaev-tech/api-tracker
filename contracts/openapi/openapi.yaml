@@ -104,6 +104,56 @@ components:
           description: Base64url-encoded RSA public exponent.
       required: [kty, use, alg, kid, n, e]
 
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          description: Markdown
+        status:
+          type: string
+          enum: [opened, progress, closed]
+        author_id:
+          type: string
+          format: uuid
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        project_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        blocking_task_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        blocked_task_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        is_frozen_by_tariff:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, title, description, status, author_id, tags, project_ids, blocking_task_ids, blocked_task_ids, is_frozen_by_tariff, created_at, updated_at]
+
     PAT:
       type: object
       description: Personal Access Token. Field `token` is non-null only in POST response (creation).
@@ -567,6 +617,262 @@ paths:
           description: PAT revoked
         "404":
           description: PAT not found or already revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks:
+    get:
+      summary: List tasks (RSQL filter, cursor pagination, sorting)
+      operationId: listTasks
+      tags: [Tasks]
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: RSQL filter expression
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: sort
+          in: query
+          schema:
+            type: string
+          description: "Sort field:direction (e.g. created_at:asc, updated_at:desc, title:asc)"
+      responses:
+        "200":
+          description: Paginated task list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+                  next_cursor:
+                    type: string
+                    nullable: true
+                  total:
+                    type: integer
+                required: [items, total]
+
+    post:
+      summary: Create a task
+      operationId: createTask
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                  enum: [opened, progress, closed]
+                assignee_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                tags:
+                  type: array
+                  items:
+                    type: string
+                project_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                blocking_task_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+              required: [title]
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "422":
+          description: Tariff limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks/{id}:
+    get:
+      summary: Get task by ID
+      operationId: getTask
+      tags: [Tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    patch:
+      summary: Update task fields
+      operationId: updateTask
+      tags: [Tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                  enum: [opened, progress, closed]
+                assignee_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                tags:
+                  type: array
+                  items:
+                    type: string
+                blocking_task_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Delete task
+      operationId: deleteTask
+      tags: [Tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Task deleted
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks/{id}/projects:
+    post:
+      summary: Attach task to project
+      operationId: attachTaskProject
+      tags: [Tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+              required: [project_id]
+      responses:
+        "204":
+          description: Attached
+        "409":
+          description: Already attached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks/{id}/projects/{project_id}:
+    delete:
+      summary: Detach task from project
+      operationId: detachTaskProject
+      tags: [Tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Detached
+        "404":
+          description: Association not found
           content:
             application/json:
               schema:
