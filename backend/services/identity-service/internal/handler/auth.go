@@ -74,10 +74,11 @@ func (handler *AuthHandler) Register(c *gin.Context) {
 	}
 
 	verificationURL := fmt.Sprintf("%s/auth/email/verify?token=%s", handler.appBaseURL, verificationToken)
-	if err := handler.emailSender.SendVerification(user.Email, verificationURL); err != nil {
-		// Non-fatal: user is created, email delivery failed. Client should retry via resend endpoint.
-		fmt.Printf("[identity] failed to send verification email to %s: %v\n", user.Email, err)
-	}
+	go func() {
+		if err := handler.emailSender.SendVerification(user.Email, verificationURL); err != nil {
+			fmt.Printf("[identity] failed to send verification email to %s: %v\n", user.Email, err)
+		}
+	}()
 
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
