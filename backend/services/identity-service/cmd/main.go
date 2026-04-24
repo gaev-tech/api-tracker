@@ -5,17 +5,25 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	grpcpkg "github.com/gaev-tech/api-tracker/backend/pkg/grpc"
+	kafkapkg "github.com/gaev-tech/api-tracker/backend/pkg/kafka"
 	"github.com/gaev-tech/api-tracker/backend/pkg/logging"
+	"github.com/gaev-tech/api-tracker/backend/pkg/outbox"
 	"github.com/gaev-tech/api-tracker/backend/pkg/sentry"
+	identityv1 "github.com/gaev-tech/api-tracker/contracts/proto/identity/v1"
 	identityinternal "github.com/gaev-tech/api-tracker/backend/services/identity-service/internal"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/auth"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/email"
+	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/grpcserver"
+	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/store"
 	migrationsfs "github.com/gaev-tech/api-tracker/backend/services/identity-service/migrations"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
@@ -39,6 +47,8 @@ func main() {
 	smtpFrom := envOr("SMTP_FROM", "")
 	smtpPassword := envOr("SMTP_PASSWORD", "")
 	appBaseURL := envOr("APP_BASE_URL", "http://localhost:3000")
+	kafkaBrokers := envOr("KAFKA_BROKERS", "kafka-cluster-kafka-bootstrap.kafka.svc:9092")
+	grpcPort := envOr("GRPC_PORT", "9090")
 
 	logger := logging.New("identity")
 
@@ -67,6 +77,37 @@ func main() {
 	emailSender := email.NewSender(smtpHost, smtpPort, smtpFrom, smtpPassword)
 	router := identityinternal.NewRouter(logger, db, jwtSvc, emailSender, appBaseURL)
 
+	// Outbox relay for Kafka events
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	brokers := strings.Split(kafkaBrokers, ",")
+	kafkaWriter := kafkapkg.NewMultiWriter(brokers)
+	defer kafkaWriter.Close()
+
+	relay := outbox.New(db, kafkaWriter, "identity_outbox", logger)
+	go relay.Start(ctx)
+
+	// gRPC server
+	patStore := store.NewPATStore(db)
+	userStore := store.NewUserStore(db)
+	grpcSrv := grpcpkg.NewServer(logger)
+	identityv1.RegisterIdentityServiceServer(grpcSrv, grpcserver.New(patStore, userStore))
+
+	grpcLis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
+	if err != nil {
+		logger.Error("grpc listen failed", "error", err)
+		os.Exit(1)
+	}
+	go func() {
+		logger.Info("starting gRPC server", "port", grpcPort)
+		if err := grpcSrv.Serve(grpcLis); err != nil {
+			logger.Error("grpc server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// HTTP server
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
 		Handler: router,
@@ -85,6 +126,9 @@ func main() {
 	<-quit
 
 	logger.Info("shutting down")
+	cancel()
+	grpcSrv.GracefulStop()
+
 	shutCtx, shutCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutCancel()
 
