@@ -310,12 +310,17 @@ jobs:
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create identity SMTP secret
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         run: |
           kubectl create secret generic identity-smtp-credentials \
-            --from-literal=SMTP_HOST=${{ secrets.SMTP_HOST }} \
-            --from-literal=SMTP_PORT=${{ secrets.SMTP_PORT || '587' }} \
-            --from-literal=SMTP_FROM=${{ secrets.SMTP_FROM }} \
-            --from-literal=SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }} \
+            --from-literal="SMTP_HOST=$SMTP_HOST" \
+            --from-literal="SMTP_PORT=${SMTP_PORT:-587}" \
+            --from-literal="SMTP_FROM=$SMTP_FROM" \
+            --from-literal="SMTP_PASSWORD=$SMTP_PASSWORD" \
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create ghcr image pull secret

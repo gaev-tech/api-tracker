@@ -6,8 +6,8 @@ metadata:
 spec:
   instances: 1
   postgresql:
-    parameters:
-      shared_preload_libraries: "citus"
+    shared_preload_libraries:
+      - citus
   bootstrap:
     initdb:
       database: events_db
@@ -33,8 +33,8 @@ metadata:
 spec:
   instances: 3
   postgresql:
-    parameters:
-      shared_preload_libraries: "citus"
+    shared_preload_libraries:
+      - citus
   bootstrap:
     initdb:
       database: events_db
