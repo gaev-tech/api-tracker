@@ -93,5 +93,17 @@ jobs:
             kubectl exec -n production $SWPOD -- wget -qO- http://127.0.0.1:8080/swagger/ 2>&1 | head -5 || true
           fi
 
+      - name: identity-service pods and env
+        run: |
+          echo "=== pods ==="
+          kubectl get pods -n production -l app=identity-service -o wide
+          echo "=== SMTP env vars ==="
+          POD=$(kubectl get pods -n production -l app=identity-service -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec -n production $POD -- env | grep -E "SMTP|APP_BASE" || true
+
+      - name: identity-service logs (last 100 lines)
+        run: |
+          kubectl logs -n production -l app=identity-service --tail=100 --prefix=true 2>&1 || true
+
       - name: events
         run: kubectl get events -n production --sort-by='.lastTimestamp' | tail -30
