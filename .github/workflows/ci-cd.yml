@@ -47,7 +47,7 @@ jobs:
             [identity-service]=.
             [workspace-service]=backend/services/workspace-service
             [events-service]=backend/services/events-service
-            [billing-service]=backend/services/billing-service
+            [billing-service]=.
             [api-gateway]=backend/api-gateway
           )
           declare -A dockerfile=(
