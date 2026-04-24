@@ -7,4 +7,5 @@ use (
 	./services/identity-service
 	./services/ping
 	./services/workspace-service
+	../contracts/proto
 )

@@ -100,6 +100,29 @@ components:
           description: Base64url-encoded RSA public exponent.
       required: [kty, use, alg, kid, n, e]
 
+    PAT:
+      type: object
+      description: Personal Access Token. Field `token` is non-null only in POST response (creation).
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: CI script
+        token:
+          type: string
+          nullable: true
+          description: Full token value (pat_...). Only returned on creation, null otherwise.
+        created_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, name, created_at]
+
 security:
   - BearerAuth: []
 
@@ -333,6 +356,136 @@ paths:
                 $ref: "#/components/schemas/User"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /pats:
+    get:
+      summary: List own PATs
+      operationId: listPATs
+      tags: [PAT]
+      responses:
+        "200":
+          description: List of PATs (token field is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PAT"
+                required: [items]
+
+    post:
+      summary: Create a new PAT
+      operationId: createPAT
+      tags: [PAT]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: CI script
+              required: [name]
+      responses:
+        "201":
+          description: PAT created (token field contains the full value — only time it is shown)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PAT"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /pats/{id}:
+    get:
+      summary: Get PAT by ID
+      operationId: getPAT
+      tags: [PAT]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: PAT details (token field is null)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PAT"
+        "404":
+          description: PAT not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    patch:
+      summary: Update PAT name
+      operationId: updatePAT
+      tags: [PAT]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+              required: [name]
+      responses:
+        "200":
+          description: Updated PAT
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PAT"
+        "404":
+          description: PAT not found or already revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Revoke PAT (soft-delete)
+      operationId: revokePAT
+      tags: [PAT]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: PAT revoked
+        "404":
+          description: PAT not found or already revoked
           content:
             application/json:
               schema:

@@ -25,9 +25,11 @@ func NewRouter(logger *slog.Logger, db *sql.DB, jwtSvc *auth.Service, emailSende
 
 	userStore := store.NewUserStore(db)
 	refreshStore := store.NewRefreshTokenStore(db)
+	patStore := store.NewPATStore(db)
 
 	authH := handler.NewAuthHandler(userStore, refreshStore, jwtSvc, emailSender, appBaseURL)
 	userH := handler.NewUserHandler(userStore)
+	patH := handler.NewPATHandler(patStore, db)
 
 	r.GET("/healthz", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	r.GET("/readyz", func(c *gin.Context) {
@@ -57,6 +59,13 @@ func NewRouter(logger *slog.Logger, db *sql.DB, jwtSvc *auth.Service, emailSende
 	// User endpoints
 	authed.GET("/users/me", userH.GetMe)
 	authed.PATCH("/users/me", userH.PatchMe)
+
+	// PAT endpoints
+	authed.GET("/pats", patH.ListPATs)
+	authed.GET("/pats/:id", patH.GetPAT)
+	authed.POST("/pats", patH.CreatePAT)
+	authed.PATCH("/pats/:id", patH.UpdatePAT)
+	authed.DELETE("/pats/:id", patH.RevokePAT)
 
 	return r
 }
