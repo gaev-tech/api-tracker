@@ -5,6 +5,9 @@ WORKDIR /app
 # Copy pkg module (needed by replace directive)
 COPY backend/pkg/ ./backend/pkg/
 
+# Copy proto contracts module (needed by replace directive)
+COPY contracts/proto/ ./contracts/proto/
+
 # Copy service module
 COPY backend/services/identity-service/ ./backend/services/identity-service/
 
