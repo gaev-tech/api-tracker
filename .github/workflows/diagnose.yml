@@ -104,10 +104,10 @@ jobs:
 
       - name: identity-service pods and env
         run: |
-          echo "=== pods (app=identity-service) ==="
-          kubectl get pods -n production -l app=identity-service -o wide 2>&1 || true
+          echo "=== pods ==="
+          kubectl get pods -n production -l "app.kubernetes.io/name=identity-service" -o wide 2>&1 || true
           echo "=== SMTP env vars ==="
-          POD=$(kubectl get pods -n production -l app=identity-service -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          POD=$(kubectl get pods -n production -l "app.kubernetes.io/name=identity-service" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
           if [ -n "$POD" ]; then
             kubectl exec -n production $POD -- env | grep -E "SMTP|APP_BASE" || true
           else
@@ -116,9 +116,9 @@ jobs:
 
       - name: identity-service logs (last 100 lines)
         run: |
-          kubectl logs -n production -l app=identity-service --tail=100 --prefix=true 2>&1 || true
+          kubectl logs -n production -l "app.kubernetes.io/name=identity-service" --tail=100 --prefix=true 2>&1 || true
           echo "=== previous pod logs ==="
-          kubectl logs -n production -l app=identity-service --tail=50 --prefix=true --previous 2>&1 || true
+          kubectl logs -n production -l "app.kubernetes.io/name=identity-service" --tail=50 --prefix=true --previous 2>&1 || true
 
       - name: events
         run: kubectl get events -n production --sort-by='.lastTimestamp' | tail -30
