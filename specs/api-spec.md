@@ -111,12 +111,13 @@ api-gateway определяет тип по префиксу: `pat_` → PAT-в
 {
   "id": "uuid",
   "name": "string",
-  "token": "string",
-  "expires_at": "ISO 8601 | null",
+  "token": "string | null",
   "created_at": "ISO 8601",
   "revoked_at": "ISO 8601 | null"
 }
 ```
+
+Поле `token` содержит полное значение **только в ответе на POST /pats** (момент создания). В остальных ответах (GET /pats, GET /pats/{id}) — `null`. Сервер хранит SHA-256 хеш токена, не plaintext. Формат токена: `pat_` + 32 случайных байта в base64url.
 
 ## Team
 
@@ -665,12 +666,18 @@ Query: `status` (опц., фильтр), `cursor`, `limit`.
 
 ### GET /pats
 
-Список своих PAT (со значениями токенов).
+Список своих PAT. Поле `token` = `null` (хеш хранится на сервере, полный токен показывается только при создании).
 
 Ответ `200`:
 ```json
 { "items": [ /* PAT */ ] }
 ```
+
+### GET /pats/{id}
+
+Получить PAT по ID. Поле `token` = `null`.
+
+Ответ `200`: `PAT`.
 
 ### POST /pats
 
@@ -679,17 +686,28 @@ Query: `status` (опц., фильтр), `cursor`, `limit`.
 Тело:
 ```json
 {
-  "name": "CI script",
-  "expires_at": "2026-04-21T00:00:00Z"
+  "name": "CI script"
 }
 ```
-`expires_at` опционально.
 
-Ответ `201`: `PAT`.
+Ответ `201`: `PAT` (поле `token` содержит полное значение, единственный раз).
+
+### PATCH /pats/{id}
+
+Обновить имя PAT.
+
+Тело:
+```json
+{
+  "name": "new name"
+}
+```
+
+Ответ `200`: `PAT`.
 
 ### DELETE /pats/{id}
 
-Отозвать PAT.
+Отозвать PAT (soft-delete: устанавливает `revoked_at`).
 
 Ответ `204`.
 
