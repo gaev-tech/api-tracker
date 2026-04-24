@@ -20,7 +20,8 @@ const (
 type NodeType int
 
 const (
-	NodeAnd NodeType = iota
+	NodeUnknown NodeType = iota
+	NodeAnd
 	NodeOr
 	NodeComparison
 )

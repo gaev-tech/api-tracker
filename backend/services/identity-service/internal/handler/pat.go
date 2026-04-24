@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -47,7 +48,7 @@ func (h *PATHandler) GetPAT(c *gin.Context) {
 	patID := c.Param("id")
 
 	pat, err := h.pats.FindByID(c.Request.Context(), uid, patID)
-	if err == store.ErrNotFound {
+	if errors.Is(err, store.ErrNotFound) {
 		c.JSON(http.StatusNotFound, apiErr("not_found", "PAT not found", nil))
 		return
 	}
@@ -131,7 +132,7 @@ func (h *PATHandler) UpdatePAT(c *gin.Context) {
 	}
 
 	pat, err := h.pats.UpdateName(c.Request.Context(), uid, patID, req.Name)
-	if err == store.ErrNotFound {
+	if errors.Is(err, store.ErrNotFound) {
 		c.JSON(http.StatusNotFound, apiErr("not_found", "PAT not found or already revoked", nil))
 		return
 	}
@@ -155,7 +156,7 @@ func (h *PATHandler) RevokePAT(c *gin.Context) {
 	}
 	defer tx.Rollback()
 
-	if err := h.pats.RevokeTx(c.Request.Context(), tx, uid, patID); err == store.ErrNotFound {
+	if err := h.pats.RevokeTx(c.Request.Context(), tx, uid, patID); errors.Is(err, store.ErrNotFound) {
 		c.JSON(http.StatusNotFound, apiErr("not_found", "PAT not found or already revoked", nil))
 		return
 	} else if err != nil {

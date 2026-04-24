@@ -2,6 +2,7 @@ package grpcserver
 
 import (
 	"context"
+	"errors"
 
 	identityv1 "github.com/gaev-tech/api-tracker/contracts/proto/identity/v1"
 	"github.com/gaev-tech/api-tracker/backend/services/identity-service/internal/store"
@@ -25,7 +26,7 @@ func (s *Server) ValidateToken(ctx context.Context, req *identityv1.ValidateToke
 	}
 
 	userID, err := s.pats.FindUserByTokenHash(ctx, hashToken(req.Token))
-	if err == store.ErrNotFound {
+	if errors.Is(err, store.ErrNotFound) {
 		return nil, status.Error(codes.Unauthenticated, "invalid or revoked token")
 	}
 	if err != nil {
