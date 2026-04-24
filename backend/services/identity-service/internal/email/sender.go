@@ -1,10 +1,10 @@
 package email
 
 import (
-	"crypto/tls"
 	"fmt"
-	"net/smtp"
-	"strings"
+	"strconv"
+
+	"gopkg.in/gomail.v2"
 )
 
 // Sender sends transactional emails via SMTP.
@@ -23,7 +23,6 @@ func NewSender(host, port, from, password string) *Sender {
 }
 
 // SendVerification sends an email verification link to the given address.
-// The verificationURL is the full URL the user should visit (e.g. https://app.example.com/verify?token=...).
 func (sender *Sender) SendVerification(toEmail, verificationURL string) error {
 	subject := "Подтвердите ваш email"
 	body := fmt.Sprintf(
@@ -39,57 +38,17 @@ func (sender *Sender) send(toEmail, subject, body string) error {
 		return nil
 	}
 
-	msg := buildMessage(sender.from, toEmail, subject, body)
-	addr := sender.host + ":" + sender.port
-
-	// Port 465 uses implicit TLS (SMTPS); other ports use STARTTLS via smtp.SendMail.
-	if sender.port == "465" {
-		return sendSSL(addr, sender.host, sender.from, sender.password, []string{toEmail}, []byte(msg))
-	}
-	auth := smtp.PlainAuth("", sender.from, sender.password, sender.host)
-	return smtp.SendMail(addr, auth, sender.from, []string{toEmail}, []byte(msg))
-}
-
-func sendSSL(addr, host, from, password string, to []string, msg []byte) error {
-	conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: host})
+	port, err := strconv.Atoi(sender.port)
 	if err != nil {
-		return err
+		port = 465
 	}
-	client, err := smtp.NewClient(conn, host)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-	auth := smtp.PlainAuth("", from, password, host)
-	if err = client.Auth(auth); err != nil {
-		return err
-	}
-	if err = client.Mail(from); err != nil {
-		return err
-	}
-	for _, addr := range to {
-		if err = client.Rcpt(addr); err != nil {
-			return err
-		}
-	}
-	w, err := client.Data()
-	if err != nil {
-		return err
-	}
-	if _, err = w.Write(msg); err != nil {
-		return err
-	}
-	return w.Close()
-}
 
-func buildMessage(from, to, subject, body string) string {
-	var builder strings.Builder
-	builder.WriteString("From: " + from + "\r\n")
-	builder.WriteString("To: " + to + "\r\n")
-	builder.WriteString("Subject: " + subject + "\r\n")
-	builder.WriteString("MIME-Version: 1.0\r\n")
-	builder.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
-	builder.WriteString("\r\n")
-	builder.WriteString(body)
-	return builder.String()
+	m := gomail.NewMessage()
+	m.SetHeader("From", sender.from)
+	m.SetHeader("To", toEmail)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/plain; charset=UTF-8", body)
+
+	d := gomail.NewDialer(sender.host, port, sender.from, sender.password)
+	return d.DialAndSend(m)
 }
