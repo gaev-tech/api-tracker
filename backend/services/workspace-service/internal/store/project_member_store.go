@@ -173,6 +173,32 @@ func (store *ProjectMemberStore) RemoveMember(ctx context.Context, tx *sql.Tx, p
 	return nil
 }
 
+// UpsertMember inserts or updates a user member in a project (used for ownership transfer).
+func (store *ProjectMemberStore) UpsertMember(ctx context.Context, tx *sql.Tx, projectID, userID string, p domain.ProjectPermissions) error {
+	_, err := tx.ExecContext(ctx, `
+		INSERT INTO project_members (project_id, user_id,
+			edit_title, edit_description, edit_tags, edit_blockers,
+			edit_assignee, edit_status, share, delete_task,
+			rename_project, manage_members, manage_automations,
+			manage_attachments, delete_project, import_tasks)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		ON CONFLICT (project_id, user_id) DO UPDATE SET
+			edit_title = EXCLUDED.edit_title, edit_description = EXCLUDED.edit_description,
+			edit_tags = EXCLUDED.edit_tags, edit_blockers = EXCLUDED.edit_blockers,
+			edit_assignee = EXCLUDED.edit_assignee, edit_status = EXCLUDED.edit_status,
+			share = EXCLUDED.share, delete_task = EXCLUDED.delete_task,
+			rename_project = EXCLUDED.rename_project, manage_members = EXCLUDED.manage_members,
+			manage_automations = EXCLUDED.manage_automations, manage_attachments = EXCLUDED.manage_attachments,
+			delete_project = EXCLUDED.delete_project, import_tasks = EXCLUDED.import_tasks`,
+		projectID, userID,
+		p.EditTitle, p.EditDescription, p.EditTags, p.EditBlockers,
+		p.EditAssignee, p.EditStatus, p.Share, p.DeleteTask,
+		p.RenameProject, p.ManageMembers, p.ManageAutomations,
+		p.ManageAttachments, p.DeleteProject, p.ImportTasks,
+	)
+	return err
+}
+
 // AddTeamMember inserts a team member into a project.
 func (store *ProjectMemberStore) AddTeamMember(ctx context.Context, tx *sql.Tx, projectID, teamID string, p domain.ProjectPermissions) error {
 	_, err := tx.ExecContext(ctx, `

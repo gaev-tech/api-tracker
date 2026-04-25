@@ -21,6 +21,7 @@ import (
 	"github.com/gaev-tech/api-tracker/backend/pkg/outbox"
 	"github.com/gaev-tech/api-tracker/backend/pkg/sentry"
 	workspaceinternal "github.com/gaev-tech/api-tracker/workspace-service/internal"
+	"github.com/gaev-tech/api-tracker/workspace-service/internal/access"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/consumer"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/grpcserver"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/store"
@@ -94,8 +95,10 @@ func main() {
 	go identityConsumer.Start(ctx)
 
 	// gRPC server
+	projectMemberStore := store.NewProjectMemberStore(db)
+	rightsService := access.NewRightsService(db)
 	grpcSrv := grpcpkg.NewServer(logger)
-	workspacev1.RegisterWorkspaceServiceServer(grpcSrv, grpcserver.New())
+	workspacev1.RegisterWorkspaceServiceServer(grpcSrv, grpcserver.New(rightsService, projectMemberStore))
 
 	grpcLis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
 	if err != nil {

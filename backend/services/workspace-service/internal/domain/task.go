@@ -52,6 +52,7 @@ var ValidStatuses = map[string]bool{
 type TaskListParams struct {
 	AuthorID  string // deprecated: use UserID with ListVisible
 	UserID    string // for visibility-based listing
+	ProjectID string // for project-scoped listing
 	Filter    string
 	Cursor    string
 	Limit     int

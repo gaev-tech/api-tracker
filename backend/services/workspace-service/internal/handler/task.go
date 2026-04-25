@@ -16,14 +16,15 @@ import (
 )
 
 type TaskHandler struct {
-	tasks   *store.TaskStore
-	db      *sql.DB
-	billing billingv1.BillingServiceClient
-	rights  *access.RightsService
+	tasks    *store.TaskStore
+	accesses *store.TaskAccessStore
+	db       *sql.DB
+	billing  billingv1.BillingServiceClient
+	rights   *access.RightsService
 }
 
-func NewTaskHandler(tasks *store.TaskStore, db *sql.DB, billing billingv1.BillingServiceClient, rights *access.RightsService) *TaskHandler {
-	return &TaskHandler{tasks: tasks, db: db, billing: billing, rights: rights}
+func NewTaskHandler(tasks *store.TaskStore, accesses *store.TaskAccessStore, db *sql.DB, billing billingv1.BillingServiceClient, rights *access.RightsService) *TaskHandler {
+	return &TaskHandler{tasks: tasks, accesses: accesses, db: db, billing: billing, rights: rights}
 }
 
 // CreateTask godoc: POST /tasks
@@ -129,6 +130,44 @@ func (handler *TaskHandler) ListTasks(ctx *gin.Context) {
 	}
 
 	result, err := handler.tasks.ListVisible(ctx.Request.Context(), params)
+	if err != nil {
+		if strings.Contains(err.Error(), "invalid filter") {
+			ctx.JSON(http.StatusBadRequest, apiErr("validation_error", err.Error(), nil))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, result)
+}
+
+// ListProjectTasks godoc: GET /projects/:id/tasks
+func (handler *TaskHandler) ListProjectTasks(ctx *gin.Context) {
+	userID := ctx.GetString(middleware.UserIDKey)
+	projectID := ctx.Param("id")
+
+	isMember, err := handler.rights.IsProjectMember(ctx.Request.Context(), projectID, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+		return
+	}
+	if !isMember {
+		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
+		return
+	}
+
+	sortField, sortDir := parseSort(ctx, "created_at", "asc")
+	params := &domain.TaskListParams{
+		ProjectID: projectID,
+		Filter:    ctx.Query("filter"),
+		Cursor:    ctx.Query("cursor"),
+		Limit:     parseLimit(ctx, 50, 100),
+		SortField: sortField,
+		SortDir:   sortDir,
+	}
+
+	result, err := handler.tasks.ListByProject(ctx.Request.Context(), params)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid filter") {
 			ctx.JSON(http.StatusBadRequest, apiErr("validation_error", err.Error(), nil))
@@ -328,6 +367,40 @@ func (handler *TaskHandler) DetachProject(ctx *gin.Context) {
 	} else if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to detach project", nil))
 		return
+	}
+
+	// Auto-delete task if no remaining projects and no direct accesses
+	var projectCount int
+	if err := handler.db.QueryRowContext(ctx.Request.Context(), `SELECT COUNT(*) FROM task_projects WHERE task_id = $1`, taskID).Scan(&projectCount); err != nil {
+		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+		return
+	}
+	if projectCount == 0 {
+		tx, err := handler.db.BeginTx(ctx.Request.Context(), nil)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+			return
+		}
+		defer tx.Rollback()
+
+		hasAccess, err := handler.accesses.HasAnyAccess(ctx.Request.Context(), tx, taskID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+			return
+		}
+		if !hasAccess {
+			if err := handler.tasks.Delete(ctx.Request.Context(), tx, taskID); err != nil {
+				ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to auto-delete task", nil))
+				return
+			}
+			_ = outbox.Write(ctx.Request.Context(), tx, "workspace_outbox", "workspace.task.deleted", map[string]string{
+				"task_id": taskID,
+			})
+		}
+		if err := tx.Commit(); err != nil {
+			ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+			return
+		}
 	}
 
 	ctx.Status(http.StatusNoContent)

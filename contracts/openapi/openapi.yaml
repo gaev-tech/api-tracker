@@ -294,6 +294,52 @@ components:
           nullable: true
       required: [id, name, created_at]
 
+    ProjectInvitation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        invitee_user_id: { type: string, format: uuid, nullable: true }
+        invitee_team_id: { type: string, format: uuid, nullable: true }
+        invited_by: { type: string, format: uuid }
+        permissions: { $ref: "#/components/schemas/ProjectPermissions" }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+      required: [id, project_id, invited_by, permissions, status, created_at]
+
+    TeamInvitation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        team_id: { type: string, format: uuid }
+        invitee_user_id: { type: string, format: uuid }
+        invited_by: { type: string, format: uuid }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+      required: [id, team_id, invitee_user_id, invited_by, status, created_at]
+
+    ProjectOwnershipTransfer:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        from_user_id: { type: string, format: uuid }
+        to_user_id: { type: string, format: uuid }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+      required: [id, project_id, from_user_id, to_user_id, status, created_at]
+
+    TeamOwnershipTransfer:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        team_id: { type: string, format: uuid }
+        from_user_id: { type: string, format: uuid }
+        to_user_id: { type: string, format: uuid }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+      required: [id, team_id, from_user_id, to_user_id, status, created_at]
+
 security:
   - BearerAuth: []
 
@@ -1661,3 +1707,400 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /projects/{id}/tasks:
+    get:
+      summary: List project tasks (RSQL filter, cursor pagination, sorting)
+      operationId: listProjectTasks
+      tags: [Tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: RSQL filter expression
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: sort
+          in: query
+          schema:
+            type: string
+          description: "Sort field:direction (e.g. created_at:asc, updated_at:desc, title:asc)"
+      responses:
+        "200":
+          description: Paginated task list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+                  next_cursor:
+                    type: string
+                    nullable: true
+                  total:
+                    type: integer
+                required: [items, total]
+
+  /projects/{id}/invitations:
+    post:
+      summary: Create project invitation
+      operationId: createProjectInvitation
+      tags: [Invitations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invitee_user_id: { type: string, format: uuid }
+                invitee_team_id: { type: string, format: uuid }
+                permissions: { $ref: "#/components/schemas/ProjectPermissions" }
+              required: [permissions]
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectInvitation"
+
+    get:
+      summary: List project invitations
+      operationId: listProjectInvitations
+      tags: [Invitations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: List of project invitations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectInvitation"
+                required: [items]
+
+  /projects/{id}/invitations/{invitation_id}:
+    delete:
+      summary: Delete project invitation
+      operationId: deleteProjectInvitation
+      tags: [Invitations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: invitation_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Invitation deleted
+
+  /invitations/projects/{invitation_id}/accept:
+    post:
+      summary: Accept project invitation
+      operationId: acceptProjectInvitation
+      tags: [Invitations]
+      parameters:
+        - name: invitation_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Invitation accepted
+
+  /invitations/projects/{invitation_id}/decline:
+    post:
+      summary: Decline project invitation
+      operationId: declineProjectInvitation
+      tags: [Invitations]
+      parameters:
+        - name: invitation_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Invitation declined
+
+  /teams/{id}/invitations:
+    post:
+      summary: Create team invitation
+      operationId: createTeamInvitation
+      tags: [Invitations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invitee_user_id: { type: string, format: uuid }
+              required: [invitee_user_id]
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitation"
+
+    get:
+      summary: List team invitations
+      operationId: listTeamInvitations
+      tags: [Invitations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: List of team invitations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TeamInvitation"
+                required: [items]
+
+  /teams/{id}/invitations/{invitation_id}:
+    delete:
+      summary: Delete team invitation
+      operationId: deleteTeamInvitation
+      tags: [Invitations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: invitation_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Invitation deleted
+
+  /invitations/teams/{invitation_id}/accept:
+    post:
+      summary: Accept team invitation
+      operationId: acceptTeamInvitation
+      tags: [Invitations]
+      parameters:
+        - name: invitation_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Invitation accepted
+
+  /invitations/teams/{invitation_id}/decline:
+    post:
+      summary: Decline team invitation
+      operationId: declineTeamInvitation
+      tags: [Invitations]
+      parameters:
+        - name: invitation_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Invitation declined
+
+  /projects/{id}/ownership-transfers:
+    post:
+      summary: Create project ownership transfer
+      operationId: createProjectTransfer
+      tags: [OwnershipTransfers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to_user_id: { type: string, format: uuid }
+              required: [to_user_id]
+      responses:
+        "201":
+          description: Transfer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectOwnershipTransfer"
+
+  /projects/{id}/ownership-transfers/{transfer_id}:
+    delete:
+      summary: Cancel project ownership transfer
+      operationId: cancelProjectTransfer
+      tags: [OwnershipTransfers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: transfer_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Transfer cancelled
+
+  /ownership-transfers/projects/{transfer_id}/accept:
+    post:
+      summary: Accept project ownership transfer
+      operationId: acceptProjectTransfer
+      tags: [OwnershipTransfers]
+      parameters:
+        - name: transfer_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Transfer accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /ownership-transfers/projects/{transfer_id}/decline:
+    post:
+      summary: Decline project ownership transfer
+      operationId: declineProjectTransfer
+      tags: [OwnershipTransfers]
+      parameters:
+        - name: transfer_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Transfer declined
+
+  /teams/{id}/ownership-transfers:
+    post:
+      summary: Create team ownership transfer
+      operationId: createTeamTransfer
+      tags: [OwnershipTransfers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to_user_id: { type: string, format: uuid }
+              required: [to_user_id]
+      responses:
+        "201":
+          description: Transfer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamOwnershipTransfer"
+
+  /teams/{id}/ownership-transfers/{transfer_id}:
+    delete:
+      summary: Cancel team ownership transfer
+      operationId: cancelTeamTransfer
+      tags: [OwnershipTransfers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: transfer_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Transfer cancelled
+
+  /ownership-transfers/teams/{transfer_id}/accept:
+    post:
+      summary: Accept team ownership transfer
+      operationId: acceptTeamTransfer
+      tags: [OwnershipTransfers]
+      parameters:
+        - name: transfer_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Transfer accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+
+  /ownership-transfers/teams/{transfer_id}/decline:
+    post:
+      summary: Decline team ownership transfer
+      operationId: declineTeamTransfer
+      tags: [OwnershipTransfers]
+      parameters:
+        - name: transfer_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Transfer declined

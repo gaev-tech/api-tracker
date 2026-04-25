@@ -26,7 +26,8 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 	rightsService := access.NewRightsService(db)
 
 	taskStore := store.NewTaskStore(db)
-	taskH := handler.NewTaskHandler(taskStore, db, billing, rightsService)
+	taskAccessStore := store.NewTaskAccessStore(db)
+	taskH := handler.NewTaskHandler(taskStore, taskAccessStore, db, billing, rightsService)
 
 	r.GET("/healthz", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	r.GET("/readyz", func(c *gin.Context) {
@@ -50,7 +51,6 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 	authed.DELETE("/tasks/:id/projects/:project_id", taskH.DetachProject)
 
 	// Task access endpoints
-	taskAccessStore := store.NewTaskAccessStore(db)
 	taskAccessH := handler.NewTaskAccessHandler(taskAccessStore, taskStore, db, rightsService)
 
 	authed.GET("/tasks/:id/accesses", taskAccessH.ListTaskAccesses)
@@ -67,6 +67,7 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 	authed.GET("/projects", projectH.ListProjects)
 	authed.GET("/projects/:id", projectH.GetProject)
 	authed.PATCH("/projects/:id", projectH.UpdateProject)
+	authed.GET("/projects/:id/tasks", taskH.ListProjectTasks)
 	authed.DELETE("/projects/:id", projectH.DeleteProject)
 
 	// Project member endpoints
@@ -96,6 +97,36 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 	authed.GET("/teams/:id/members", teamMemberH.ListTeamMembers)
 	authed.PATCH("/teams/:id/members/:user_id", teamMemberH.UpdateTeamMemberRole)
 	authed.DELETE("/teams/:id/members/:user_id", teamMemberH.RemoveTeamMember)
+
+	// Invitation endpoints
+	invitationStore := store.NewInvitationStore(db)
+	invitationH := handler.NewInvitationHandler(invitationStore, projectMemberStore, teamMemberStore, projectStore, teamStore, db, rightsService)
+
+	authed.POST("/projects/:id/invitations", invitationH.CreateProjectInvitation)
+	authed.GET("/projects/:id/invitations", invitationH.ListProjectInvitations)
+	authed.DELETE("/projects/:id/invitations/:invitation_id", invitationH.DeleteProjectInvitation)
+	authed.POST("/invitations/projects/:invitation_id/accept", invitationH.AcceptProjectInvitation)
+	authed.POST("/invitations/projects/:invitation_id/decline", invitationH.DeclineProjectInvitation)
+
+	authed.POST("/teams/:id/invitations", invitationH.CreateTeamInvitation)
+	authed.GET("/teams/:id/invitations", invitationH.ListTeamInvitations)
+	authed.DELETE("/teams/:id/invitations/:invitation_id", invitationH.DeleteTeamInvitation)
+	authed.POST("/invitations/teams/:invitation_id/accept", invitationH.AcceptTeamInvitation)
+	authed.POST("/invitations/teams/:invitation_id/decline", invitationH.DeclineTeamInvitation)
+
+	// Ownership transfer endpoints
+	transferStore := store.NewOwnershipTransferStore(db)
+	transferH := handler.NewOwnershipTransferHandler(transferStore, projectStore, projectMemberStore, teamStore, db)
+
+	authed.POST("/projects/:id/ownership-transfers", transferH.CreateProjectTransfer)
+	authed.DELETE("/projects/:id/ownership-transfers/:transfer_id", transferH.CancelProjectTransfer)
+	authed.POST("/ownership-transfers/projects/:transfer_id/accept", transferH.AcceptProjectTransfer)
+	authed.POST("/ownership-transfers/projects/:transfer_id/decline", transferH.DeclineProjectTransfer)
+
+	authed.POST("/teams/:id/ownership-transfers", transferH.CreateTeamTransfer)
+	authed.DELETE("/teams/:id/ownership-transfers/:transfer_id", transferH.CancelTeamTransfer)
+	authed.POST("/ownership-transfers/teams/:transfer_id/accept", transferH.AcceptTeamTransfer)
+	authed.POST("/ownership-transfers/teams/:transfer_id/decline", transferH.DeclineTeamTransfer)
 
 	return r
 }
