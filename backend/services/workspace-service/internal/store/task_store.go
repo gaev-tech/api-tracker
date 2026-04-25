@@ -239,6 +239,134 @@ func (s *TaskStore) List(ctx context.Context, params *domain.TaskListParams) (*d
 	}, nil
 }
 
+const visibilityCondition = `(
+	t.author_id = $1
+	OR EXISTS(SELECT 1 FROM task_direct_accesses WHERE task_id = t.id AND grantee_user_id = $1)
+	OR EXISTS(SELECT 1 FROM task_projects tp JOIN project_members pm ON tp.project_id = pm.project_id WHERE tp.task_id = t.id AND pm.user_id = $1)
+	OR EXISTS(SELECT 1 FROM task_projects tp JOIN project_team_members ptm ON tp.project_id = ptm.project_id JOIN team_members tm ON ptm.team_id = tm.team_id WHERE tp.task_id = t.id AND tm.user_id = $1)
+	OR EXISTS(SELECT 1 FROM task_direct_accesses tda JOIN team_members tm ON tda.grantee_team_id = tm.team_id WHERE tda.task_id = t.id AND tm.user_id = $1)
+)`
+
+// ListVisible returns tasks visible to the user through any access source.
+func (s *TaskStore) ListVisible(ctx context.Context, params *domain.TaskListParams) (*domain.TaskListResult, error) {
+	sortCol, ok := allowedSortFields[params.SortField]
+	if !ok {
+		sortCol = "t.created_at"
+	}
+	sortDir := "ASC"
+	if strings.EqualFold(params.SortDir, "desc") {
+		sortDir = "DESC"
+	}
+
+	where := visibilityCondition
+	args := []any{params.UserID}
+
+	// RSQL filter
+	if params.Filter != "" {
+		node, err := rsql.Parse(params.Filter)
+		if err != nil {
+			return nil, fmt.Errorf("invalid filter: %w", err)
+		}
+		filterSQL, filterArgs, err := rsql.ToSQL(node, rsqlFields)
+		if err != nil {
+			return nil, fmt.Errorf("invalid filter: %w", err)
+		}
+		for i, filterArg := range filterArgs {
+			args = append(args, filterArg)
+			filterSQL = strings.Replace(filterSQL, fmt.Sprintf("$%d", i+1), fmt.Sprintf("$%d", len(args)), 1)
+		}
+		where += " AND " + filterSQL
+	}
+
+	// Cursor
+	if params.Cursor != "" {
+		cursorTime, cursorID, err := decodeCursor(params.Cursor)
+		if err == nil {
+			args = append(args, cursorTime, cursorID)
+			if sortDir == "ASC" {
+				where += fmt.Sprintf(" AND (%s > $%d OR (%s = $%d AND t.id > $%d))",
+					sortCol, len(args)-1, sortCol, len(args)-1, len(args))
+			} else {
+				where += fmt.Sprintf(" AND (%s < $%d OR (%s = $%d AND t.id > $%d))",
+					sortCol, len(args)-1, sortCol, len(args)-1, len(args))
+			}
+		}
+	}
+
+	// Count total visible
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM tasks t WHERE %s", visibilityCondition)
+	if err := s.db.QueryRowContext(ctx, countQuery, params.UserID).Scan(&total); err != nil {
+		return nil, err
+	}
+
+	limit := params.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	query := fmt.Sprintf(`
+		SELECT t.id, t.title, t.description, t.status, t.author_id, t.assignee_id,
+		       t.tags, t.is_frozen_by_tariff, t.created_at, t.updated_at
+		FROM tasks t
+		WHERE %s
+		ORDER BY %s %s, t.id ASC
+		LIMIT %d`, where, sortCol, sortDir, limit+1)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*domain.Task
+	for rows.Next() {
+		task := &domain.Task{}
+		if err := rows.Scan(
+			&task.ID, &task.Title, &task.Description, &task.Status,
+			&task.AuthorID, &task.AssigneeID, pq.Array(&task.Tags),
+			&task.IsFrozenByTariff, &task.CreatedAt, &task.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, task)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for _, task := range tasks {
+		if err := s.loadRelations(ctx, task); err != nil {
+			return nil, err
+		}
+	}
+
+	var nextCursor *string
+	if len(tasks) > limit {
+		tasks = tasks[:limit]
+		last := tasks[limit-1]
+		var cursorTime time.Time
+		switch params.SortField {
+		case "updated_at":
+			cursorTime = last.UpdatedAt
+		default:
+			cursorTime = last.CreatedAt
+		}
+		cursor := encodeCursor(cursorTime, last.ID)
+		nextCursor = &cursor
+	}
+
+	if tasks == nil {
+		tasks = []*domain.Task{}
+	}
+
+	return &domain.TaskListResult{
+		Items:      tasks,
+		NextCursor: nextCursor,
+		Total:      total,
+	}, nil
+}
+
 // Update updates task fields. Only non-nil fields in req are updated.
 func (s *TaskStore) Update(ctx context.Context, tx *sql.Tx, taskID string, req *domain.UpdateTaskRequest) (*domain.Task, error) {
 	sets := []string{}

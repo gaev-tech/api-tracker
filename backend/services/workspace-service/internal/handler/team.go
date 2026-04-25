@@ -14,12 +14,13 @@ import (
 )
 
 type TeamHandler struct {
-	teams *store.TeamStore
-	db    *sql.DB
+	teams   *store.TeamStore
+	members *store.TeamMemberStore
+	db      *sql.DB
 }
 
-func NewTeamHandler(teams *store.TeamStore, db *sql.DB) *TeamHandler {
-	return &TeamHandler{teams: teams, db: db}
+func NewTeamHandler(teams *store.TeamStore, members *store.TeamMemberStore, db *sql.DB) *TeamHandler {
+	return &TeamHandler{teams: teams, members: members, db: db}
 }
 
 // CreateTeam godoc: POST /teams
@@ -47,6 +48,12 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	team, err := h.teams.Create(c.Request.Context(), tx, uid, &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to create team", nil))
+		return
+	}
+
+	// Add owner as admin member
+	if err := h.members.AddMember(c.Request.Context(), tx, team.ID, uid, domain.TeamRoleAdmin); err != nil {
+		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to add owner as member", nil))
 		return
 	}
 

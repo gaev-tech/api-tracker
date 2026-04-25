@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gaev-tech/api-tracker/backend/pkg/outbox"
+	"github.com/gaev-tech/api-tracker/workspace-service/internal/access"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/domain"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/middleware"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/store"
@@ -17,10 +18,11 @@ type ProjectHandler struct {
 	projects *store.ProjectStore
 	members  *store.ProjectMemberStore
 	db       *sql.DB
+	rights   *access.RightsService
 }
 
-func NewProjectHandler(projects *store.ProjectStore, members *store.ProjectMemberStore, db *sql.DB) *ProjectHandler {
-	return &ProjectHandler{projects: projects, members: members, db: db}
+func NewProjectHandler(projects *store.ProjectStore, members *store.ProjectMemberStore, db *sql.DB, rights *access.RightsService) *ProjectHandler {
+	return &ProjectHandler{projects: projects, members: members, db: db, rights: rights}
 }
 
 // CreateProject godoc: POST /projects
@@ -83,7 +85,7 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		Limit:   parseLimit(c, 50, 100),
 	}
 
-	result, err := h.projects.ListByOwner(c.Request.Context(), params)
+	result, err := h.projects.ListByMember(c.Request.Context(), params)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
@@ -97,6 +99,16 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 	uid := c.GetString(middleware.UserIDKey)
 	projectID := c.Param("id")
 
+	isMember, err := h.rights.IsProjectMember(c.Request.Context(), projectID, uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+		return
+	}
+	if !isMember {
+		c.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
+		return
+	}
+
 	project, err := h.projects.FindByID(c.Request.Context(), projectID)
 	if errors.Is(err, store.ErrNotFound) {
 		c.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
@@ -104,11 +116,6 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
-		return
-	}
-
-	if project.OwnerID != uid {
-		c.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
 		return
 	}
 
@@ -135,18 +142,14 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		req.Name = &trimmed
 	}
 
-	// Verify ownership
-	existing, err := h.projects.FindByID(c.Request.Context(), projectID)
-	if errors.Is(err, store.ErrNotFound) {
-		c.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
-		return
-	}
+	// Check RenameProject right
+	projectRights, err := h.rights.GetProjectRights(c.Request.Context(), projectID, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if existing.OwnerID != uid {
-		c.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
+	if !projectRights.RenameProject {
+		c.JSON(http.StatusForbidden, apiErr("forbidden", "no permission to rename project", nil))
 		return
 	}
 
@@ -188,18 +191,14 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 	uid := c.GetString(middleware.UserIDKey)
 	projectID := c.Param("id")
 
-	// Verify ownership
-	existing, err := h.projects.FindByID(c.Request.Context(), projectID)
-	if errors.Is(err, store.ErrNotFound) {
-		c.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
-		return
-	}
+	// Check DeleteProject right
+	projectRights, err := h.rights.GetProjectRights(c.Request.Context(), projectID, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if existing.OwnerID != uid {
-		c.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
+	if !projectRights.DeleteProject {
+		c.JSON(http.StatusForbidden, apiErr("forbidden", "no permission to delete project", nil))
 		return
 	}
 

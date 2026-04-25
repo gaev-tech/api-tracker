@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gaev-tech/api-tracker/backend/pkg/outbox"
+	"github.com/gaev-tech/api-tracker/workspace-service/internal/access"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/domain"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/middleware"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/store"
@@ -16,10 +17,11 @@ type ProjectMemberHandler struct {
 	members  *store.ProjectMemberStore
 	projects *store.ProjectStore
 	db       *sql.DB
+	rights   *access.RightsService
 }
 
-func NewProjectMemberHandler(members *store.ProjectMemberStore, projects *store.ProjectStore, db *sql.DB) *ProjectMemberHandler {
-	return &ProjectMemberHandler{members: members, projects: projects, db: db}
+func NewProjectMemberHandler(members *store.ProjectMemberStore, projects *store.ProjectStore, db *sql.DB, rights *access.RightsService) *ProjectMemberHandler {
+	return &ProjectMemberHandler{members: members, projects: projects, db: db, rights: rights}
 }
 
 // ListMembers godoc: GET /projects/:id/members
@@ -27,17 +29,13 @@ func (handler *ProjectMemberHandler) ListMembers(ctx *gin.Context) {
 	userID := ctx.GetString(middleware.UserIDKey)
 	projectID := ctx.Param("id")
 
-	project, err := handler.projects.FindByID(ctx.Request.Context(), projectID)
-	if errors.Is(err, store.ErrNotFound) {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
-		return
-	}
+	projectRights, err := handler.rights.GetProjectRights(ctx.Request.Context(), projectID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if project.OwnerID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
+	if !projectRights.ManageMembers {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no permission to manage members", nil))
 		return
 	}
 
@@ -67,6 +65,20 @@ func (handler *ProjectMemberHandler) UpdateMember(ctx *gin.Context) {
 		return
 	}
 
+	projectRights, err := handler.rights.GetProjectRights(ctx.Request.Context(), projectID, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+		return
+	}
+	if !projectRights.ManageMembers {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no permission to manage members", nil))
+		return
+	}
+	if !access.ProjectPermissionsContain(*projectRights, req.Permissions) {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "cannot grant more rights than you have", nil))
+		return
+	}
+
 	project, err := handler.projects.FindByID(ctx.Request.Context(), projectID)
 	if errors.Is(err, store.ErrNotFound) {
 		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
@@ -74,10 +86,6 @@ func (handler *ProjectMemberHandler) UpdateMember(ctx *gin.Context) {
 	}
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
-		return
-	}
-	if project.OwnerID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
 		return
 	}
 	if targetUserID == project.OwnerID {
@@ -124,6 +132,16 @@ func (handler *ProjectMemberHandler) RemoveMember(ctx *gin.Context) {
 	projectID := ctx.Param("id")
 	targetUserID := ctx.Param("user_id")
 
+	projectRights, err := handler.rights.GetProjectRights(ctx.Request.Context(), projectID, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
+		return
+	}
+	if !projectRights.ManageMembers {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no permission to manage members", nil))
+		return
+	}
+
 	project, err := handler.projects.FindByID(ctx.Request.Context(), projectID)
 	if errors.Is(err, store.ErrNotFound) {
 		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
@@ -131,10 +149,6 @@ func (handler *ProjectMemberHandler) RemoveMember(ctx *gin.Context) {
 	}
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
-		return
-	}
-	if project.OwnerID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
 		return
 	}
 	if targetUserID == project.OwnerID {
@@ -178,17 +192,13 @@ func (handler *ProjectMemberHandler) ListTeamMembers(ctx *gin.Context) {
 	userID := ctx.GetString(middleware.UserIDKey)
 	projectID := ctx.Param("id")
 
-	project, err := handler.projects.FindByID(ctx.Request.Context(), projectID)
-	if errors.Is(err, store.ErrNotFound) {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
-		return
-	}
+	projectRights, err := handler.rights.GetProjectRights(ctx.Request.Context(), projectID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if project.OwnerID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
+	if !projectRights.ManageMembers {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no permission to manage members", nil))
 		return
 	}
 
@@ -218,17 +228,17 @@ func (handler *ProjectMemberHandler) UpdateTeamMember(ctx *gin.Context) {
 		return
 	}
 
-	project, err := handler.projects.FindByID(ctx.Request.Context(), projectID)
-	if errors.Is(err, store.ErrNotFound) {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
-		return
-	}
+	projectRights, err := handler.rights.GetProjectRights(ctx.Request.Context(), projectID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if project.OwnerID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
+	if !projectRights.ManageMembers {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no permission to manage members", nil))
+		return
+	}
+	if !access.ProjectPermissionsContain(*projectRights, req.Permissions) {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "cannot grant more rights than you have", nil))
 		return
 	}
 
@@ -271,17 +281,13 @@ func (handler *ProjectMemberHandler) RemoveTeamMember(ctx *gin.Context) {
 	projectID := ctx.Param("id")
 	teamID := ctx.Param("team_id")
 
-	project, err := handler.projects.FindByID(ctx.Request.Context(), projectID)
-	if errors.Is(err, store.ErrNotFound) {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
-		return
-	}
+	projectRights, err := handler.rights.GetProjectRights(ctx.Request.Context(), projectID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if project.OwnerID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "project not found", nil))
+	if !projectRights.ManageMembers {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no permission to manage members", nil))
 		return
 	}
 

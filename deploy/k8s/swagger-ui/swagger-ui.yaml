@@ -218,6 +218,17 @@ data:
             joined_at: { type: string, format: date-time }
           required: [team_id, team_name, permissions, is_frozen_in_project, joined_at]
 
+        TeamMember:
+          type: object
+          properties:
+            team_id: { type: string, format: uuid }
+            user_id: { type: string, format: uuid }
+            email: { type: string }
+            name: { type: string }
+            role: { type: string, enum: [admin, member] }
+            joined_at: { type: string, format: date-time }
+          required: [team_id, user_id, email, name, role, joined_at]
+
         Task:
           type: object
           properties:
@@ -1309,6 +1320,91 @@ data:
               description: Team deleted
             "404":
               description: Team not found
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+      /teams/{id}/members:
+        get:
+          summary: List team members
+          operationId: listTeamMembers
+          tags: [TeamMembers]
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema: { type: string, format: uuid }
+          responses:
+            "200":
+              description: List of team members
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TeamMember"
+                    required: [items]
+
+      /teams/{id}/members/{user_id}:
+        patch:
+          summary: Update team member role
+          operationId: updateTeamMemberRole
+          tags: [TeamMembers]
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema: { type: string, format: uuid }
+            - name: user_id
+              in: path
+              required: true
+              schema: { type: string, format: uuid }
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    role:
+                      type: string
+                  required: [role]
+          responses:
+            "200":
+              description: Member updated
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/TeamMember"
+            "404":
+              description: Member not found
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+
+        delete:
+          summary: Remove member from team
+          operationId: removeTeamMember
+          tags: [TeamMembers]
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema: { type: string, format: uuid }
+            - name: user_id
+              in: path
+              required: true
+              schema: { type: string, format: uuid }
+          responses:
+            "204":
+              description: Member removed
+            "404":
+              description: Member not found
               content:
                 application/json:
                   schema:

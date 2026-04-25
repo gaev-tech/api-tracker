@@ -168,3 +168,76 @@ func (s *ProjectStore) Delete(ctx context.Context, tx *sql.Tx, projectID string)
 	}
 	return nil
 }
+
+// ListByMember returns projects where the user is a member (directly or via team).
+func (s *ProjectStore) ListByMember(ctx context.Context, params *domain.ProjectListParams) (*domain.ProjectListResult, error) {
+	memberCondition := `(
+		EXISTS(SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = $1)
+		OR EXISTS(SELECT 1 FROM project_team_members ptm JOIN team_members tm ON ptm.team_id = tm.team_id WHERE ptm.project_id = p.id AND tm.user_id = $1)
+	)`
+
+	where := memberCondition
+	args := []any{params.OwnerID} // reusing OwnerID field as userID
+
+	if params.Cursor != "" {
+		cursorTime, cursorID, err := decodeCursor(params.Cursor)
+		if err == nil {
+			args = append(args, cursorTime, cursorID)
+			where += fmt.Sprintf(" AND (p.created_at > $%d OR (p.created_at = $%d AND p.id > $%d))",
+				len(args)-1, len(args)-1, len(args))
+		}
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM projects p WHERE %s", memberCondition)
+	if err := s.db.QueryRowContext(ctx, countQuery, params.OwnerID).Scan(&total); err != nil {
+		return nil, err
+	}
+
+	limit := params.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	query := fmt.Sprintf(`
+		SELECT %s FROM projects p
+		WHERE %s
+		ORDER BY p.created_at ASC, p.id ASC
+		LIMIT %d`, projectColumns, where, limit+1)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var projects []*domain.Project
+	for rows.Next() {
+		project, err := scanProject(rows)
+		if err != nil {
+			return nil, err
+		}
+		projects = append(projects, project)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	var nextCursor *string
+	if len(projects) > limit {
+		projects = projects[:limit]
+		last := projects[limit-1]
+		cursor := encodeCursor(last.CreatedAt, last.ID)
+		nextCursor = &cursor
+	}
+
+	if projects == nil {
+		projects = []*domain.Project{}
+	}
+
+	return &domain.ProjectListResult{
+		Items:      projects,
+		NextCursor: nextCursor,
+		Total:      total,
+	}, nil
+}

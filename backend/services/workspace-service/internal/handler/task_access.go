@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gaev-tech/api-tracker/backend/pkg/outbox"
+	"github.com/gaev-tech/api-tracker/workspace-service/internal/access"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/domain"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/middleware"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/store"
@@ -16,10 +17,11 @@ type TaskAccessHandler struct {
 	accesses *store.TaskAccessStore
 	tasks    *store.TaskStore
 	db       *sql.DB
+	rights   *access.RightsService
 }
 
-func NewTaskAccessHandler(accesses *store.TaskAccessStore, tasks *store.TaskStore, db *sql.DB) *TaskAccessHandler {
-	return &TaskAccessHandler{accesses: accesses, tasks: tasks, db: db}
+func NewTaskAccessHandler(accesses *store.TaskAccessStore, tasks *store.TaskStore, db *sql.DB, rights *access.RightsService) *TaskAccessHandler {
+	return &TaskAccessHandler{accesses: accesses, tasks: tasks, db: db, rights: rights}
 }
 
 // ListTaskAccesses godoc: GET /tasks/:id/accesses
@@ -27,17 +29,13 @@ func (handler *TaskAccessHandler) ListTaskAccesses(ctx *gin.Context) {
 	userID := ctx.GetString(middleware.UserIDKey)
 	taskID := ctx.Param("id")
 
-	task, err := handler.tasks.FindByID(ctx.Request.Context(), taskID)
-	if errors.Is(err, store.ErrNotFound) {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "task not found", nil))
-		return
-	}
+	taskRights, err := handler.rights.GetTaskRights(ctx.Request.Context(), taskID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if task.AuthorID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "task not found", nil))
+	if !taskRights.Share {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no share permission on this task", nil))
 		return
 	}
 
@@ -64,23 +62,22 @@ func (handler *TaskAccessHandler) GrantTaskAccess(ctx *gin.Context) {
 		return
 	}
 
-	// Validate exactly one grantee
 	if (req.GranteeUserID == nil) == (req.GranteeTeamID == nil) {
 		ctx.JSON(http.StatusBadRequest, apiErr("validation_error", "exactly one of grantee_user_id or grantee_team_id is required", nil))
 		return
 	}
 
-	task, err := handler.tasks.FindByID(ctx.Request.Context(), taskID)
-	if errors.Is(err, store.ErrNotFound) {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "task not found", nil))
-		return
-	}
+	taskRights, err := handler.rights.GetTaskRights(ctx.Request.Context(), taskID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if task.AuthorID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "task not found", nil))
+	if !taskRights.Share {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no share permission on this task", nil))
+		return
+	}
+	if !access.TaskPermissionsContain(*taskRights, req.Permissions) {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "cannot grant more rights than you have", nil))
 		return
 	}
 
@@ -91,7 +88,7 @@ func (handler *TaskAccessHandler) GrantTaskAccess(ctx *gin.Context) {
 	}
 	defer tx.Rollback()
 
-	access, err := handler.accesses.Create(ctx.Request.Context(), tx, taskID, userID, &req)
+	taskAccess, err := handler.accesses.Create(ctx.Request.Context(), tx, taskID, userID, &req)
 	if errors.Is(err, store.ErrConflict) {
 		ctx.JSON(http.StatusConflict, apiErr("conflict", "access already exists for this grantee", nil))
 		return
@@ -103,7 +100,7 @@ func (handler *TaskAccessHandler) GrantTaskAccess(ctx *gin.Context) {
 
 	if err := outbox.Write(ctx.Request.Context(), tx, "workspace_outbox", "workspace.task.access.granted", map[string]string{
 		"task_id":    taskID,
-		"access_id":  access.ID,
+		"access_id":  taskAccess.ID,
 		"granted_by": userID,
 	}); err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to write outbox", nil))
@@ -115,7 +112,7 @@ func (handler *TaskAccessHandler) GrantTaskAccess(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, access)
+	ctx.JSON(http.StatusCreated, taskAccess)
 }
 
 // UpdateTaskAccess godoc: PATCH /tasks/:id/accesses/:access_id
@@ -130,21 +127,20 @@ func (handler *TaskAccessHandler) UpdateTaskAccess(ctx *gin.Context) {
 		return
 	}
 
-	task, err := handler.tasks.FindByID(ctx.Request.Context(), taskID)
-	if errors.Is(err, store.ErrNotFound) {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "task not found", nil))
-		return
-	}
+	taskRights, err := handler.rights.GetTaskRights(ctx.Request.Context(), taskID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if task.AuthorID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "task not found", nil))
+	if !taskRights.Share {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no share permission on this task", nil))
+		return
+	}
+	if !access.TaskPermissionsContain(*taskRights, req.Permissions) {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "cannot grant more rights than you have", nil))
 		return
 	}
 
-	// Verify access belongs to this task
 	existing, err := handler.accesses.FindByID(ctx.Request.Context(), accessID)
 	if errors.Is(err, store.ErrNotFound) {
 		ctx.JSON(http.StatusNotFound, apiErr("not_found", "access not found", nil))
@@ -166,7 +162,7 @@ func (handler *TaskAccessHandler) UpdateTaskAccess(ctx *gin.Context) {
 	}
 	defer tx.Rollback()
 
-	access, err := handler.accesses.Update(ctx.Request.Context(), tx, accessID, &req)
+	taskAccess, err := handler.accesses.Update(ctx.Request.Context(), tx, accessID, &req)
 	if errors.Is(err, store.ErrNotFound) {
 		ctx.JSON(http.StatusNotFound, apiErr("not_found", "access not found", nil))
 		return
@@ -189,7 +185,7 @@ func (handler *TaskAccessHandler) UpdateTaskAccess(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, access)
+	ctx.JSON(http.StatusOK, taskAccess)
 }
 
 // RevokeTaskAccess godoc: DELETE /tasks/:id/accesses/:access_id
@@ -198,21 +194,16 @@ func (handler *TaskAccessHandler) RevokeTaskAccess(ctx *gin.Context) {
 	taskID := ctx.Param("id")
 	accessID := ctx.Param("access_id")
 
-	task, err := handler.tasks.FindByID(ctx.Request.Context(), taskID)
-	if errors.Is(err, store.ErrNotFound) {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "task not found", nil))
-		return
-	}
+	taskRights, err := handler.rights.GetTaskRights(ctx.Request.Context(), taskID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
 		return
 	}
-	if task.AuthorID != userID {
-		ctx.JSON(http.StatusNotFound, apiErr("not_found", "task not found", nil))
+	if !taskRights.Share {
+		ctx.JSON(http.StatusForbidden, apiErr("forbidden", "no share permission on this task", nil))
 		return
 	}
 
-	// Verify access belongs to this task
 	existing, err := handler.accesses.FindByID(ctx.Request.Context(), accessID)
 	if errors.Is(err, store.ErrNotFound) {
 		ctx.JSON(http.StatusNotFound, apiErr("not_found", "access not found", nil))
@@ -247,7 +238,7 @@ func (handler *TaskAccessHandler) RevokeTaskAccess(ctx *gin.Context) {
 		return
 	}
 
-	// Auto-delete task if no remaining accesses with any right AND no project associations
+	// Auto-delete task if no remaining accesses and no project associations
 	hasAccess, err := handler.accesses.HasAnyAccess(ctx.Request.Context(), tx, taskID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, apiErr("internal_error", "database error", nil))
@@ -265,8 +256,7 @@ func (handler *TaskAccessHandler) RevokeTaskAccess(ctx *gin.Context) {
 				return
 			}
 			_ = outbox.Write(ctx.Request.Context(), tx, "workspace_outbox", "workspace.task.deleted", map[string]string{
-				"task_id":   taskID,
-				"author_id": task.AuthorID,
+				"task_id": taskID,
 			})
 		}
 	}

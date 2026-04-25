@@ -8,6 +8,7 @@ import (
 	billingv1 "github.com/gaev-tech/api-tracker/contracts/proto/billing/v1"
 	"github.com/gaev-tech/api-tracker/backend/pkg/logging"
 	"github.com/gaev-tech/api-tracker/backend/pkg/metrics"
+	"github.com/gaev-tech/api-tracker/workspace-service/internal/access"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/handler"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/middleware"
 	"github.com/gaev-tech/api-tracker/workspace-service/internal/store"
@@ -22,8 +23,10 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 	r.Use(metrics.Middleware("workspace"))
 	r.Use(gin.Recovery())
 
+	rightsService := access.NewRightsService(db)
+
 	taskStore := store.NewTaskStore(db)
-	taskH := handler.NewTaskHandler(taskStore, db, billing)
+	taskH := handler.NewTaskHandler(taskStore, db, billing, rightsService)
 
 	r.GET("/healthz", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	r.GET("/readyz", func(c *gin.Context) {
@@ -48,7 +51,7 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 
 	// Task access endpoints
 	taskAccessStore := store.NewTaskAccessStore(db)
-	taskAccessH := handler.NewTaskAccessHandler(taskAccessStore, taskStore, db)
+	taskAccessH := handler.NewTaskAccessHandler(taskAccessStore, taskStore, db, rightsService)
 
 	authed.GET("/tasks/:id/accesses", taskAccessH.ListTaskAccesses)
 	authed.POST("/tasks/:id/accesses", taskAccessH.GrantTaskAccess)
@@ -58,7 +61,7 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 	// Project endpoints
 	projectStore := store.NewProjectStore(db)
 	projectMemberStore := store.NewProjectMemberStore(db)
-	projectH := handler.NewProjectHandler(projectStore, projectMemberStore, db)
+	projectH := handler.NewProjectHandler(projectStore, projectMemberStore, db, rightsService)
 
 	authed.POST("/projects", projectH.CreateProject)
 	authed.GET("/projects", projectH.ListProjects)
@@ -67,7 +70,7 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 	authed.DELETE("/projects/:id", projectH.DeleteProject)
 
 	// Project member endpoints
-	projectMemberH := handler.NewProjectMemberHandler(projectMemberStore, projectStore, db)
+	projectMemberH := handler.NewProjectMemberHandler(projectMemberStore, projectStore, db, rightsService)
 
 	authed.GET("/projects/:id/members", projectMemberH.ListMembers)
 	authed.PATCH("/projects/:id/members/:user_id", projectMemberH.UpdateMember)
@@ -78,13 +81,21 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 
 	// Team endpoints
 	teamStore := store.NewTeamStore(db)
-	teamH := handler.NewTeamHandler(teamStore, db)
+	teamMemberStore := store.NewTeamMemberStore(db)
+	teamH := handler.NewTeamHandler(teamStore, teamMemberStore, db)
 
 	authed.POST("/teams", teamH.CreateTeam)
 	authed.GET("/teams", teamH.ListTeams)
 	authed.GET("/teams/:id", teamH.GetTeam)
 	authed.PATCH("/teams/:id", teamH.UpdateTeam)
 	authed.DELETE("/teams/:id", teamH.DeleteTeam)
+
+	// Team member endpoints
+	teamMemberH := handler.NewTeamMemberHandler(teamMemberStore, teamStore, db)
+
+	authed.GET("/teams/:id/members", teamMemberH.ListTeamMembers)
+	authed.PATCH("/teams/:id/members/:user_id", teamMemberH.UpdateTeamMemberRole)
+	authed.DELETE("/teams/:id/members/:user_id", teamMemberH.RemoveTeamMember)
 
 	return r
 }
