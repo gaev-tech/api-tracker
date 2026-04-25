@@ -15,11 +15,12 @@ import (
 
 type ProjectHandler struct {
 	projects *store.ProjectStore
+	members  *store.ProjectMemberStore
 	db       *sql.DB
 }
 
-func NewProjectHandler(projects *store.ProjectStore, db *sql.DB) *ProjectHandler {
-	return &ProjectHandler{projects: projects, db: db}
+func NewProjectHandler(projects *store.ProjectStore, members *store.ProjectMemberStore, db *sql.DB) *ProjectHandler {
+	return &ProjectHandler{projects: projects, members: members, db: db}
 }
 
 // CreateProject godoc: POST /projects
@@ -47,6 +48,12 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	project, err := h.projects.Create(c.Request.Context(), tx, uid, &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to create project", nil))
+		return
+	}
+
+	// Add owner as member with full permissions
+	if err := h.members.AddMember(c.Request.Context(), tx, project.ID, uid, domain.FullProjectPermissions()); err != nil {
+		c.JSON(http.StatusInternalServerError, apiErr("internal_error", "failed to add owner as member", nil))
 		return
 	}
 

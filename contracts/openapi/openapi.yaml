@@ -146,6 +146,70 @@ components:
           format: date-time
       required: [id, name, description, owner_id, created_at, updated_at]
 
+    TaskPermissions:
+      type: object
+      properties:
+        edit_title: { type: boolean }
+        edit_description: { type: boolean }
+        edit_tags: { type: boolean }
+        edit_blockers: { type: boolean }
+        edit_assignee: { type: boolean }
+        edit_status: { type: boolean }
+        share: { type: boolean }
+        delete_task: { type: boolean }
+
+    TaskDirectAccess:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        task_id: { type: string, format: uuid }
+        grantee_user_id: { type: string, format: uuid, nullable: true }
+        grantee_team_id: { type: string, format: uuid, nullable: true }
+        granted_by: { type: string, format: uuid }
+        permissions: { $ref: "#/components/schemas/TaskPermissions" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+      required: [id, task_id, granted_by, permissions, created_at, updated_at]
+
+    ProjectPermissions:
+      type: object
+      properties:
+        edit_title: { type: boolean }
+        edit_description: { type: boolean }
+        edit_tags: { type: boolean }
+        edit_blockers: { type: boolean }
+        edit_assignee: { type: boolean }
+        edit_status: { type: boolean }
+        share: { type: boolean }
+        delete_task: { type: boolean }
+        rename_project: { type: boolean }
+        manage_members: { type: boolean }
+        manage_automations: { type: boolean }
+        manage_attachments: { type: boolean }
+        delete_project: { type: boolean }
+        import_tasks: { type: boolean }
+
+    ProjectMember:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        email: { type: string }
+        name: { type: string }
+        permissions: { $ref: "#/components/schemas/ProjectPermissions" }
+        is_frozen_by_tariff: { type: boolean }
+        joined_at: { type: string, format: date-time }
+      required: [user_id, email, name, permissions, is_frozen_by_tariff, joined_at]
+
+    ProjectTeamMember:
+      type: object
+      properties:
+        team_id: { type: string, format: uuid }
+        team_name: { type: string }
+        permissions: { $ref: "#/components/schemas/ProjectPermissions" }
+        is_frozen_in_project: { type: boolean }
+        joined_at: { type: string, format: date-time }
+      required: [team_id, team_name, permissions, is_frozen_in_project, joined_at]
+
     Task:
       type: object
       properties:
@@ -659,6 +723,292 @@ paths:
           description: PAT revoked
         "404":
           description: PAT not found or already revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks/{id}/accesses:
+    get:
+      summary: List task direct accesses
+      operationId: listTaskAccesses
+      tags: [TaskAccesses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: List of direct accesses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TaskDirectAccess"
+                required: [items]
+
+    post:
+      summary: Grant direct access to task
+      operationId: grantTaskAccess
+      tags: [TaskAccesses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                grantee_user_id: { type: string, format: uuid }
+                grantee_team_id: { type: string, format: uuid }
+                permissions: { $ref: "#/components/schemas/TaskPermissions" }
+              required: [permissions]
+      responses:
+        "201":
+          description: Access granted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDirectAccess"
+        "409":
+          description: Access already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tasks/{id}/accesses/{access_id}:
+    patch:
+      summary: Update task direct access permissions
+      operationId: updateTaskAccess
+      tags: [TaskAccesses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: access_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permissions: { $ref: "#/components/schemas/TaskPermissions" }
+              required: [permissions]
+      responses:
+        "200":
+          description: Access updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDirectAccess"
+        "404":
+          description: Access not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Revoke task direct access
+      operationId: revokeTaskAccess
+      tags: [TaskAccesses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: access_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Access revoked
+        "404":
+          description: Access not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /projects/{id}/members:
+    get:
+      summary: List project user members
+      operationId: listProjectMembers
+      tags: [ProjectMembers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: List of project members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectMember"
+                required: [items]
+
+  /projects/{id}/members/{user_id}:
+    patch:
+      summary: Update project member permissions
+      operationId: updateProjectMember
+      tags: [ProjectMembers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permissions: { $ref: "#/components/schemas/ProjectPermissions" }
+              required: [permissions]
+      responses:
+        "200":
+          description: Member updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectMember"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Remove member from project
+      operationId: removeProjectMember
+      tags: [ProjectMembers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Member removed
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /projects/{id}/team-members:
+    get:
+      summary: List project team members
+      operationId: listProjectTeamMembers
+      tags: [ProjectMembers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: List of project team members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectTeamMember"
+                required: [items]
+
+  /projects/{id}/team-members/{team_id}:
+    patch:
+      summary: Update project team member permissions
+      operationId: updateProjectTeamMember
+      tags: [ProjectMembers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: team_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permissions: { $ref: "#/components/schemas/ProjectPermissions" }
+              required: [permissions]
+      responses:
+        "200":
+          description: Team member updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTeamMember"
+        "404":
+          description: Team member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Remove team from project
+      operationId: removeProjectTeamMember
+      tags: [ProjectMembers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: team_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Team member removed
+        "404":
+          description: Team member not found
           content:
             application/json:
               schema:

@@ -46,15 +46,35 @@ func NewRouter(logger *slog.Logger, db *sql.DB, billing billingv1.BillingService
 	authed.POST("/tasks/:id/projects", taskH.AttachProject)
 	authed.DELETE("/tasks/:id/projects/:project_id", taskH.DetachProject)
 
+	// Task access endpoints
+	taskAccessStore := store.NewTaskAccessStore(db)
+	taskAccessH := handler.NewTaskAccessHandler(taskAccessStore, taskStore, db)
+
+	authed.GET("/tasks/:id/accesses", taskAccessH.ListTaskAccesses)
+	authed.POST("/tasks/:id/accesses", taskAccessH.GrantTaskAccess)
+	authed.PATCH("/tasks/:id/accesses/:access_id", taskAccessH.UpdateTaskAccess)
+	authed.DELETE("/tasks/:id/accesses/:access_id", taskAccessH.RevokeTaskAccess)
+
 	// Project endpoints
 	projectStore := store.NewProjectStore(db)
-	projectH := handler.NewProjectHandler(projectStore, db)
+	projectMemberStore := store.NewProjectMemberStore(db)
+	projectH := handler.NewProjectHandler(projectStore, projectMemberStore, db)
 
 	authed.POST("/projects", projectH.CreateProject)
 	authed.GET("/projects", projectH.ListProjects)
 	authed.GET("/projects/:id", projectH.GetProject)
 	authed.PATCH("/projects/:id", projectH.UpdateProject)
 	authed.DELETE("/projects/:id", projectH.DeleteProject)
+
+	// Project member endpoints
+	projectMemberH := handler.NewProjectMemberHandler(projectMemberStore, projectStore, db)
+
+	authed.GET("/projects/:id/members", projectMemberH.ListMembers)
+	authed.PATCH("/projects/:id/members/:user_id", projectMemberH.UpdateMember)
+	authed.DELETE("/projects/:id/members/:user_id", projectMemberH.RemoveMember)
+	authed.GET("/projects/:id/team-members", projectMemberH.ListTeamMembers)
+	authed.PATCH("/projects/:id/team-members/:team_id", projectMemberH.UpdateTeamMember)
+	authed.DELETE("/projects/:id/team-members/:team_id", projectMemberH.RemoveTeamMember)
 
 	// Team endpoints
 	teamStore := store.NewTeamStore(db)
