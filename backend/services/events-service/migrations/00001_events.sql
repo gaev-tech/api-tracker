@@ -14,6 +14,7 @@ CREATE TABLE events (
 ) PARTITION BY RANGE (created_at);
 
 -- Function to dynamically create monthly partitions
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION ensure_events_partition(ts TIMESTAMPTZ)
 RETURNS VOID AS $$
 DECLARE
@@ -35,6 +36,7 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Create partition for current month
 SELECT ensure_events_partition(now());
