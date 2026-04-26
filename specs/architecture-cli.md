@@ -17,13 +17,30 @@
 
 ## Аутентификация
 
-Аутентификация только через PAT. Три способа передачи (в порядке приоритета):
+Два способа аутентификации:
+
+### Интерактивный логин (OAuth 2.0)
+
+Команда `tracker login` запускает OAuth 2.0 Authorization Code Flow с PKCE:
+1. CLI генерирует `code_verifier` (случайная строка) и `code_challenge` (SHA-256 хеш).
+2. Поднимает временный HTTP-сервер на локальном порту.
+3. Открывает браузер на клиенте авторизации с параметрами `client_id`, `redirect_uri=http://localhost:<port>/callback`, `code_challenge` и `code_challenge_method=S256`.
+4. Пользователь логинится в браузере.
+5. Клиент авторизации редиректит на localhost с authorization code.
+6. CLI обменивает code + `code_verifier` на access + refresh token через identity-service.
+7. Токены сохраняются в активный профиль конфига.
+
+### PAT (для скриптов и CI/CD)
+
+PAT используется для неинтерактивной аутентификации.
+
+### Приоритет источников токена
 
 1. Флаг `--token <pat>` в команде.
 2. Переменная окружения `TRACKER_TOKEN`.
-3. Поле `token` в активном профиле конфига `~/.tracker/config.yaml`.
+3. Токен в активном профиле конфига `~/.tracker/config.yaml` (PAT или токен от интерактивного логина).
 
-PAT хранится в конфиг-файле в открытом виде. Файл создаётся с правами `0600`.
+Токены хранятся в конфиг-файле в открытом виде. Файл создаётся с правами `0600`.
 
 ## Конфигурация
 
@@ -40,9 +57,10 @@ profiles:
     token: pat_yyyyyyyyyyyy
 ```
 
-Команды для управления профилями:
+Команды для управления профилями и аутентификации:
 
 ```
+tracker login                               # интерактивный логин через браузер
 tracker profile list
 tracker profile use <name>
 tracker profile add <name> --host <url> --token <pat>
@@ -55,7 +73,7 @@ tracker profile remove <name>
 
 Составные ресурсы разделяются пробелом: `tracker task access grant`, `tracker project member add`.
 
-Полный каталог команд — в `product-spec.md`, раздел 2.2 PostMVP → CLI.
+Полный каталог команд — в `prd.md`, раздел 1.17 «CLI».
 
 ## Форматы вывода
 

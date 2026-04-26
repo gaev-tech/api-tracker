@@ -48,11 +48,13 @@ deploy/
 
 ### identity-service
 
-**Ответственность:** регистрация, аутентификация, управление PAT, managed-пользователи (PostMVP).
+**Ответственность:** регистрация, аутентификация (OAuth 2.0 Authorization Code Flow), управление PAT, managed-пользователи (PostMVP).
+
+Является authorization server системы: выдаёт authorization code, обменивает на access + refresh token, обновляет токены. Все клиенты (веб-приложение, CLI, клиент авторизации) аутентифицируются через единый OAuth 2.0 Authorization Code Flow с PKCE (Proof Key for Code Exchange) для public clients.
 
 **БД:** PostgreSQL
 
-Ключевые таблицы: `users`, `pats`, `refresh_tokens`, `password_reset_tokens`.
+Ключевые таблицы: `users`, `pats`, `refresh_tokens`, `oauth_clients`, `authorization_codes`.
 
 Managed-пользователи хранятся в той же таблице `users` с полем `parent_user_id`; вложенность — один уровень, проверяется на уровне приложения.
 
@@ -63,7 +65,7 @@ Managed-пользователи хранятся в той же таблице 
 - `identity.pat.revoked`
 
 **gRPC (internal):**
-- `ValidateToken(token) → UserID` — вызывается Gateway при каждом запросе
+- `ValidateToken(token) → UserID` — вызывается Gateway при каждом запросе (поддерживает и access token, и PAT)
 - `GetUser(id) → User` — вызывается workspace-service
 
 ---
@@ -167,14 +169,14 @@ Managed-пользователи хранятся в той же таблице 
 ## API Gateway (Nginx)
 
 - Маршрутизация по префиксу пути к соответствующему сервису
-- Валидация PAT через `auth_request` → identity-service
+- Валидация токена (access token или PAT) через `auth_request` → identity-service
 - Rate limiting per IP и per token
 - TLS termination, сертификаты через cert-manager (Let's Encrypt)
 
 ## Безопасность
 
-- **Внешняя аутентификация:** Bearer PAT в заголовке `Authorization`
-- **Сессии в UI:** short-lived JWT (access) + refresh token в httpOnly cookie
+- **Внешняя аутентификация:** OAuth 2.0 Authorization Code Flow с PKCE. Два типа Bearer-токенов в заголовке `Authorization`: access token (выдаётся через OAuth 2.0 flow) и PAT (для скриптов и CI/CD). Gateway валидирует оба типа через identity-service.
+- **Клиент авторизации:** отдельное легковесное веб-приложение, единая точка входа для регистрации, логина и подтверждения email. Все клиенты (веб-приложение, CLI) аутентифицируются через redirect на клиент авторизации.
 - **Внутренняя аутентификация:** mTLS между сервисами
 - `request_id` propagates через все HTTP, gRPC и Kafka вызовы для сквозной трассировки
 

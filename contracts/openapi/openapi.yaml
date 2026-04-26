@@ -271,6 +271,47 @@ components:
           format: date-time
       required: [id, title, description, status, author_id, tags, project_ids, blocking_task_ids, blocked_task_ids, is_frozen_by_tariff, created_at, updated_at]
 
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          description: Event type (e.g. workspace.task.created, identity.user.registered)
+        actor_id:
+          type: string
+          format: uuid
+          nullable: true
+        task_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        team_id:
+          type: string
+          format: uuid
+          nullable: true
+        automation_id:
+          type: string
+          format: uuid
+          nullable: true
+        target_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        payload:
+          type: object
+          description: Full event payload (JSONB)
+        created_at:
+          type: string
+          format: date-time
+      required: [id, type, payload, created_at]
+
     PAT:
       type: object
       description: Personal Access Token. Field `token` is non-null only in POST response (creation).
@@ -2090,6 +2131,132 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Team"
+
+  /events:
+    get:
+      summary: List events (RSQL filter, cursor pagination)
+      operationId: listEvents
+      tags: [Events]
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: "RSQL filter. Fields: type, actor_id, task_id, project_id, team_id, automation_id, target_user_id, created_at"
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated event list (newest first)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Event"
+                  cursor:
+                    type: string
+                    nullable: true
+                required: [data]
+
+  /projects/{id}/events:
+    get:
+      summary: List project events (RSQL filter, cursor pagination)
+      operationId: listProjectEvents
+      tags: [Events]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: "RSQL filter (same fields as /events)"
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated event list for project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Event"
+                  cursor:
+                    type: string
+                    nullable: true
+                required: [data]
+
+  /tasks/{id}/events:
+    get:
+      summary: List task events (RSQL filter, cursor pagination)
+      operationId: listTaskEvents
+      tags: [Events]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: "RSQL filter (same fields as /events)"
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated event list for task
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Event"
+                  cursor:
+                    type: string
+                    nullable: true
+                required: [data]
 
   /ownership-transfers/teams/{transfer_id}/decline:
     post:

@@ -1,6 +1,6 @@
 # Roadmap
 
-Задачи сгруппированы по направлениям. Зависимости указаны явно. MVP/PostMVP — метки из product-spec.
+Задачи сгруппированы по направлениям. Зависимости указаны явно. MVP/PostMVP — метки из prd.
 
 ---
 
@@ -13,7 +13,6 @@
 | INFRA-3 | Nginx Ingress Controller + cert-manager (Let's Encrypt) | INFRA-2 | API-41, DOCS-1 | mvp |
 | INFRA-4 | Kafka (Strimzi Operator) | INFRA-2 | — | mvp |
 | INFRA-5 | PostgreSQL (CloudNativePG Operator) | INFRA-2 | API-8, API-13 | mvp |
-| ~~INFRA-6~~ | ~~Citus (CloudNativePG Operator)~~ — убрано, все сервисы используют plain PostgreSQL (INFRA-5) | — | — | — |
 | INFRA-7 | MinIO | INFRA-2 | — | postmvp |
 | INFRA-8 | Prometheus + Grafana (дашборды per-service) | INFRA-2 | — | mvp |
 | INFRA-9 | Loki + Promtail | INFRA-2 | — | mvp |
@@ -40,11 +39,13 @@
 
 | ID | Задача | Зависит от | Блокирует | Milestone |
 |----|--------|-----------|-----------|-----------|
-| API-8 | Регистрация, подтверждение email (SMTP через identity-service: `SMTP_HOST/PORT/FROM/PASSWORD`), логин, логаут, refresh token | API-1, API-2, API-5, INFRA-5 | API-9, API-10, API-11, API-12, API-49 | mvp |
+| API-8 | OAuth 2.0 Authorization Code Flow: authorize endpoint, token exchange, refresh token, регистрация, подтверждение email (SMTP: `SMTP_HOST/PORT/FROM/PASSWORD`), логин, логаут; таблицы oauth_clients, authorization_codes | API-1, API-2, API-5, INFRA-5 | API-9, API-10, API-11, API-12, API-42, API-49 | mvp |
 | API-9 | PAT: создание, список, получение по ID, обновление, отзыв | API-8 | API-42 | mvp |
 | API-10 | Профиль: получение, обновление (name, theme, language), смена пароля, удаление аккаунта | API-8 | — | mvp |
 | API-11 | Поиск пользователей по email (префикс) | API-8 | — | mvp |
 | API-12 | Kafka publish: user.registered, user.email_verified, user.deleted, pat.created, pat.revoked | API-5, API-8 | API-33 | mvp |
+
+| API-55 | OAuth 2.0 Authorization Code Flow: authorize endpoint, token exchange, refresh; таблицы oauth_clients, authorization_codes; ValidateToken поддержка access token + PAT (доработка API-8) | API-8 | API-42, UI-2, CLI-1 | mvp |
 
 ### billing-service (MVP)
 
@@ -94,7 +95,7 @@
 | ID | Задача | Зависит от | Блокирует | Milestone |
 |----|--------|-----------|-----------|-----------|
 | API-41 | Nginx: маршрутизация по префиксу к сервисам | INFRA-3 | API-42, API-43, API-44 | mvp |
-| API-42 | auth_request → identity-service: валидация Bearer PAT на каждый запрос | API-9, API-41 | — | mvp |
+| API-42 | auth_request → identity-service: валидация Bearer-токена (access token или PAT) на каждый запрос | API-8, API-41 | — | mvp |
 | API-43 | Rate limiting per IP и per token | API-41 | — | mvp |
 | API-44 | TLS termination, request_id в заголовках | API-41 | — | mvp |
 
@@ -128,7 +129,7 @@
 
 | ID | Задача | Зависит от | Блокирует | Milestone |
 |----|--------|-----------|-----------|-----------|
-| CLI-1 | Скаффолд: go mod, Cobra setup, структура директорий; конфиг и профили (`~/.tracker/config.yaml`, команды `profile list/use/add/remove`), PAT приоритет (флаг → env → конфиг) | — | CLI-2 | postmvp |
+| CLI-1 | Скаффолд: go mod, Cobra setup, структура директорий; конфиг и профили (`~/.tracker/config.yaml`, команды `profile list/use/add/remove`); аутентификация: `tracker login` (OAuth 2.0 через браузер, localhost callback), PAT (`--token` / `TRACKER_TOKEN` / конфиг), приоритет источников | — | CLI-2 | postmvp |
 | CLI-2 | Команды: вывод и пагинация (`--output table/json/plain`, `--limit/--cursor/--all`); `task`, `project`, `team`, `profile`, `pat`, `password`, `account`, `tariff`, `frozen`, `enterprise-slots`, `event` | CLI-1, API-8..44 | CLI-3 | postmvp |
 | CLI-3 | Дистрибуция: GitHub Releases (Linux/macOS/Windows amd64/arm64), Homebrew tap, `curl \| sh` скрипт | CLI-2 | — | postmvp |
 
@@ -138,5 +139,6 @@
 
 | ID | Задача | Зависит от | Блокирует | Milestone |
 |----|--------|-----------|-----------|-----------|
-| UI-1 | Скаффолд Angular Workspace: структура монорепо (`projects/app`, `projects/docs`), libs, CI/CD (path-based триггеры, ng build, Nginx образ, Helm); API-клиент: codegen из `openapi.yaml`, Zod runtime validation, Sentry-алерт при рассинхронизации | DOCS-1, API-8..44 | UI-2 | postmvp |
-| UI-2 | Приложение: дизайн-система (трёхуровневые токены, темы light/dark), аутентификация (JWT + refresh, soft-refresh, multi-auth), сайдбар, роутинг, breadcrumbs, WebSocket счётчик приглашений; все страницы — задачи, проекты, команды, профиль, тариф, события, приглашения | UI-1 | — | postmvp |
+| UI-1 | Скаффолд Angular Workspace: структура монорепо (`projects/auth`, `projects/app`, `projects/docs`), libs, CI/CD (path-based триггеры, ng build, Nginx образ, Helm); API-клиент: codegen из `openapi.yaml`, Zod runtime validation, Sentry-алерт при рассинхронизации | DOCS-1, API-8..44 | UI-2, UI-3 | postmvp |
+| UI-2 | Клиент авторизации (`projects/auth`): страницы логина, регистрации, подтверждения email; OAuth 2.0 Authorization Code Flow (client_id, redirect_uri), редирект в app после подтверждения email, поддержка redirect на localhost (CLI) | UI-1 | UI-3 | postmvp |
+| UI-3 | Приложение (`projects/app`): дизайн-система (трёхуровневые токены, темы light/dark), аутентификация через OAuth 2.0 (redirect на auth, получение access + refresh token, soft-refresh, multi-auth), сайдбар, роутинг, breadcrumbs, WebSocket счётчик приглашений; все страницы — задачи, проекты, команды, профиль, тариф, события, приглашения | UI-1, UI-2 | — | postmvp |

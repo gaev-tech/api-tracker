@@ -10,7 +10,7 @@ This project is currently in the **specification phase** — only `specs/` exist
 
 | File | Contents |
 |------|----------|
-| `specs/product-spec.md` | Product overview, clients, requirements (MVP + PostMVP), tariffs, access model, events, RSQL, function catalog, UI functions, CLI commands |
+| `specs/prd.md` | Product overview, clients, requirements (functional + non-functional), tariffs, access model, events, RSQL, function catalog, UI functions, CLI commands |
 | `specs/architecture-api.md` | Microservices, tech stack, services responsibilities, Kafka/gRPC communication, security, DB strategy, infra, observability, CI/CD |
 | `specs/architecture-ui.md` | Angular Workspace (app + docs), libs, design system, API client codegen, multi-auth, WebSocket, routing, UI patterns |
 | `specs/architecture-cli.md` | CLI structure, auth, config, output formats, pagination, distribution |
@@ -49,7 +49,7 @@ docker compose up  # from deploy/
 
 ## Architecture Overview
 
-API-first microservices system (Go + Kafka + gRPC + PostgreSQL/Citus). UI and CLI are plain API clients with no privileges. See `specs/architecture-api.md`, `specs/architecture-ui.md`, `specs/architecture-cli.md` for details.
+API-first microservices system (Go + Kafka + gRPC + PostgreSQL). UI and CLI are plain API clients with no privileges. See `specs/architecture-api.md`, `specs/architecture-ui.md`, `specs/architecture-cli.md` for details.
 
 ### Key Domain Concepts
 
@@ -58,3 +58,7 @@ API-first microservices system (Go + Kafka + gRPC + PostgreSQL/Citus). UI and CL
 - **Tariff system** freezes entities (newest first by `created_at`) when usage limits are exceeded.
 - **RSQL** is used for all list/filter endpoints; supports `me` literal for `assignee`/`author`.
 - **Cursor-based pagination** throughout the API; tasks always sorted `created_at asc`.
+
+## Workflow
+
+Use subagents for any task to keep memory clean.

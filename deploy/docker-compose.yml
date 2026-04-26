@@ -76,9 +76,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Citus: workspace-service ──────────────────────────────────────────────
-  citus-workspace:
-    image: citusdata/citus:12.1
+  # ── PostgreSQL: workspace-service ──────────────────────────────────────────
+  postgres-workspace:
+    image: postgres:17
     environment:
       POSTGRES_DB: workspace_db
       POSTGRES_USER: workspace_user
@@ -86,7 +86,7 @@ services:
     ports:
       - "5436:5432"
     volumes:
-      - citus-workspace-data:/var/lib/postgresql/data
+      - postgres-workspace-data:/var/lib/postgresql/data
     networks:
       - backend
     healthcheck:
@@ -95,9 +95,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Citus: events-service ─────────────────────────────────────────────────
-  citus-events:
-    image: citusdata/citus:12.1
+  # ── PostgreSQL: events-service ─────────────────────────────────────────────
+  postgres-events:
+    image: postgres:17
     environment:
       POSTGRES_DB: events_db
       POSTGRES_USER: events_user
@@ -105,7 +105,7 @@ services:
     ports:
       - "5437:5432"
     volumes:
-      - citus-events-data:/var/lib/postgresql/data
+      - postgres-events-data:/var/lib/postgresql/data
     networks:
       - backend
     healthcheck:
@@ -114,9 +114,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Citus: automations-service ───────────────────────────────────────────
-  citus-automations:
-    image: citusdata/citus:12.1
+  # ── PostgreSQL: automations-service ───────────────────────────────────────
+  postgres-automations:
+    image: postgres:17
     environment:
       POSTGRES_DB: automations_db
       POSTGRES_USER: automations_user
@@ -124,7 +124,7 @@ services:
     ports:
       - "5438:5432"
     volumes:
-      - citus-automations-data:/var/lib/postgresql/data
+      - postgres-automations-data:/var/lib/postgresql/data
     networks:
       - backend
     healthcheck:
@@ -226,13 +226,13 @@ services:
       - "8081:8080"
     environment:
       PORT: "8080"
-      DATABASE_URL: postgres://workspace_user:workspace_pass@citus-workspace:5432/workspace_db?sslmode=disable
+      DATABASE_URL: postgres://workspace_user:workspace_pass@postgres-workspace:5432/workspace_db?sslmode=disable
       KAFKA_BROKERS: kafka:9092
       SENTRY_DSN: ""
     networks:
       - backend
     depends_on:
-      citus-workspace:
+      postgres-workspace:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -246,13 +246,13 @@ services:
       - "8082:8080"
     environment:
       PORT: "8080"
-      DATABASE_URL: postgres://automations_user:automations_pass@citus-automations:5432/automations_db?sslmode=disable
+      DATABASE_URL: postgres://automations_user:automations_pass@postgres-automations:5432/automations_db?sslmode=disable
       KAFKA_BROKERS: kafka:9092
       SENTRY_DSN: ""
     networks:
       - backend
     depends_on:
-      citus-automations:
+      postgres-automations:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -266,13 +266,13 @@ services:
       - "8083:8080"
     environment:
       PORT: "8080"
-      DATABASE_URL: postgres://events_user:events_pass@citus-events:5432/events_db?sslmode=disable
+      DATABASE_URL: postgres://events_user:events_pass@postgres-events:5432/events_db?sslmode=disable
       KAFKA_BROKERS: kafka:9092
       SENTRY_DSN: ""
     networks:
       - backend
     depends_on:
-      citus-events:
+      postgres-events:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -484,9 +484,9 @@ volumes:
   postgres-billing-data:
   postgres-files-data:
   postgres-ping-data:
-  citus-workspace-data:
-  citus-events-data:
-  citus-automations-data:
+  postgres-workspace-data:
+  postgres-events-data:
+  postgres-automations-data:
   kafka-data:
   redis-data:
   minio-data:

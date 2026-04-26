@@ -15,6 +15,7 @@ import (
 	"github.com/gaev-tech/api-tracker/backend/pkg/logging"
 	"github.com/gaev-tech/api-tracker/backend/pkg/sentry"
 	"github.com/gaev-tech/api-tracker/events-service/internal/consumer"
+	internal "github.com/gaev-tech/api-tracker/events-service/internal"
 	"github.com/gaev-tech/api-tracker/events-service/internal/store"
 	migrationsfs "github.com/gaev-tech/api-tracker/events-service/migrations"
 	_ "github.com/lib/pq"
@@ -61,26 +62,12 @@ func main() {
 	eventsConsumer := consumer.NewEventsConsumer(brokers, eventStore, logger)
 	go eventsConsumer.Start(ctx)
 
-	// HTTP server (health checks)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		if err := db.PingContext(r.Context()); err != nil {
-			http.Error(w, "db unreachable", http.StatusServiceUnavailable)
-			return
-		}
-		fmt.Fprint(w, "ok")
-	})
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
-		if err := db.PingContext(r.Context()); err != nil {
-			http.Error(w, "db unreachable", http.StatusServiceUnavailable)
-			return
-		}
-		fmt.Fprint(w, "ok")
-	})
+	// HTTP server (Gin router with health checks + event API)
+	router := internal.NewRouter(logger, db, eventStore)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
-		Handler: mux,
+		Handler: router,
 	}
 
 	go func() {
