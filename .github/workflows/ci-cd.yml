@@ -8,34 +8,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── Path filter ──────────────────────────────────────────────────────────────
-  # Determines which jobs to run based on changed files.
-  changes:
-    name: detect changes
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      infra: ${{ steps.filter.outputs.infra }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-              - 'contracts/**'
-            frontend:
-              - 'frontend/**'
-            infra:
-              - 'deploy/k8s/**'
-
   # ── Backend: build ─────────────────────────────────────────────────────────
   backend-build:
     name: backend-build
-    needs: changes
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -99,8 +74,6 @@ jobs:
   # ── Backend: lint ──────────────────────────────────────────────────────────
   backend-lint:
     name: backend-lint
-    needs: changes
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container: ghcr.io/gaev-tech/api-tracker/ci-base:latest
     steps:
@@ -140,8 +113,6 @@ jobs:
   # ── Backend: test ──────────────────────────────────────────────────────────
   backend-test:
     name: backend-test
-    needs: changes
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container: ghcr.io/gaev-tech/api-tracker/ci-base:latest
     steps:
@@ -169,8 +140,6 @@ jobs:
   # ── Frontend: build ────────────────────────────────────────────────────────
   frontend-build:
     name: frontend-build
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -221,8 +190,6 @@ jobs:
   # ── Frontend: lint ─────────────────────────────────────────────────────────
   frontend-lint:
     name: frontend-lint
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -248,8 +215,6 @@ jobs:
   # ── Frontend: test ─────────────────────────────────────────────────────────
   frontend-test:
     name: frontend-test
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -269,16 +234,12 @@ jobs:
         working-directory: frontend/
 
   # ── Deploy ─────────────────────────────────────────────────────────────────
-  # Runs on main/tag only (not PRs). Skipped jobs are treated as success for needs.
   deploy:
     name: deploy
     runs-on: ubuntu-latest
     container: ghcr.io/gaev-tech/api-tracker/ci-base:latest
-    needs: [changes, backend-build, backend-lint, backend-test, frontend-build, frontend-lint, frontend-test]
-    if: |
-      always() &&
-      github.event_name != 'pull_request' &&
-      !contains(needs.*.result, 'failure')
+    needs: [backend-build, backend-lint, backend-test, frontend-build, frontend-lint, frontend-test]
+    if: github.event_name != 'pull_request'
     continue-on-error: true
     environment: production
     steps:
@@ -472,32 +433,15 @@ jobs:
 
       - name: Helm deploy — all services
         shell: bash
-        env:
-          BACKEND_CHANGED: ${{ needs.changes.outputs.backend }}
-          FRONTEND_CHANGED: ${{ needs.changes.outputs.frontend }}
-          IS_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          BACKEND_SERVICES="api-gateway identity-service workspace-service events-service billing-service"
-          FRONTEND_SERVICES="frontend"
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
             echo "=== $service ==="
-            # Only set image.tag when the corresponding build ran (image exists in GHCR)
-            TAG_FLAG=""
-            if echo "$BACKEND_SERVICES" | grep -qw "$service"; then
-              if [ "$BACKEND_CHANGED" = "true" ] || [ "$IS_DISPATCH" = "true" ]; then
-                TAG_FLAG="--set image.tag=${{ github.sha }}"
-              fi
-            elif echo "$FRONTEND_SERVICES" | grep -qw "$service"; then
-              if [ "$FRONTEND_CHANGED" = "true" ] || [ "$IS_DISPATCH" = "true" ]; then
-                TAG_FLAG="--set image.tag=${{ github.sha }}"
-              fi
-            fi
             helm upgrade --install "$service" "$chart" \
               --namespace production \
               --create-namespace \
-              $TAG_FLAG \
+              --set image.tag=${{ github.sha }} \
               --timeout 5m
           done
           pids=()
