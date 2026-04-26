@@ -1,0 +1,36 @@
+.status-message {
+  text-align: center;
+
+  h2 {
+    font-family: var(--font-family);
+    font-size: var(--font-size-xl);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-2);
+  }
+
+  p {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-base);
+    margin: 0;
+  }
+
+  &.success h2 {
+    color: var(--color-success);
+  }
+
+  &.error h2 {
+    color: var(--color-danger);
+  }
+
+  a {
+    display: inline-block;
+    margin-top: var(--space-4);
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

@@ -1,0 +1,56 @@
+<app-auth-card>
+  @if (isSuccess()) {
+    <div class="success-state">
+      <h2>Check your email</h2>
+      <p>
+        We've sent a verification link to <strong>{{ email() }}</strong
+        >. Click the link to activate your account.
+      </p>
+    </div>
+  } @else {
+    <h2>Create account</h2>
+    <form (ngSubmit)="onSubmit()">
+      <div class="form-field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
+          name="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+          required
+        />
+      </div>
+      <div class="form-field">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          name="password"
+          placeholder="At least 8 characters"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        />
+      </div>
+      @if (errorMessage()) {
+        <div class="error-message">{{ errorMessage() }}</div>
+      }
+      <button type="submit" [disabled]="isLoading()">
+        @if (isLoading()) {
+          Creating account...
+        } @else {
+          Create account
+        }
+      </button>
+    </form>
+    <div class="auth-link">
+      Already have an account?
+      <a routerLink="/login" [queryParams]="route.snapshot.queryParams">Sign in</a>
+    </div>
+  }
+</app-auth-card>

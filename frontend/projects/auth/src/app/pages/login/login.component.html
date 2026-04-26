@@ -1,0 +1,45 @@
+<app-auth-card>
+  <h2>Sign in</h2>
+  <form (ngSubmit)="onSubmit()">
+    <div class="form-field">
+      <label for="email">Email</label>
+      <input
+        id="email"
+        type="email"
+        [ngModel]="email()"
+        (ngModelChange)="email.set($event)"
+        name="email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        required
+      />
+    </div>
+    <div class="form-field">
+      <label for="password">Password</label>
+      <input
+        id="password"
+        type="password"
+        [ngModel]="password()"
+        (ngModelChange)="password.set($event)"
+        name="password"
+        placeholder="Password"
+        autocomplete="current-password"
+        required
+      />
+    </div>
+    @if (errorMessage()) {
+      <div class="error-message">{{ errorMessage() }}</div>
+    }
+    <button type="submit" [disabled]="isLoading()">
+      @if (isLoading()) {
+        Signing in...
+      } @else {
+        Sign in
+      }
+    </button>
+  </form>
+  <div class="auth-link">
+    Don't have an account?
+    <a routerLink="/register" [queryParams]="route.snapshot.queryParams">Sign up</a>
+  </div>
+</app-auth-card>

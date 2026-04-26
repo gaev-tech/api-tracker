@@ -1,0 +1,23 @@
+<app-auth-card>
+  @switch (status()) {
+    @case ('loading') {
+      <div class="status-message">
+        <h2>Verifying email...</h2>
+        <p>Please wait while we confirm your email address.</p>
+      </div>
+    }
+    @case ('success') {
+      <div class="status-message success">
+        <h2>Email verified!</h2>
+        <p>Redirecting to the application...</p>
+      </div>
+    }
+    @case ('error') {
+      <div class="status-message error">
+        <h2>Verification failed</h2>
+        <p>{{ errorMessage() }}</p>
+        <a routerLink="/register">Try registering again</a>
+      </div>
+    }
+  }
+</app-auth-card>

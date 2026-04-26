@@ -36,3 +36,34 @@ Use named constants for repeated column lists (e.g. `userColumns`). Do not repea
 ### HTTP handlers
 
 Handlers must not contain business logic. Validation and persistence belong in store/service layers.
+
+## Angular Code Style
+
+### Component file structure
+
+Every component must be split into three files inside its own folder:
+
+```
+my-component/
+  my-component.component.ts
+  my-component.component.html
+  my-component.component.scss
+```
+
+Never use inline templates or styles. The `@Component` decorator must reference external files:
+
+```typescript
+@Component({
+  selector: 'app-my-component',
+  templateUrl: './my-component.component.html',
+  styleUrl: './my-component.component.scss',
+})
+```
+
+### One file — one export
+
+Each TypeScript file must have exactly one exported symbol. Barrel files (`index.ts`) are the exception — they re-export from other files.
+
+### Strict TypeScript
+
+All code uses strict TypeScript. The `any` type is banned — use `unknown` or proper types instead.
