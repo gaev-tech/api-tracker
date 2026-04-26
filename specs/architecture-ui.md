@@ -8,11 +8,11 @@
 
 | Слой | Технология |
 |------|-----------|
-| Фреймворк | Angular (latest stable) |
+| Фреймворк | Angular 21 |
 | Язык | TypeScript |
 | Сборка | Angular CLI + esbuild |
 | Стили | SCSS + CSS custom properties (дизайн-токены) |
-| API-клиент | OpenAPI codegen + Zod (runtime validation) |
+| API-клиент | @openapitools/openapi-generator-cli (Angular) + Zod (runtime validation на каждом запросе, Sentry-алерт при несовпадении) |
 | Markdown-редактор | Milkdown (WYSIWYG, ProseMirror) |
 | Real-time | WebSocket (events-service) |
 | Контейнеризация | Docker + Nginx |
@@ -139,9 +139,18 @@ Milkdown (WYSIWYG поверх ProseMirror) для поля `description` зад
 
 ## API-клиент (libs/api-client)
 
-- Генерируется из `openapi.yaml` при сборке.
-- Каждый endpoint — типизированная функция с Zod-валидацией ответа в runtime.
-- При ошибке валидации — Sentry-алерт, чтобы отловить рассинхронизацию клиента и сервера.
+- Генерируется из `openapi.yaml` при помощи `@openapitools/openapi-generator-cli` (Angular generator).
+- Zod-схемы описываются вручную для каждого response-типа. HTTP-interceptor валидирует каждый ответ API через Zod в runtime.
+- При ошибке валидации — Sentry-алерт, чтобы отловить рассинхронизацию клиента и сервера. Запрос при этом не блокируется — данные передаются дальше.
+
+## Деплой
+
+Все три приложения собираются в один Docker-образ (Nginx + статика). Nginx раздаёт:
+- `/auth/` → projects/auth (клиент авторизации)
+- `/` → projects/app (основное приложение, PostMVP)
+- `/docs/` → projects/docs (документация, PostMVP)
+
+Домен: `apitracker.ru`. API: `api.apitracker.ru`.
 
 ## CI/CD
 
