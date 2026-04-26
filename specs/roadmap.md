@@ -13,7 +13,7 @@
 | INFRA-3 | Nginx Ingress Controller + cert-manager (Let's Encrypt) | INFRA-2 | API-41, DOCS-1 | mvp |
 | INFRA-4 | Kafka (Strimzi Operator) | INFRA-2 | — | mvp |
 | INFRA-5 | PostgreSQL (CloudNativePG Operator) | INFRA-2 | API-8, API-13 | mvp |
-| INFRA-6 | Citus (CloudNativePG Operator) | INFRA-2 | API-22, API-37, API-45 | mvp |
+| ~~INFRA-6~~ | ~~Citus (CloudNativePG Operator)~~ — убрано, все сервисы используют plain PostgreSQL (INFRA-5) | — | — | — |
 | INFRA-7 | MinIO | INFRA-2 | — | postmvp |
 | INFRA-8 | Prometheus + Grafana (дашборды per-service) | INFRA-2 | — | mvp |
 | INFRA-9 | Loki + Promtail | INFRA-2 | — | mvp |
@@ -64,7 +64,7 @@
 
 | ID | Задача | Зависит от | Блокирует | Milestone |
 |----|--------|-----------|-----------|-----------|
-| API-22 | Задачи: CRUD, PATCH (все поля включая projects), список (RSQL + пагинация, created_at asc) | API-1, API-2, API-6, INFRA-6 | API-23, API-24, API-25, API-27, API-32, API-34, API-35, API-52 | mvp |
+| API-22 | Задачи: CRUD, PATCH (все поля включая projects), список (RSQL + пагинация, created_at asc) | API-1, API-2, API-6, INFRA-5 | API-23, API-24, API-25, API-27, API-32, API-34, API-35, API-52 | mvp |
 | API-23 | Задачи: GET /projects/{id}/tasks | API-22 | — | mvp |
 | API-24 | Прямые доступы к задачам: выдача, обновление, отзыв, список (subject_type: user/team) | API-22 | API-31 | mvp |
 | API-25 | Проекты: CRUD, GET /projects + GET /projects/{id} | API-22 | API-26, API-29, API-30 | mvp |
@@ -84,7 +84,7 @@
 
 | ID | Задача | Зависит от | Блокирует | Milestone |
 |----|--------|-----------|-----------|-----------|
-| API-37 | Таблица events (Citus, партиционирование по created_at по месяцам) | API-1, INFRA-6 | API-38, API-39 | mvp |
+| API-37 | Таблица events (PostgreSQL, партиционирование по created_at по месяцам) | API-1, INFRA-5 | API-38, API-39 | mvp |
 | API-38 | Kafka consume: все топики всех сервисов → запись в events | API-5, API-37 | — | mvp |
 | API-39 | API событий: GET /events, GET /projects/{id}/events, GET /tasks/{id}/events (фильтры: тип, время, сущность) | API-37 | API-40 | mvp |
 | API-40 | WebSocket: real-time пуш счётчика входящих приглашений | API-37, API-39 | — | mvp |
@@ -102,7 +102,7 @@
 
 | ID | Задача | Зависит от | Блокирует | Milestone |
 |----|--------|-----------|-----------|-----------|
-| API-45 | automations-service: CRUD автоматизаций, секреты проектов (шифрование) | API-1, API-2, API-5, API-6, INFRA-6 | API-46, API-47, API-48 | postmvp |
+| API-45 | automations-service: CRUD автоматизаций, секреты проектов (шифрование) | API-1, API-2, API-5, API-6, INFRA-5 | API-46, API-47, API-48 | postmvp |
 | API-46 | automations-service: tasks_cache, Kafka consume workspace.task.* | API-5, API-45 | — | postmvp |
 | API-47 | automations-service: выполнение HTTP-вызовов по триггерам, RSQL-условия | API-6, API-45 | — | postmvp |
 | API-48 | automations-service: Kafka publish automation.* | API-5, API-45 | API-54 | postmvp |

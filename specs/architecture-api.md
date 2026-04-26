@@ -10,7 +10,7 @@
 |------|-----------|
 | Язык бэкенда | Go |
 | HTTP-фреймворк | Gin |
-| Реляционная БД | PostgreSQL (identity, billing), Citus (workspace, automations, events) |
+| Реляционная БД | PostgreSQL (CloudNativePG Operator) |
 | Очередь сообщений | Kafka (Strimzi) |
 | Внутренние вызовы | gRPC |
 | Gateway | Nginx |
@@ -72,7 +72,7 @@ Managed-пользователи хранятся в той же таблице 
 
 **Ответственность:** задачи, проекты, команды, доступы, приглашения, передача владения.
 
-**БД:** Citus, шардирование по `owner_id` для проектов/команд; задачи шардируются по `id`.
+**БД:** PostgreSQL. Индексы по `owner_id` для проектов/команд.
 
 Ключевые таблицы: `tasks`, `task_projects`, `task_blockers`, `task_direct_accesses`, `projects`, `project_members`, `project_invitations`, `project_ownership_transfers`, `teams`, `team_members`, `team_invitations`, `team_ownership_transfers`, `users_cache`.
 
@@ -98,7 +98,7 @@ Managed-пользователи хранятся в той же таблице 
 
 **Ответственность:** автоматизации, секреты проектов, выполнение HTTP-вызовов по триггерам (PostMVP).
 
-**БД:** Citus, шардирование по `project_id`.
+**БД:** PostgreSQL. Индексы по `project_id`.
 
 Ключевые таблицы: `automations`, `automation_runs`, `project_secrets`, `tasks_cache`.
 
@@ -120,7 +120,7 @@ Managed-пользователи хранятся в той же таблице 
 
 **Ответственность:** хранение всех доменных событий, API для чтения event feed, WebSocket для real-time уведомлений (счётчик входящих приглашений).
 
-**БД:** Citus, таблица `events` партиционирована по `created_at` (по месяцам).
+**БД:** PostgreSQL, таблица `events` партиционирована по `created_at` (нативный `PARTITION BY RANGE`, по месяцам).
 
 **Kafka topics (consume):** все топики всех сервисов — записывает в `events`.
 
@@ -185,9 +185,9 @@ Managed-пользователи хранятся в той же таблице 
 | Сервис | БД | Причина |
 |--------|----|---------|
 | identity | PostgreSQL | Небольшой объём, сложные транзакции auth |
-| workspace | Citus | Большой объём задач, шардирование по owner |
-| automations | Citus | Горизонтальное масштабирование по project_id |
-| events | Citus | Партиционирование по времени, append-only |
+| workspace | PostgreSQL | Индексы по owner, партиционирование при необходимости |
+| automations | PostgreSQL | Индексы по project_id |
+| events | PostgreSQL | Партиционирование по времени (PARTITION BY RANGE), append-only |
 | billing | PostgreSQL | Финансовые транзакции, строгая консистентность |
 
 ### Конвенции
@@ -204,7 +204,7 @@ Managed-пользователи хранятся в той же таблице 
 **Компоненты:**
 - Nginx Ingress Controller + cert-manager
 - Kafka (Strimzi Operator)
-- PostgreSQL и Citus (CloudNativePG Operator)
+- PostgreSQL (CloudNativePG Operator)
 - MinIO (S3-совместимое хранилище)
 - Prometheus + Grafana + Loki + Promtail
 - Sentry (self-hosted)
@@ -222,7 +222,7 @@ GitHub Actions + GitHub Container Registry (ghcr.io/gaev-tech) + Helm.
 
 **Пайплайн:**
 1. `lint` — golangci-lint, staticcheck
-2. `test` — `go test ./...` с real PostgreSQL/Citus в Docker
+2. `test` — `go test ./...` с real PostgreSQL в Docker
 3. `build` — `docker build`, push образа в GHCR с тегом по SHA коммита
 4. `deploy` — `helm upgrade --install` в K3s кластер
 
