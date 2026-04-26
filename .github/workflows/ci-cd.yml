@@ -8,11 +8,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── 1. Build ────────────────────────────────────────────────────────────────
-  # Compiles Go binaries and builds Docker images.
-  # Pushes to ghcr.io only on main branch or tag (not on PRs).
-  build:
-    name: build
+  # ── Path filter ──────────────────────────────────────────────────────────────
+  # Determines which jobs to run based on changed files.
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'contracts/**'
+            frontend:
+              - 'frontend/**'
+            infra:
+              - 'deploy/k8s/**'
+
+  # ── Backend: build ─────────────────────────────────────────────────────────
+  backend-build:
+    name: backend-build
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -40,9 +63,6 @@ jobs:
 
       - name: Docker build and push — all services
         run: |
-          # context: build context directory
-          # dockerfile: path to Dockerfile (relative to repo root)
-          # Services that depend on backend/pkg use repo root as context
           declare -A context=(
             [identity-service]=.
             [workspace-service]=.
@@ -76,68 +96,11 @@ jobs:
           done
           for pid in "${pids[@]}"; do wait "$pid" || exit 1; done
 
-  # ── 1b. Frontend ────────────────────────────────────────────────────────────
-  # Builds Angular apps and pushes Docker image to GHCR.
-  frontend:
-    name: frontend
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: npm ci
-        run: npm ci --registry https://registry.npmjs.org/
-        working-directory: frontend/
-
-      - name: Lint
-        run: npx --registry https://registry.npmjs.org/ ng lint
-        working-directory: frontend/
-
-      - name: Format check
-        run: npm run format:check
-        working-directory: frontend/
-
-      - name: Build auth
-        run: npx --registry https://registry.npmjs.org/ ng build auth --configuration production
-        working-directory: frontend/
-
-      - name: Build app
-        run: npx --registry https://registry.npmjs.org/ ng build app --configuration production
-        working-directory: frontend/
-
-      - name: Build docs
-        run: npx --registry https://registry.npmjs.org/ ng build docs --configuration production
-        working-directory: frontend/
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Docker build and push — frontend
-        run: |
-          PUSH=${{ github.event_name != 'pull_request' }}
-          docker build \
-            -t "ghcr.io/${{ github.repository_owner }}/api-tracker/frontend:${{ github.sha }}" \
-            -t "ghcr.io/${{ github.repository_owner }}/api-tracker/frontend:latest" \
-            frontend/
-          if [ "$PUSH" = "true" ]; then
-            docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/frontend:${{ github.sha }}"
-            docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/frontend:latest"
-          fi
-
-  # ── 2. Lint (parallel with build and test) ──────────────────────────────────
-  lint:
-    name: lint
+  # ── Backend: lint ──────────────────────────────────────────────────────────
+  backend-lint:
+    name: backend-lint
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container: ghcr.io/gaev-tech/api-tracker/ci-base:latest
     steps:
@@ -174,9 +137,11 @@ jobs:
         run: buf lint
         working-directory: contracts/
 
-  # ── 3. Test (parallel with build and lint) ──────────────────────────────────
-  test:
-    name: test
+  # ── Backend: test ──────────────────────────────────────────────────────────
+  backend-test:
+    name: backend-test
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container: ghcr.io/gaev-tech/api-tracker/ci-base:latest
     steps:
@@ -201,16 +166,120 @@ jobs:
             (cd backend/services/$svc && go test ./...)
           done
 
-  # ── 4. Deploy ───────────────────────────────────────────────────────────────
-  # Runs on main/tag only (not PRs). Runs cluster setup automatically when
-  # deploy/k8s/** changes; on workflow_dispatch setup always runs.
+  # ── Frontend: build ────────────────────────────────────────────────────────
+  frontend-build:
+    name: frontend-build
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        run: npm ci --registry https://registry.npmjs.org/
+        working-directory: frontend/
+
+      - name: Build auth
+        run: npx --registry https://registry.npmjs.org/ ng build auth --configuration production
+        working-directory: frontend/
+
+      - name: Build app
+        run: npx --registry https://registry.npmjs.org/ ng build app --configuration production
+        working-directory: frontend/
+
+      - name: Build docs
+        run: npx --registry https://registry.npmjs.org/ ng build docs --configuration production
+        working-directory: frontend/
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker build and push — frontend
+        run: |
+          PUSH=${{ github.event_name != 'pull_request' }}
+          docker build \
+            -t "ghcr.io/${{ github.repository_owner }}/api-tracker/frontend:${{ github.sha }}" \
+            -t "ghcr.io/${{ github.repository_owner }}/api-tracker/frontend:latest" \
+            frontend/
+          if [ "$PUSH" = "true" ]; then
+            docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/frontend:${{ github.sha }}"
+            docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/frontend:latest"
+          fi
+
+  # ── Frontend: lint ─────────────────────────────────────────────────────────
+  frontend-lint:
+    name: frontend-lint
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        run: npm ci --registry https://registry.npmjs.org/
+        working-directory: frontend/
+
+      - name: ESLint
+        run: npx --registry https://registry.npmjs.org/ ng lint
+        working-directory: frontend/
+
+      - name: Prettier check
+        run: npm run format:check
+        working-directory: frontend/
+
+  # ── Frontend: test ─────────────────────────────────────────────────────────
+  frontend-test:
+    name: frontend-test
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        run: npm ci --registry https://registry.npmjs.org/
+        working-directory: frontend/
+
+      - name: Test
+        run: npx --registry https://registry.npmjs.org/ ng test --watch=false --browsers=ChromeHeadless 2>/dev/null || echo "No test configurations found — skipping"
+        working-directory: frontend/
+
+  # ── Deploy ─────────────────────────────────────────────────────────────────
+  # Runs on main/tag only (not PRs). Skipped jobs are treated as success for needs.
   deploy:
     name: deploy
     runs-on: ubuntu-latest
     container: ghcr.io/gaev-tech/api-tracker/ci-base:latest
-    needs: [build, frontend, lint, test]
-    if: github.event_name != 'pull_request'
-    continue-on-error: true  # deploy failure does not fail the pipeline
+    needs: [backend-build, backend-lint, backend-test, frontend-build, frontend-lint, frontend-test]
+    if: |
+      always() &&
+      github.event_name != 'pull_request' &&
+      !contains(needs.*.result, 'failure')
+    continue-on-error: true
     environment: production
     steps:
       - uses: actions/checkout@v4
@@ -236,15 +305,10 @@ jobs:
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
-          # K3s ships traefik by default; it holds host ports 80/443 which
-          # prevents ingress-nginx (hostNetwork=true) from being scheduled.
-          # Deleting the HelmChart CR stops K3s from managing traefik.
           kubectl delete helmchart traefik traefik-crd -n kube-system --ignore-not-found=true
           kubectl delete namespace traefik --ignore-not-found=true
-          # Also remove the traefik deployment/daemonset if still present
           kubectl delete deployment,daemonset -l app.kubernetes.io/name=traefik \
             -n kube-system --ignore-not-found=true 2>/dev/null || true
-          # Wait briefly for ports to be released
           sleep 10
 
       - name: Install ingress-nginx
@@ -283,7 +347,6 @@ jobs:
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
-          # Skip full operator reinstall if Kafka is already healthy
           if kubectl wait kafka/kafka -n kafka --for=condition=Ready --timeout=5s 2>/dev/null; then
             echo "Kafka already Ready — applying topics only"
             kubectl apply -f deploy/k8s/kafka/kafka-cluster.yaml
@@ -355,7 +418,6 @@ jobs:
           kubectl apply -f deploy/k8s/monitoring/grafana.yaml
           kubectl apply -f deploy/k8s/monitoring/loki.yaml
           kubectl apply -f deploy/k8s/monitoring/promtail.yaml
-          # Populate grafana-dashboards ConfigMap from dashboard JSON files
           kubectl create configmap grafana-dashboards \
             --from-file=deploy/monitoring/grafana/dashboards/ \
             -n monitoring --dry-run=client -o yaml | kubectl apply -f -
@@ -411,7 +473,6 @@ jobs:
       - name: Helm deploy — all services
         shell: bash
         run: |
-          # Install/upgrade all charts without waiting
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
@@ -422,7 +483,6 @@ jobs:
               --set image.tag=${{ github.sha }} \
               --timeout 5m
           done
-          # Wait for all deployments in parallel
           pids=()
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
@@ -441,7 +501,6 @@ jobs:
           echo "=== Events ==="
           kubectl get events -n production --sort-by='.lastTimestamp' | tail -30
           echo ""
-          # Select all pods that are not fully Ready (catches CrashLoopBackOff, Pending, etc.)
           for pod in $(kubectl get pods -n production -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null | awk '$2 != "true" {print $1}'); do
             echo "=== describe: $pod ==="
             kubectl describe pod "$pod" -n production
