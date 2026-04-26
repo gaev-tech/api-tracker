@@ -29,8 +29,10 @@ env:
       secretKeyRef:
         name: events-db-credentials
         key: password
+  - name: DB_HOST
+    value: "postgres-events-rw"
   - name: DATABASE_URL
-    value: "postgres://events_user:$(DB_PASSWORD)@citus-events-coordinator-rw:5432/events_db"
+    value: "postgres://events_user:$(DB_PASSWORD)@postgres-events-rw:5432/events_db"
 
 envFrom:
   configMapRef: ""

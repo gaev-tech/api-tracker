@@ -1,40 +1,11 @@
-# Citus coordinator for events-service
+# PostgreSQL cluster for events-service (CNPG)
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: citus-events-coordinator
+  name: postgres-events
 spec:
   instances: 1
-  postgresql:
-    shared_preload_libraries:
-      - citus
-  bootstrap:
-    initdb:
-      database: events_db
-      owner: events_user
-      secret:
-        name: events-db-credentials
-  storage:
-    storageClass: local-path
-    size: 5Gi
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
----
-# Citus workers for events-service (3 instances)
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
-metadata:
-  name: citus-events-workers
-spec:
-  instances: 3
-  postgresql:
-    shared_preload_libraries:
-      - citus
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.2
   bootstrap:
     initdb:
       database: events_db
@@ -51,38 +22,3 @@ spec:
     limits:
       cpu: 500m
       memory: 512Mi
----
-# Job to register workers with coordinator
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: citus-events-register-workers
-spec:
-  template:
-    spec:
-      restartPolicy: OnFailure
-      containers:
-        - name: register
-          image: postgres:16-alpine
-          env:
-            - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: events-db-credentials
-                  key: password
-          command:
-            - sh
-            - -c
-            - |
-              set -e
-              COORD=citus-events-coordinator-rw
-              USER=events_user
-              DB=events_db
-              until pg_isready -h $COORD -U $USER -d $DB; do sleep 2; done
-              for i in 0 1 2; do
-                WORKER="citus-events-workers-$i.citus-events-workers-r"
-                psql -h $COORD -U $USER -d $DB \
-                  -c "SELECT citus_add_node('$WORKER', 5432);" || true
-              done
-              psql -h $COORD -U $USER -d $DB \
-                -c "SELECT * FROM citus_get_active_worker_nodes();"

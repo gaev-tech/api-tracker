@@ -34,7 +34,7 @@ import (
 
 func main() {
 	port := envOr("PORT", "8080")
-	dbHost := envOr("DB_HOST", "citus-workspace-coordinator-rw")
+	dbHost := envOr("DB_HOST", "postgres-workspace-rw")
 	dbPort := envOr("DB_PORT", "5432")
 	dbUser := envOr("DB_USER", "workspace_user")
 	dbPassword := mustEnv("DB_PASSWORD")

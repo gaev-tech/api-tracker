@@ -30,9 +30,9 @@ env:
         name: workspace-db-credentials
         key: password
   - name: DB_HOST
-    value: "citus-workspace-coordinator-rw"
+    value: "postgres-workspace-rw"
   - name: DATABASE_URL
-    value: "postgres://workspace_user:$(DB_PASSWORD)@citus-workspace-coordinator-rw:5432/workspace_db"
+    value: "postgres://workspace_user:$(DB_PASSWORD)@postgres-workspace-rw:5432/workspace_db"
 
 envFrom:
   configMapRef: ""
