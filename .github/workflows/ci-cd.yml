@@ -46,7 +46,7 @@ jobs:
           declare -A context=(
             [identity-service]=.
             [workspace-service]=.
-            [events-service]=backend/services/events-service
+            [events-service]=.
             [billing-service]=.
             [api-gateway]=backend/api-gateway
           )
