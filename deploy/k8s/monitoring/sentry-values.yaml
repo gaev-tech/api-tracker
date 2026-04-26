@@ -1,0 +1,39 @@
+# Sentry Helm chart values for api-tracker (INFRA-10)
+# Minimal config for single-node K3s cluster.
+
+user:
+  email: admin@apitracker.ru
+  password: ""  # Set via --set at install time
+
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      size: 5Gi
+      storageClass: local-path
+
+redis:
+  enabled: true
+  master:
+    persistence:
+      size: 2Gi
+      storageClass: local-path
+
+clickhouse:
+  enabled: true
+  persistence:
+    size: 5Gi
+    storageClass: local-path
+
+kafka:
+  enabled: false
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hostname: sentry.apitracker.ru
+  tls: true
+
+nginx:
+  enabled: false

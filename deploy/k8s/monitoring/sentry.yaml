@@ -1,0 +1,20 @@
+# Sentry self-hosted for api-tracker (INFRA-10)
+#
+# Sentry requires PostgreSQL, Redis, Kafka, Clickhouse, and multiple workers.
+# For a single-node K3s cluster, we deploy using the official Sentry Helm chart.
+#
+# Installation:
+#   helm repo add sentry https://sentry-kubernetes.github.io/charts
+#   helm install sentry sentry/sentry \
+#     --namespace monitoring \
+#     --set user.email=admin@apitracker.ru \
+#     --set user.password=<SENTRY_ADMIN_PASSWORD> \
+#     --set postgresql.enabled=true \
+#     --set redis.enabled=true \
+#     --set kafka.enabled=false \
+#     --set clickhouse.enabled=true \
+#     --set ingress.enabled=true \
+#     --set ingress.hostname=sentry.apitracker.ru \
+#     --values deploy/k8s/monitoring/sentry-values.yaml
+#
+# After installation, get DSN from Sentry UI and set SENTRY_DSN env var in each service.

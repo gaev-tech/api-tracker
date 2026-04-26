@@ -287,6 +287,23 @@ jobs:
           kubectl apply -f deploy/k8s/swagger-ui/swagger-ui.yaml -n production
           kubectl rollout status deployment/swagger-ui -n production --timeout=2m
 
+      - name: Deploy monitoring stack
+        if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
+        run: |
+          kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f deploy/k8s/monitoring/prometheus.yaml
+          kubectl apply -f deploy/k8s/monitoring/grafana.yaml
+          kubectl apply -f deploy/k8s/monitoring/loki.yaml
+          kubectl apply -f deploy/k8s/monitoring/promtail.yaml
+          # Populate grafana-dashboards ConfigMap from dashboard JSON files
+          kubectl create configmap grafana-dashboards \
+            --from-file=deploy/monitoring/grafana/dashboards/ \
+            -n monitoring --dry-run=client -o yaml | kubectl apply -f -
+          kubectl rollout status deployment/prometheus -n monitoring --timeout=3m
+          kubectl rollout status deployment/loki -n monitoring --timeout=3m
+          kubectl rollout status deployment/grafana -n monitoring --timeout=3m
+
       # ── Application deploy (always on main/tag) ─────────────────────────────
       - name: Create identity-service JWT secret
         env:
