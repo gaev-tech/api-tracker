@@ -58,25 +58,29 @@ jobs:
             [api-gateway]=backend/api-gateway/Dockerfile
           )
           PUSH=${{ github.event_name != 'pull_request' }}
+          pids=()
           for service in "${!context[@]}"; do
-            echo "=== $service ==="
-            docker build \
-              -f "${dockerfile[$service]}" \
-              -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}" \
-              -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest" \
-              "${context[$service]}"
-            if [ "$PUSH" = "true" ]; then
-              docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}"
-              docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest"
-            fi
+            (
+              echo "=== $service ==="
+              docker build \
+                -f "${dockerfile[$service]}" \
+                -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}" \
+                -t "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest" \
+                "${context[$service]}"
+              if [ "$PUSH" = "true" ]; then
+                docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:${{ github.sha }}"
+                docker push "ghcr.io/${{ github.repository_owner }}/api-tracker/$service:latest"
+              fi
+            ) &
+            pids+=($!)
           done
+          for pid in "${pids[@]}"; do wait "$pid" || exit 1; done
 
-  # ── 2. Lint (parallel with test) ───────────────────────────────────────────
+  # ── 2. Lint (parallel with build and test) ──────────────────────────────────
   lint:
     name: lint
     runs-on: ubuntu-latest
     container: ghcr.io/gaev-tech/api-tracker/ci-base:latest
-    needs: build
     steps:
       - uses: actions/checkout@v4
 
@@ -111,12 +115,11 @@ jobs:
         run: buf lint
         working-directory: contracts/
 
-  # ── 3. Test (parallel with lint) ───────────────────────────────────────────
+  # ── 3. Test (parallel with build and lint) ──────────────────────────────────
   test:
     name: test
     runs-on: ubuntu-latest
     container: ghcr.io/gaev-tech/api-tracker/ci-base:latest
-    needs: build
     steps:
       - uses: actions/checkout@v4
 
@@ -221,25 +224,32 @@ jobs:
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
-          helm repo add strimzi https://strimzi.io/charts/ && helm repo update
-          STRIMZI_STATUS=$(helm status strimzi-kafka-operator -n kafka -o json 2>/dev/null | jq -r '.info.status' || echo "not-found")
-          if [ "$STRIMZI_STATUS" != "deployed" ] && [ "$STRIMZI_STATUS" != "not-found" ]; then
-            helm uninstall strimzi-kafka-operator -n kafka --wait || true
+          # Skip full operator reinstall if Kafka is already healthy
+          if kubectl wait kafka/kafka -n kafka --for=condition=Ready --timeout=5s 2>/dev/null; then
+            echo "Kafka already Ready — applying topics only"
+            kubectl apply -f deploy/k8s/kafka/kafka-cluster.yaml
+            kubectl apply -f deploy/k8s/kafka/kafka-topics.yaml
+          else
+            helm repo add strimzi https://strimzi.io/charts/ && helm repo update
+            STRIMZI_STATUS=$(helm status strimzi-kafka-operator -n kafka -o json 2>/dev/null | jq -r '.info.status' || echo "not-found")
+            if [ "$STRIMZI_STATUS" != "deployed" ] && [ "$STRIMZI_STATUS" != "not-found" ]; then
+              helm uninstall strimzi-kafka-operator -n kafka --wait || true
+            fi
+            kubectl delete rolebinding \
+              strimzi-cluster-operator \
+              strimzi-cluster-operator-entity-operator-delegation \
+              strimzi-cluster-operator-watched \
+              -n kafka --ignore-not-found=true
+            for rb in strimzi-cluster-operator strimzi-cluster-operator-entity-operator-delegation strimzi-cluster-operator-watched; do
+              kubectl wait rolebinding/$rb -n kafka --for=delete --timeout=30s 2>/dev/null || true
+            done
+            helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
+              --namespace kafka --create-namespace --version 0.40.0 \
+              --wait --timeout 10m
+            kubectl apply -f deploy/k8s/kafka/kafka-cluster.yaml
+            kubectl wait kafka/kafka -n kafka --for=condition=Ready --timeout=10m
+            kubectl apply -f deploy/k8s/kafka/kafka-topics.yaml
           fi
-          kubectl delete rolebinding \
-            strimzi-cluster-operator \
-            strimzi-cluster-operator-entity-operator-delegation \
-            strimzi-cluster-operator-watched \
-            -n kafka --ignore-not-found=true
-          for rb in strimzi-cluster-operator strimzi-cluster-operator-entity-operator-delegation strimzi-cluster-operator-watched; do
-            kubectl wait rolebinding/$rb -n kafka --for=delete --timeout=30s 2>/dev/null || true
-          done
-          helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
-            --namespace kafka --create-namespace --version 0.40.0 \
-            --wait --timeout 10m
-          kubectl apply -f deploy/k8s/kafka/kafka-cluster.yaml
-          kubectl wait kafka/kafka -n kafka --for=condition=Ready --timeout=10m
-          kubectl apply -f deploy/k8s/kafka/kafka-topics.yaml
 
       - name: Install CNPG Operator + deploy PostgreSQL
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
@@ -249,22 +259,13 @@ jobs:
             --namespace cnpg-system --create-namespace --version 0.23.0 \
             --wait --timeout 5m
           kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
-          kubectl create secret generic identity-db-credentials \
-            --from-literal=username=identity_user \
-            --from-literal=password=${{ secrets.IDENTITY_DB_PASSWORD }} \
-            --namespace production --dry-run=client -o yaml | kubectl apply -f -
-          kubectl create secret generic billing-db-credentials \
-            --from-literal=username=billing_user \
-            --from-literal=password=${{ secrets.BILLING_DB_PASSWORD }} \
-            --namespace production --dry-run=client -o yaml | kubectl apply -f -
           kubectl apply -f deploy/k8s/postgres/identity.yaml -n production
           kubectl apply -f deploy/k8s/postgres/billing.yaml  -n production
           kubectl wait cluster/postgres-identity -n production --for=condition=Ready --timeout=5m
           kubectl wait cluster/postgres-billing  -n production --for=condition=Ready --timeout=5m
 
-      - name: Deploy Citus clusters
+      - name: Deploy PostgreSQL clusters (workspace, events)
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
-        continue-on-error: true
         run: |
           kubectl create secret generic workspace-db-credentials \
             --from-literal=username=workspace_user \
@@ -276,8 +277,8 @@ jobs:
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
           kubectl apply -f deploy/k8s/citus/workspace.yaml -n production
           kubectl apply -f deploy/k8s/citus/events.yaml    -n production
-          kubectl wait cluster/citus-workspace-coordinator   -n production --for=condition=Ready --timeout=10m
-          kubectl wait cluster/citus-events-coordinator      -n production --for=condition=Ready --timeout=10m
+          kubectl wait cluster/postgres-workspace -n production --for=condition=Ready --timeout=5m
+          kubectl wait cluster/postgres-events    -n production --for=condition=Ready --timeout=5m
 
       - name: Deploy Swagger UI
         if: steps.filter.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
@@ -333,6 +334,7 @@ jobs:
 
       - name: Helm deploy — all services
         run: |
+          # Install/upgrade all charts without waiting
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
@@ -341,9 +343,17 @@ jobs:
               --namespace production \
               --create-namespace \
               --set image.tag=${{ github.sha }} \
-              --wait \
               --timeout 5m
           done
+          # Wait for all deployments in parallel
+          pids=()
+          for chart in deploy/helm/*/; do
+            service=$(basename "$chart")
+            [ "$service" = "service-template" ] && continue
+            kubectl rollout status deployment/"$service" -n production --timeout=5m &
+            pids+=($!)
+          done
+          for pid in "${pids[@]}"; do wait "$pid" || exit 1; done
 
       - name: Diagnose failed pods
         if: failure()
