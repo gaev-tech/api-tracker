@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, EMPTY } from 'rxjs';
@@ -17,6 +18,7 @@ import { ApiErrorResponse } from '../../models/api-error-response.model';
 export class VerifyEmailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly authApiService = inject(AuthApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly status = signal<'loading' | 'success' | 'error'>('loading');
   readonly errorMessage = signal('');
@@ -42,6 +44,7 @@ export class VerifyEmailComponent implements OnInit {
           this.setErrorState(this.extractErrorMessage(error));
           return EMPTY;
         }),
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(() => {
         this.handleVerificationSuccess();

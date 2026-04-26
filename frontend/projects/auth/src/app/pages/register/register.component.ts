@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -18,6 +19,7 @@ import { ApiErrorResponse } from '../../models/api-error-response.model';
 export class RegisterComponent {
   readonly route = inject(ActivatedRoute);
   private readonly authApiService = inject(AuthApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly email = signal('');
   readonly password = signal('');
@@ -29,7 +31,10 @@ export class RegisterComponent {
     this.resetState();
     this.authApiService
       .register({ email: this.email(), password: this.password() })
-      .pipe(catchError((error: unknown) => this.handleRegistrationError(error)))
+      .pipe(
+        catchError((error: unknown) => this.handleRegistrationError(error)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe(() => {
         this.handleRegistrationSuccess();
       });

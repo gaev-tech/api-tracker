@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -19,6 +20,7 @@ import { LoginResponse } from '../../models/login-response.model';
 export class LoginComponent {
   readonly route = inject(ActivatedRoute);
   private readonly authApiService = inject(AuthApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly email = signal('');
   readonly password = signal('');
@@ -47,6 +49,7 @@ export class LoginComponent {
       .pipe(
         switchMap((loginResponse) => this.handleLoginSuccess(loginResponse)),
         catchError((error: unknown) => this.handleError(error)),
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((redirectUrl) => {
         this.redirectTo(redirectUrl);
