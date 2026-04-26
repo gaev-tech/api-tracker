@@ -92,7 +92,7 @@ func main() {
 	patStore := store.NewPATStore(db)
 	userStore := store.NewUserStore(db)
 	grpcSrv := grpcpkg.NewServer(logger)
-	identityv1.RegisterIdentityServiceServer(grpcSrv, grpcserver.New(patStore, userStore))
+	identityv1.RegisterIdentityServiceServer(grpcSrv, grpcserver.New(patStore, userStore, jwtSvc))
 
 	grpcLis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
 	if err != nil {

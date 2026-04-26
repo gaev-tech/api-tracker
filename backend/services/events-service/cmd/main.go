@@ -17,6 +17,7 @@ import (
 	"github.com/gaev-tech/api-tracker/events-service/internal/consumer"
 	internal "github.com/gaev-tech/api-tracker/events-service/internal"
 	"github.com/gaev-tech/api-tracker/events-service/internal/store"
+	"github.com/gaev-tech/api-tracker/events-service/internal/ws"
 	migrationsfs "github.com/gaev-tech/api-tracker/events-service/migrations"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
@@ -56,14 +57,18 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Kafka consumer for all domain events
+	// WebSocket hub + invitation notifier
 	eventStore := store.NewEventStore(db)
+	hub := ws.NewHub(logger)
+	notifier := ws.NewInvitationNotifier(hub, logger)
+
+	// Kafka consumer for all domain events
 	brokers := strings.Split(kafkaBrokers, ",")
-	eventsConsumer := consumer.NewEventsConsumer(brokers, eventStore, logger)
+	eventsConsumer := consumer.NewEventsConsumer(brokers, eventStore, logger, notifier)
 	go eventsConsumer.Start(ctx)
 
-	// HTTP server (Gin router with health checks + event API)
-	router := internal.NewRouter(logger, db, eventStore)
+	// HTTP server (Gin router with health checks + event API + WebSocket)
+	router := internal.NewRouter(logger, db, eventStore, hub)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),

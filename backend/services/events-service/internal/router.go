@@ -10,10 +10,11 @@ import (
 	"github.com/gaev-tech/api-tracker/events-service/internal/handler"
 	"github.com/gaev-tech/api-tracker/events-service/internal/middleware"
 	"github.com/gaev-tech/api-tracker/events-service/internal/store"
+	"github.com/gaev-tech/api-tracker/events-service/internal/ws"
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(logger *slog.Logger, db *sql.DB, eventStore *store.EventStore) *gin.Engine {
+func NewRouter(logger *slog.Logger, db *sql.DB, eventStore *store.EventStore, hub *ws.Hub) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 
@@ -35,6 +36,7 @@ func NewRouter(logger *slog.Logger, db *sql.DB, eventStore *store.EventStore) *g
 
 	authed := r.Group("/", middleware.RequireAuth())
 
+	authed.GET("/events/stream", ws.HandleWebSocket(hub, logger))
 	authed.GET("/events", eventH.ListEvents)
 	authed.GET("/projects/:id/events", eventH.ListProjectEvents)
 	authed.GET("/tasks/:id/events", eventH.ListTaskEvents)

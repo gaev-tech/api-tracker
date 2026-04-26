@@ -63,24 +63,31 @@ var topics = []string{
 	"automations.automation.frozen",
 }
 
+// EventObserver is notified after an event is stored.
+type EventObserver interface {
+	OnEvent(event *domain.Event)
+}
+
 // EventsConsumer consumes all domain events from Kafka and stores them.
 type EventsConsumer struct {
-	readers []*kafka.Reader
-	store   *store.EventStore
-	logger  *slog.Logger
+	readers  []*kafka.Reader
+	store    *store.EventStore
+	logger   *slog.Logger
+	observer EventObserver
 }
 
 // NewEventsConsumer creates a consumer for all domain event topics.
-func NewEventsConsumer(brokers []string, eventStore *store.EventStore, logger *slog.Logger) *EventsConsumer {
+func NewEventsConsumer(brokers []string, eventStore *store.EventStore, logger *slog.Logger, observer EventObserver) *EventsConsumer {
 	groupID := "events-service-consumer"
 	readers := make([]*kafka.Reader, 0, len(topics))
 	for _, topic := range topics {
 		readers = append(readers, kafkapkg.NewReader(brokers, topic, groupID))
 	}
 	return &EventsConsumer{
-		readers: readers,
-		store:   eventStore,
-		logger:  logger,
+		readers:  readers,
+		store:    eventStore,
+		logger:   logger,
+		observer: observer,
 	}
 }
 
@@ -115,6 +122,11 @@ func (c *EventsConsumer) consume(ctx context.Context, reader *kafka.Reader) {
 
 		if err := c.store.Insert(ctx, event); err != nil {
 			c.logger.Error("failed to store event", "topic", topic, "error", err)
+			continue
+		}
+
+		if c.observer != nil {
+			c.observer.OnEvent(event)
 		}
 	}
 }

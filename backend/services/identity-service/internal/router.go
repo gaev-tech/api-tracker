@@ -26,10 +26,12 @@ func NewRouter(logger *slog.Logger, db *sql.DB, jwtSvc *auth.Service, emailSende
 	userStore := store.NewUserStore(db)
 	refreshStore := store.NewRefreshTokenStore(db)
 	patStore := store.NewPATStore(db)
+	oauthStore := store.NewOAuthStore(db)
 
 	authH := handler.NewAuthHandler(userStore, refreshStore, jwtSvc, emailSender, appBaseURL)
 	userH := handler.NewUserHandler(userStore, db)
 	patH := handler.NewPATHandler(patStore, db)
+	oauthH := handler.NewOAuthHandler(oauthStore, refreshStore, patStore, userStore, jwtSvc)
 
 	r.GET("/healthz", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	r.GET("/readyz", func(c *gin.Context) {
@@ -50,11 +52,18 @@ func NewRouter(logger *slog.Logger, db *sql.DB, jwtSvc *auth.Service, emailSende
 	authGroup.POST("/login", authH.Login)
 	authGroup.POST("/refresh", authH.Refresh)
 	authGroup.POST("/email/verify", authH.VerifyEmail)
+	authGroup.POST("/validate", oauthH.ValidateToken)
+
+	// Public OAuth endpoints
+	r.POST("/oauth/token", oauthH.Token)
 
 	// Authenticated auth endpoints
 	authed := r.Group("/", middleware.RequireAuth(jwtSvc))
 	authed.POST("/auth/logout", authH.Logout)
 	authed.POST("/auth/password/change", authH.ChangePassword)
+
+	// OAuth authorize (requires auth)
+	authed.GET("/oauth/authorize", oauthH.Authorize)
 
 	// User endpoints
 	authed.GET("/users/me", userH.GetMe)

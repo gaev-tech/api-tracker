@@ -5,6 +5,7 @@ go 1.23
 require (
 	github.com/gaev-tech/api-tracker/backend/pkg v0.0.0
 	github.com/gin-gonic/gin v1.10.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/lib/pq v1.10.9
 	github.com/pressly/goose/v3 v3.22.1
 	github.com/segmentio/kafka-go v0.4.47
