@@ -333,6 +333,7 @@ jobs:
             --namespace production --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Helm deploy — all services
+        shell: bash
         run: |
           # Install/upgrade all charts without waiting
           for chart in deploy/helm/*/; do
