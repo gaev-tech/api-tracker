@@ -89,6 +89,13 @@ func (h *OAuthHandler) Authorize(c *gin.Context) {
 	if state != "" {
 		location += "&state=" + state
 	}
+
+	// JSON clients (e.g. SPA) cannot follow 302 and read Location header,
+	// so return the redirect URL in a JSON body when Accept: application/json.
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		c.JSON(http.StatusOK, gin.H{"redirect_url": location})
+		return
+	}
 	c.Redirect(http.StatusFound, location)
 }
 

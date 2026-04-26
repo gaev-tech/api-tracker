@@ -1,17 +1,27 @@
 import { ZodType } from 'zod';
 
-export const schemaRegistry = new Map<
-  string,
-  { method: string; pattern: RegExp; schema: ZodType }
->();
-
-/**
- * Register a Zod schema for response validation.
- * @param method HTTP method (GET, POST, etc.)
- * @param pattern URL pattern (regex)
- * @param schema Zod schema to validate against
- */
-export function registerResponseSchema(method: string, pattern: RegExp, schema: ZodType): void {
-  const key = `${method}:${pattern.source}`;
-  schemaRegistry.set(key, { method, pattern, schema });
+interface SchemaRegistryEntry {
+  readonly method: string;
+  readonly pattern: RegExp;
+  readonly schema: ZodType;
 }
+
+class SchemaRegistryImpl {
+  private readonly entries = new Map<string, SchemaRegistryEntry>();
+
+  register(method: string, pattern: RegExp, schema: ZodType): void {
+    const key = `${method}:${pattern.source}`;
+    this.entries.set(key, { method, pattern, schema });
+  }
+
+  findMatch(requestMethod: string, requestUrl: string): SchemaRegistryEntry | undefined {
+    for (const [, entry] of this.entries) {
+      if (requestMethod === entry.method && entry.pattern.test(requestUrl)) {
+        return entry;
+      }
+    }
+    return undefined;
+  }
+}
+
+export const schemaRegistry = new SchemaRegistryImpl();

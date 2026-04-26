@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { catchError, EMPTY, switchMap } from 'rxjs';
+import { catchError, EMPTY, Observable, switchMap } from 'rxjs';
 import { AuthCardComponent } from '../../components/auth-card/auth-card.component';
 import { AuthApiService } from '../../services/auth-api.service';
 import { ApiErrorResponse } from '../../models/api-error-response.model';
+import { LoginResponse } from '../../models/login-response.model';
 
 @Component({
   selector: 'app-login',
@@ -40,43 +41,61 @@ export class LoginComponent {
   }
 
   onSubmit(): void {
-    this.errorMessage.set('');
-    this.isLoading.set(true);
-
+    this.resetState();
     this.authApiService
       .login({ email: this.email(), password: this.password() })
       .pipe(
-        switchMap((loginResponse) => {
-          if (this.clientId && this.redirectUri) {
-            const authorizeParams: Record<string, string> = {
-              response_type: 'code',
-              client_id: this.clientId,
-              redirect_uri: this.redirectUri,
-            };
-            if (this.codeChallenge) {
-              authorizeParams['code_challenge'] = this.codeChallenge;
-            }
-            if (this.codeChallengeMethod) {
-              authorizeParams['code_challenge_method'] = this.codeChallengeMethod;
-            }
-            if (this.state) {
-              authorizeParams['state'] = this.state;
-            }
-            return this.authApiService.authorize(authorizeParams, loginResponse.access_token);
-          }
-          window.location.href = '/';
-          return EMPTY;
-        }),
-        catchError((error: unknown) => {
-          const message = this.extractErrorMessage(error);
-          this.errorMessage.set(message);
-          this.isLoading.set(false);
-          return EMPTY;
-        }),
+        switchMap((loginResponse) => this.handleLoginSuccess(loginResponse)),
+        catchError((error: unknown) => this.handleError(error)),
       )
       .subscribe((redirectUrl) => {
-        window.location.href = redirectUrl;
+        this.redirectTo(redirectUrl);
       });
+  }
+
+  private resetState(): void {
+    this.errorMessage.set('');
+    this.isLoading.set(true);
+  }
+
+  private handleLoginSuccess(loginResponse: LoginResponse): Observable<string> {
+    if (this.hasOAuthParams()) {
+      const authorizeParams = this.buildAuthorizeParams();
+      return this.authApiService.authorize(authorizeParams, loginResponse.access_token);
+    }
+    this.redirectTo('/');
+    return EMPTY;
+  }
+
+  private hasOAuthParams(): boolean {
+    return !!(this.clientId && this.redirectUri);
+  }
+
+  private buildAuthorizeParams(): Record<string, string> {
+    const params: Record<string, string> = {
+      response_type: 'code',
+      client_id: this.clientId,
+      redirect_uri: this.redirectUri,
+    };
+    if (this.codeChallenge) {
+      params['code_challenge'] = this.codeChallenge;
+      params['code_challenge_method'] = this.codeChallengeMethod;
+    }
+    if (this.state) {
+      params['state'] = this.state;
+    }
+    return params;
+  }
+
+  private handleError(error: unknown): Observable<never> {
+    const message = this.extractErrorMessage(error);
+    this.errorMessage.set(message);
+    this.isLoading.set(false);
+    return EMPTY;
+  }
+
+  private redirectTo(url: string): void {
+    window.location.href = url;
   }
 
   private extractErrorMessage(error: unknown): string {

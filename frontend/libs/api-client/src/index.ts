@@ -1,5 +1,5 @@
 export { ZodValidationInterceptor } from './interceptors/zod-validation.interceptor';
-export { registerResponseSchema } from './interceptors/schema-registry';
+export { schemaRegistry } from './interceptors/schema-registry';
 export { TokenPairSchema } from './schemas/token-pair.schema';
 export { UserSchema } from './schemas/user.schema';
 export { RegisterResponseSchema } from './schemas/register-response.schema';

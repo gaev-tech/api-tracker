@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { catchError, EMPTY } from 'rxjs';
+import { catchError, EMPTY, Observable } from 'rxjs';
 import { AuthCardComponent } from '../../components/auth-card/auth-card.component';
 import { AuthApiService } from '../../services/auth-api.service';
 import { ApiErrorResponse } from '../../models/api-error-response.model';
@@ -26,23 +26,30 @@ export class RegisterComponent {
   readonly isSuccess = signal(false);
 
   onSubmit(): void {
-    this.errorMessage.set('');
-    this.isLoading.set(true);
-
+    this.resetState();
     this.authApiService
       .register({ email: this.email(), password: this.password() })
-      .pipe(
-        catchError((error: unknown) => {
-          const message = this.extractErrorMessage(error);
-          this.errorMessage.set(message);
-          this.isLoading.set(false);
-          return EMPTY;
-        }),
-      )
+      .pipe(catchError((error: unknown) => this.handleRegistrationError(error)))
       .subscribe(() => {
-        this.isLoading.set(false);
-        this.isSuccess.set(true);
+        this.handleRegistrationSuccess();
       });
+  }
+
+  private resetState(): void {
+    this.errorMessage.set('');
+    this.isLoading.set(true);
+  }
+
+  private handleRegistrationSuccess(): void {
+    this.isLoading.set(false);
+    this.isSuccess.set(true);
+  }
+
+  private handleRegistrationError(error: unknown): Observable<never> {
+    const message = this.extractErrorMessage(error);
+    this.errorMessage.set(message);
+    this.isLoading.set(false);
+    return EMPTY;
   }
 
   private extractErrorMessage(error: unknown): string {

@@ -1,12 +1,16 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, map } from 'rxjs';
 import { LoginRequest } from '../models/login-request.model';
 import { LoginResponse } from '../models/login-response.model';
 import { RegisterRequest } from '../models/register-request.model';
 import { RegisterResponse } from '../models/register-response.model';
 import { VerifyEmailRequest } from '../models/verify-email-request.model';
 import { VerifyEmailResponse } from '../models/verify-email-response.model';
+
+interface AuthorizeResponse {
+  readonly redirect_url: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
@@ -26,22 +30,18 @@ export class AuthApiService {
   }
 
   authorize(params: Record<string, string>, accessToken: string): Observable<string> {
-    const queryString = new URLSearchParams(params).toString();
-    return new Observable<string>((subscriber) => {
-      fetch(`${this.baseUrl}/oauth/authorize?${queryString}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        redirect: 'manual',
-      })
-        .then((response) => {
-          const location = response.headers.get('location');
-          if (location) {
-            subscriber.next(location);
-            subscriber.complete();
-          } else {
-            subscriber.error(new Error('No redirect location received'));
-          }
-        })
-        .catch((fetchError: unknown) => subscriber.error(fetchError));
+    const authorizationUrl = this.buildAuthorizationUrl(params);
+    const headers = new HttpHeaders({
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/json',
     });
+    return this.httpClient
+      .get<AuthorizeResponse>(authorizationUrl, { headers })
+      .pipe(map((response) => response.redirect_url));
+  }
+
+  private buildAuthorizationUrl(params: Record<string, string>): string {
+    const queryString = new URLSearchParams(params).toString();
+    return `${this.baseUrl}/oauth/authorize?${queryString}`;
   }
 }

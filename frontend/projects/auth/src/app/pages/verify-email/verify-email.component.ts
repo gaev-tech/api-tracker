@@ -22,29 +22,46 @@ export class VerifyEmailComponent implements OnInit {
   readonly errorMessage = signal('');
 
   ngOnInit(): void {
-    const token = this.route.snapshot.queryParams['token'] ?? '';
-    if (!token) {
-      this.status.set('error');
-      this.errorMessage.set('Invalid verification link.');
+    const verificationToken = this.extractTokenFromQuery();
+    if (!verificationToken) {
+      this.setErrorState('Invalid verification link.');
       return;
     }
+    this.executeEmailVerification(verificationToken);
+  }
 
+  private extractTokenFromQuery(): string {
+    return this.route.snapshot.queryParams['token'] ?? '';
+  }
+
+  private executeEmailVerification(verificationToken: string): void {
     this.authApiService
-      .verifyEmail({ token })
+      .verifyEmail({ token: verificationToken })
       .pipe(
         catchError((error: unknown) => {
-          const message = this.extractErrorMessage(error);
-          this.status.set('error');
-          this.errorMessage.set(message);
+          this.setErrorState(this.extractErrorMessage(error));
           return EMPTY;
         }),
       )
       .subscribe(() => {
-        this.status.set('success');
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 2000);
+        this.handleVerificationSuccess();
       });
+  }
+
+  private handleVerificationSuccess(): void {
+    this.status.set('success');
+    setTimeout(() => {
+      this.redirectToApplication();
+    }, 2000);
+  }
+
+  private redirectToApplication(): void {
+    window.location.href = '/';
+  }
+
+  private setErrorState(message: string): void {
+    this.status.set('error');
+    this.errorMessage.set(message);
   }
 
   private extractErrorMessage(error: unknown): string {
