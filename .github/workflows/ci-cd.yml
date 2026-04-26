@@ -274,7 +274,7 @@ jobs:
     name: deploy
     runs-on: ubuntu-latest
     container: ghcr.io/gaev-tech/api-tracker/ci-base:latest
-    needs: [backend-build, backend-lint, backend-test, frontend-build, frontend-lint, frontend-test]
+    needs: [changes, backend-build, backend-lint, backend-test, frontend-build, frontend-lint, frontend-test]
     if: |
       always() &&
       github.event_name != 'pull_request' &&
@@ -472,15 +472,32 @@ jobs:
 
       - name: Helm deploy — all services
         shell: bash
+        env:
+          BACKEND_CHANGED: ${{ needs.changes.outputs.backend }}
+          FRONTEND_CHANGED: ${{ needs.changes.outputs.frontend }}
+          IS_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
+          BACKEND_SERVICES="api-gateway identity-service workspace-service events-service billing-service"
+          FRONTEND_SERVICES="frontend"
           for chart in deploy/helm/*/; do
             service=$(basename "$chart")
             [ "$service" = "service-template" ] && continue
             echo "=== $service ==="
+            # Only set image.tag when the corresponding build ran (image exists in GHCR)
+            TAG_FLAG=""
+            if echo "$BACKEND_SERVICES" | grep -qw "$service"; then
+              if [ "$BACKEND_CHANGED" = "true" ] || [ "$IS_DISPATCH" = "true" ]; then
+                TAG_FLAG="--set image.tag=${{ github.sha }}"
+              fi
+            elif echo "$FRONTEND_SERVICES" | grep -qw "$service"; then
+              if [ "$FRONTEND_CHANGED" = "true" ] || [ "$IS_DISPATCH" = "true" ]; then
+                TAG_FLAG="--set image.tag=${{ github.sha }}"
+              fi
+            fi
             helm upgrade --install "$service" "$chart" \
               --namespace production \
               --create-namespace \
-              --set image.tag=${{ github.sha }} \
+              $TAG_FLAG \
               --timeout 5m
           done
           pids=()
