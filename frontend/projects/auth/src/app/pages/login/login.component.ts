@@ -8,6 +8,9 @@ import { AuthCardComponent } from '../../components/auth-card/auth-card.componen
 import { AuthApiService } from '../../services/auth-api.service';
 import { ApiErrorResponse } from '../../models/api-error-response.model';
 import { LoginResponse } from '../../models/login-response.model';
+import { OAUTH_QUERY_PARAMS } from '../../constants/oauth-query-params.constant';
+import { OAUTH_DEFAULTS } from '../../constants/oauth-defaults.constant';
+import { APP_ROUTES } from '../../constants/app-routes.constant';
 
 @Component({
   selector: 'app-login',
@@ -35,11 +38,11 @@ export class LoginComponent {
 
   constructor() {
     const queryParams = this.route.snapshot.queryParams;
-    this.clientId = queryParams['client_id'] ?? '';
-    this.redirectUri = queryParams['redirect_uri'] ?? '';
-    this.state = queryParams['state'] ?? '';
-    this.codeChallenge = queryParams['code_challenge'] ?? '';
-    this.codeChallengeMethod = queryParams['code_challenge_method'] ?? '';
+    this.clientId = queryParams[OAUTH_QUERY_PARAMS.CLIENT_ID] ?? '';
+    this.redirectUri = queryParams[OAUTH_QUERY_PARAMS.REDIRECT_URI] ?? '';
+    this.state = queryParams[OAUTH_QUERY_PARAMS.STATE] ?? '';
+    this.codeChallenge = queryParams[OAUTH_QUERY_PARAMS.CODE_CHALLENGE] ?? '';
+    this.codeChallengeMethod = queryParams[OAUTH_QUERY_PARAMS.CODE_CHALLENGE_METHOD] ?? '';
   }
 
   onSubmit(): void {
@@ -66,7 +69,7 @@ export class LoginComponent {
       const authorizeParams = this.buildAuthorizeParams();
       return this.authApiService.authorize(authorizeParams, loginResponse.access_token);
     }
-    this.redirectTo('/');
+    this.redirectTo(APP_ROUTES.HOME);
     return EMPTY;
   }
 
@@ -76,16 +79,16 @@ export class LoginComponent {
 
   private buildAuthorizeParams(): Record<string, string> {
     const params: Record<string, string> = {
-      response_type: 'code',
-      client_id: this.clientId,
-      redirect_uri: this.redirectUri,
+      [OAUTH_QUERY_PARAMS.RESPONSE_TYPE]: OAUTH_DEFAULTS.RESPONSE_TYPE,
+      [OAUTH_QUERY_PARAMS.CLIENT_ID]: this.clientId,
+      [OAUTH_QUERY_PARAMS.REDIRECT_URI]: this.redirectUri,
     };
     if (this.codeChallenge) {
-      params['code_challenge'] = this.codeChallenge;
-      params['code_challenge_method'] = this.codeChallengeMethod;
+      params[OAUTH_QUERY_PARAMS.CODE_CHALLENGE] = this.codeChallenge;
+      params[OAUTH_QUERY_PARAMS.CODE_CHALLENGE_METHOD] = this.codeChallengeMethod;
     }
     if (this.state) {
-      params['state'] = this.state;
+      params[OAUTH_QUERY_PARAMS.STATE] = this.state;
     }
     return params;
   }

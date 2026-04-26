@@ -7,6 +7,7 @@ import { RegisterRequest } from '../models/register-request.model';
 import { RegisterResponse } from '../models/register-response.model';
 import { VerifyEmailRequest } from '../models/verify-email-request.model';
 import { VerifyEmailResponse } from '../models/verify-email-response.model';
+import { API_BASE_URL } from '../constants/api-base-url.constant';
 
 interface AuthorizeResponse {
   readonly redirect_url: string;
@@ -15,7 +16,7 @@ interface AuthorizeResponse {
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
   private readonly httpClient = inject(HttpClient);
-  private readonly baseUrl = '/api';
+  private readonly baseUrl = API_BASE_URL;
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.httpClient.post<LoginResponse>(`${this.baseUrl}/auth/login`, request);
