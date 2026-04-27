@@ -48,9 +48,8 @@ data:
             auth_request_set $x_parent_user_id $upstream_http_x_parent_user_id;
             auth_request_set $x_is_active $upstream_http_x_is_active;
 
-            proxy_set_header X-User-Id $x_user_id;
-            proxy_set_header X-Parent-User-Id $x_parent_user_id;
-            proxy_set_header X-Is-Active $x_is_active;
+            # NOTE: proxy_set_header is not inherited when a child location defines
+            # its own proxy_set_header. Auth headers are repeated in each location.
 
             # ── Internal: auth subrequest endpoint ────────────────────────────
             location = /internal/auth/validate {
@@ -117,6 +116,9 @@ data:
                 set $upstream identity-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
+                proxy_set_header X-User-Id $x_user_id;
+                proxy_set_header X-Parent-User-Id $x_parent_user_id;
+                proxy_set_header X-Is-Active $x_is_active;
             }
 
             # ── Workspace ──────────────────────────────────────────────────────
@@ -125,6 +127,9 @@ data:
                 set $upstream workspace-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
+                proxy_set_header X-User-Id $x_user_id;
+                proxy_set_header X-Parent-User-Id $x_parent_user_id;
+                proxy_set_header X-Is-Active $x_is_active;
             }
 
             # ── Billing ────────────────────────────────────────────────────────
@@ -133,6 +138,9 @@ data:
                 set $upstream billing-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
+                proxy_set_header X-User-Id $x_user_id;
+                proxy_set_header X-Parent-User-Id $x_parent_user_id;
+                proxy_set_header X-Is-Active $x_is_active;
             }
 
             # ── Files ──────────────────────────────────────────────────────────
@@ -141,6 +149,9 @@ data:
                 set $upstream files-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
+                proxy_set_header X-User-Id $x_user_id;
+                proxy_set_header X-Parent-User-Id $x_parent_user_id;
+                proxy_set_header X-Is-Active $x_is_active;
             }
 
             # ── Events: WebSocket (sticky routing by PAT token query param) ────
@@ -152,6 +163,9 @@ data:
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection "upgrade";
                 proxy_set_header Host $host;
+                proxy_set_header X-User-Id $x_user_id;
+                proxy_set_header X-Parent-User-Id $x_parent_user_id;
+                proxy_set_header X-Is-Active $x_is_active;
                 proxy_read_timeout 3600s;
             }
 
@@ -161,6 +175,9 @@ data:
                 set $upstream events-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
+                proxy_set_header X-User-Id $x_user_id;
+                proxy_set_header X-Parent-User-Id $x_parent_user_id;
+                proxy_set_header X-Is-Active $x_is_active;
             }
         }
     }
