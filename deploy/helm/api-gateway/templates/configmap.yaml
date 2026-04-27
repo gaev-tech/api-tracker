@@ -39,22 +39,37 @@ data:
             # Propagate / generate request ID through the chain
             proxy_set_header X-Request-ID $req_id;
 
-            # TODO: F-3 — PAT validation via auth_request
-            # auth_request /internal/auth/validate;
-            # auth_request_set $x_user_id $upstream_http_x_user_id;
-            # auth_request_set $x_parent_user_id $upstream_http_x_parent_user_id;
-            # auth_request_set $x_is_active $upstream_http_x_is_active;
+            # ── Token validation (access token or PAT) via identity-service ────
+            # Internal subrequest: identity-service validates the Bearer token and
+            # returns user metadata in response headers. These are captured and
+            # forwarded to upstream services.
+            auth_request /internal/auth/validate;
+            auth_request_set $x_user_id $upstream_http_x_user_id;
+            auth_request_set $x_parent_user_id $upstream_http_x_parent_user_id;
+            auth_request_set $x_is_active $upstream_http_x_is_active;
 
-            # Placeholder headers until F-3 implements auth_request
-            proxy_set_header X-User-Id "";
-            proxy_set_header X-Parent-User-Id "";
-            proxy_set_header X-Is-Active "";
+            proxy_set_header X-User-Id $x_user_id;
+            proxy_set_header X-Parent-User-Id $x_parent_user_id;
+            proxy_set_header X-Is-Active $x_is_active;
+
+            # ── Internal: auth subrequest endpoint ────────────────────────────
+            location = /internal/auth/validate {
+                internal;
+                set $upstream identity-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
+                proxy_pass http://$upstream/auth/validate;
+                proxy_pass_request_body off;
+                proxy_set_header Content-Length "";
+                proxy_set_header X-Original-URI $request_uri;
+                proxy_set_header X-Original-Method $request_method;
+                proxy_set_header Authorization $http_authorization;
+            }
 
             # ── API docs (Swagger UI) ─────────────────────────────────────────
             location = /swagger {
                 return 301 /swagger/;
             }
             location /swagger/ {
+                auth_request off;
                 set $upstream swagger-ui.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 rewrite ^/swagger/(.*)$ /$1 break;
                 proxy_pass http://$upstream;
@@ -63,6 +78,7 @@ data:
 
             # ── JWKS (JWT public key discovery) ───────────────────────────────
             location = /.well-known/jwks.json {
+                auth_request off;
                 set $upstream identity-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
                 proxy_set_header Host $host;
@@ -70,6 +86,7 @@ data:
 
             # ── Health check ─────────────────────────────────────────────────
             location = /healthz {
+                auth_request off;
                 access_log off;
                 return 200 "ok\n";
                 add_header Content-Type text/plain;
@@ -77,6 +94,7 @@ data:
 
             # ── Nginx metrics (internal — K3s pod CIDR only) ──────────────────
             location = /stub_status {
+                auth_request off;
                 stub_status;
                 access_log off;
                 allow 10.42.0.0/16;
@@ -85,6 +103,7 @@ data:
 
             # ── Auth / Identity — unauthenticated (per-IP rate limit) ─────────
             location ~ ^/auth/ {
+                auth_request off;
                 limit_req zone=per_ip burst=20 nodelay;
                 set $upstream identity-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
@@ -92,7 +111,7 @@ data:
             }
 
             # ── Identity — authenticated (per-PAT rate limit) ──────────────────
-            location ~ ^/(users|pats|managed-users)/ {
+            location ~ ^/(users|pats|managed-users)(/|$) {
                 limit_req zone=per_pat burst=200 nodelay;
                 set $upstream identity-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
@@ -100,7 +119,7 @@ data:
             }
 
             # ── Workspace ──────────────────────────────────────────────────────
-            location ~ ^/(tasks|projects|teams|invitations|ownership-transfers)/ {
+            location ~ ^/(tasks|projects|teams|invitations|ownership-transfers)(/|$) {
                 limit_req zone=per_pat burst=200 nodelay;
                 set $upstream workspace-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
@@ -108,7 +127,7 @@ data:
             }
 
             # ── Billing ────────────────────────────────────────────────────────
-            location ~ ^/(tariffs|payments)/ {
+            location ~ ^/(tariffs|payments)(/|$) {
                 limit_req zone=per_pat burst=200 nodelay;
                 set $upstream billing-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
@@ -116,7 +135,7 @@ data:
             }
 
             # ── Files ──────────────────────────────────────────────────────────
-            location ~ ^/files/ {
+            location ~ ^/files(/|$) {
                 limit_req zone=per_pat burst=200 nodelay;
                 set $upstream files-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream;
