@@ -55,6 +55,7 @@ data:
             # ── Internal: auth subrequest endpoint ────────────────────────────
             location = /internal/auth/validate {
                 internal;
+                proxy_method POST;
                 set $upstream identity-service.{{ .Release.Namespace }}.svc.cluster.local:8080;
                 proxy_pass http://$upstream/auth/validate;
                 proxy_pass_request_body off;
