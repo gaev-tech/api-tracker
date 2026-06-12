@@ -1,6 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg
+
+# uv
+uv.lock
+
+# Node / Angular
+node_modules/
+.angular/
+*.tsbuildinfo
+.next/
+out/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
-vendor/
-*.exe
-*.test
-backend/services/*/cmd/server
-.superpowers
+
+# Secrets and env
+.env
+.env.*
+!.env.example
+!deploy/.env.example
+*.pem
+*.key
+!**/*.pub.key
+
+# Backups
+backups/
+*.dump
+
+# Local logs
+*.log
+logs/
+
+# Generated code (committed but listed for clarity)
+# frontend/*/src/generated/  -- ВКЛЮЧЕНО в репо (architecture.md §5.2.4)
+# backend/*/generated/grpc_pb/ -- ВКЛЮЧЕНО в репо (architecture.md §5.4.4)
+
+# Claude/superpowers worktrees
+.claude/worktrees/
+.superpowers/
