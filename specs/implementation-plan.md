@@ -272,9 +272,55 @@
 
 6.2.5 `apitracker.ru` → 301 → `docs.apitracker.ru`.
 
-### 6.3 Done criteria
+### 6.3 Multi-channel дистрибуция CLI
 
-6.3.1 Сторонний пользователь по docs.apitracker.ru может разобраться, поставить CLI, залогиниться, создать задачу — без помощи автора.
+6.3.1 Расширение release-workflow на дополнительные пакетные площадки (ARCH §15.9).
+
+6.3.2 PyPI:
+
+6.3.2.1 Регистрация имени пакета `apit` на pypi.org; создание API-token, добавление в repo-secret `PYPI_TOKEN`.
+
+6.3.2.2 GHA-job `pypi-publish` с `uv build` + `uv publish`.
+
+6.3.2.3 Проверка: `pipx install apit` ставит работоспособный CLI.
+
+6.3.3 Homebrew:
+
+6.3.3.1 Создание публичного репо `gaev-tech/homebrew-apit` с `Formula/apit.rb`.
+
+6.3.3.2 GHA-job `homebrew-publish` обновляет Formula с новой версией и SHA256, пушит в tap-репо через GitHub App.
+
+6.3.3.3 Проверка: `brew install gaev-tech/apit/apit` ставит работоспособный CLI на macOS.
+
+6.3.4 APT:
+
+6.3.4.1 На прод-сервере поднимается статический APT-репо в `/var/lib/api-tracker/apt/`, отдаваемый nginx по `apt.apitracker.ru`.
+
+6.3.4.2 Генерация GPG-ключа для подписи, публикация публичного ключа в `apt.apitracker.ru/key.gpg`; приватный — в repo-secret `APT_GPG_KEY`.
+
+6.3.4.3 GHA-job `apt-publish` собирает `.deb`, подписывает, обновляет репо через `aptly`, пушит по SSH.
+
+6.3.4.4 nginx-конфиг `apt.apitracker.ru` с TLS Let's Encrypt.
+
+6.3.4.5 Проверка: установка по инструкции (ARCH §15.9.5.4) на чистой Ubuntu даёт работоспособный CLI.
+
+6.3.5 npm:
+
+6.3.5.1 Регистрация имени `@gaev-tech/apit` на npmjs.com; создание токена, добавление в repo-secret `NPM_TOKEN`.
+
+6.3.5.2 Пакет в `cli/npm-wrapper/` — postinstall-скрипт качает бинарь из GitHub Releases по OS+arch.
+
+6.3.5.3 GHA-job `npm-publish` с `npm publish --registry https://registry.npmjs.org/`.
+
+6.3.5.4 Проверка: `npx @gaev-tech/apit --version` и `npm install -g @gaev-tech/apit` работают.
+
+6.3.6 Документация в docs-client: страница "Installation" перечисляет все каналы установки с командами.
+
+### 6.4 Done criteria
+
+6.4.1 Сторонний пользователь по docs.apitracker.ru может разобраться, поставить CLI, залогиниться, создать задачу — без помощи автора.
+
+6.4.2 Установка через каждый из 5 каналов (GitHub Releases binary, PyPI, Homebrew, APT, npm) даёт работоспособный `apit --version` соответствующей версии.
 
 ## 7. Сквозные требования
 

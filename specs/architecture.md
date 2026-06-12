@@ -416,6 +416,74 @@
 
 15.8.8 Обновление CLI пользователем: повторная установка из README; команда `apit --version` показывает текущую версию.
 
+### 15.9 Дистрибуция через пакетные площадки
+
+15.9.1 Дополнительные каналы дистрибуции CLI помимо GitHub Releases (§15.8). Все каналы триггерятся одним и тем же тегом `vX.Y.Z` через расширение release-workflow.
+
+15.9.2 GitHub Releases (§15.8) остаётся канонiчным источником бинарей; все остальные каналы либо переупаковывают их, либо ссылаются на них.
+
+15.9.3 PyPI:
+
+15.9.3.1 Пакет `apit` публикуется на `pypi.org`.
+
+15.9.3.2 Сборка — `uv build` из `cli/`, публикация — `uv publish` или `twine` с токеном из repo-secret `PYPI_TOKEN`.
+
+15.9.3.3 Установка пользователем: `pipx install apit` (рекомендуется) или `pip install apit`.
+
+15.9.3.4 Зависимости пакета: те же, что у source-варианта; pyinstaller-обёртка не используется (pip ставит Python-источники).
+
+15.9.4 Homebrew (macOS):
+
+15.9.4.1 Отдельный публичный репозиторий `gaev-tech/homebrew-apit` со структурой Homebrew tap; содержит `Formula/apit.rb`.
+
+15.9.4.2 Formula ссылается на GitHub Releases по URL — отдельный URL для darwin-arm64 и darwin-amd64, с SHA256.
+
+15.9.4.3 Release-workflow генерирует обновлённый `Formula/apit.rb` и пушит в tap-репо через GitHub App token.
+
+15.9.4.4 Установка пользователем: `brew install gaev-tech/apit/apit`.
+
+15.9.5 APT (Debian/Ubuntu):
+
+15.9.5.1 `.deb`-пакет собирается в release-workflow через `dpkg-deb` поверх ubuntu-latest linux-amd64 бинаря.
+
+15.9.5.2 Хостинг репозитория: `apt.apitracker.ru/` — статический Debian-репо на том же проде (nginx раздаёт каталог `dists/` и `pool/`, генерация структуры через `aptly` в release-workflow с push по SSH).
+
+15.9.5.3 Подпись пакетов GPG-ключом; публичный ключ выложен по `apt.apitracker.ru/key.gpg`.
+
+15.9.5.4 Установка пользователем:
+
+15.9.5.4.1 `curl -fsSL https://apt.apitracker.ru/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/apit.gpg`
+
+15.9.5.4.2 `echo "deb [signed-by=/usr/share/keyrings/apit.gpg] https://apt.apitracker.ru stable main" | sudo tee /etc/apt/sources.list.d/apit.list`
+
+15.9.5.4.3 `sudo apt update && sudo apt install apit`.
+
+15.9.6 npm (binary-wrapper pattern):
+
+15.9.6.1 Пакет `@gaev-tech/apit` публикуется на npmjs.com.
+
+15.9.6.2 Структура — postinstall-скрипт определяет OS+arch и качает соответствующий бинарь из GitHub Releases (§15.8.3) в `node_modules/.bin/apit`.
+
+15.9.6.3 Публикация — `npm publish --registry https://registry.npmjs.org/` с токеном из repo-secret `NPM_TOKEN`.
+
+15.9.6.4 Установка пользователем: `npm install -g @gaev-tech/apit` или одноразовый запуск `npx @gaev-tech/apit ...`.
+
+15.9.7 Release-workflow (расширение §15.8.5):
+
+15.9.7.1 Job 1 — собрать бинари (§15.8.3).
+
+15.9.7.2 Job 2 — `gh release create` в публичном GitHub-репо (§15.8.5).
+
+15.9.7.3 Job 3 — `pypi-publish` через `uv publish`.
+
+15.9.7.4 Job 4 — `homebrew-publish` через генерацию Formula и push в tap-репо.
+
+15.9.7.5 Job 5 — `apt-publish` через `aptly` и SSH в `apt.apitracker.ru`.
+
+15.9.7.6 Job 6 — `npm-publish` через `npm publish --registry https://registry.npmjs.org/`.
+
+15.9.8 Чек-лист релиза: автоматический после успеха всех jobs — `apit --version` показывает корректную версию при установке из любого канала.
+
 ## 16. Frontend-архитектура
 
 ### 16.1 Angular workspace
