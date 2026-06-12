@@ -1,6 +1,0 @@
-apiVersion: v2
-name: service-template
-description: Generic Helm chart template for api-tracker backend services
-type: application
-version: 0.1.0
-appVersion: "latest"
