@@ -384,6 +384,38 @@
 
 15.7.5 `4` — forbidden (403).
 
+### 15.8 Распространение и релизы
+
+15.8.1 Публичный репозиторий `gaev-tech/apit` — отдельный от приватного monorepo `gaev-tech/api-tracker`.
+
+15.8.2 Содержимое публичного репо: README с инструкциями установки и GitHub Releases с бинарными артефактами; исходный код CLI остаётся в приватном monorepo (`cli/`).
+
+15.8.3 Сборка бинарей — pyinstaller в GHA-matrix по операционным системам:
+
+15.8.3.1 `macos-latest` (arm64) → артефакт `apit-vX.Y.Z-darwin-arm64`.
+
+15.8.3.2 `macos-13` (amd64) → `apit-vX.Y.Z-darwin-amd64`.
+
+15.8.3.3 `ubuntu-latest` → `apit-vX.Y.Z-linux-amd64`.
+
+15.8.3.4 `windows-latest` → `apit-vX.Y.Z-windows-amd64.exe`.
+
+15.8.4 Триггер релиза: git tag `vX.Y.Z` в приватном monorepo запускает release-workflow в GHA.
+
+15.8.5 Release-workflow: собирает бинари по 15.8.3, создаёт GitHub Release в публичном репо через `gh release create` с использованием Personal Access Token из repo-secret `PUBLIC_REPO_TOKEN`.
+
+15.8.6 README публичного репо содержит:
+
+15.8.6.1 Краткое описание системы и ссылку на `docs.apitracker.ru`.
+
+15.8.6.2 По одной команде установки на OS (curl/Invoke-WebRequest, chmod, mv в PATH).
+
+15.8.6.3 Ссылка на последний релиз и список SHA256 артефактов для верификации.
+
+15.8.7 Версионирование — semver `vX.Y.Z`; bump вручную через создание тега в monorepo.
+
+15.8.8 Обновление CLI пользователем: повторная установка из README; команда `apit --version` показывает текущую версию.
+
 ## 16. Frontend-архитектура
 
 ### 16.1 Angular workspace
