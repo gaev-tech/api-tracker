@@ -1,0 +1,223 @@
+name: Release
+
+# Триггерится тегом vX.Y.Z в этом monorepo.
+# Собирает CLI-бинари и публикует Release в публичный репо
+# gaev-tech/apit (architecture.md §15.8.4, §15.8.5).
+#
+# В M0 — структура workflow без полноценной сборки (cli/ пустой).
+# В M1 — добавляется реальный pyinstaller для macOS arm64
+#         (implementation-plan.md §3.2.9).
+# В M2 — расширяется на полную matrix (linux-amd64, darwin-amd64,
+#         windows-amd64) (implementation-plan.md §4.2.6.1).
+# В M4 — добавляются jobs publish-pypi, publish-homebrew,
+#         publish-apt, publish-npm (implementation-plan.md §6.3).
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+env:
+  CLI_NAME: apit
+  PUBLIC_REPO: gaev-tech/apit
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      is-prerelease: ${{ steps.tag.outputs.is-prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        name: Parse tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "is-prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is-prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Releasing $TAG (version=$VERSION)"
+
+  build-binaries:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest        # arm64 — M1+
+            asset: apit-darwin-arm64
+            enabled-from: M1
+          - os: macos-13            # amd64 — M2+
+            asset: apit-darwin-amd64
+            enabled-from: M2
+          - os: ubuntu-latest       # linux amd64 — M2+
+            asset: apit-linux-amd64
+            enabled-from: M2
+          - os: windows-latest      # windows amd64 — M2+
+            asset: apit-windows-amd64.exe
+            enabled-from: M2
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check CLI source presence
+        id: cli
+        shell: bash
+        run: |
+          if [[ -f cli/src/apit/__main__.py ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLI source not yet implemented (M0 skeleton). Skipping ${{ matrix.asset }}."
+          fi
+
+      - if: steps.cli.outputs.ready == 'true'
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.5.4"
+
+      - if: steps.cli.outputs.ready == 'true'
+        run: uv python install 3.13
+
+      - if: steps.cli.outputs.ready == 'true'
+        working-directory: cli
+        shell: bash
+        run: |
+          uv sync --extra dev
+          uv run pyinstaller \
+            --name apit \
+            --onefile \
+            --clean \
+            src/apit/__main__.py
+
+      - if: steps.cli.outputs.ready == 'true'
+        name: Rename artifact
+        shell: bash
+        working-directory: cli/dist
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            mv apit.exe "${{ matrix.asset }}"
+          else
+            mv apit "${{ matrix.asset }}"
+            chmod +x "${{ matrix.asset }}"
+          fi
+
+      - if: steps.cli.outputs.ready == 'true'
+        name: Compute SHA256
+        shell: bash
+        working-directory: cli/dist
+        run: |
+          if command -v sha256sum >/dev/null; then
+            sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+          else
+            shasum -a 256 "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+          fi
+
+      - if: steps.cli.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: |
+            cli/dist/${{ matrix.asset }}
+            cli/dist/${{ matrix.asset }}.sha256
+          if-no-files-found: error
+
+  publish-github-release:
+    needs: [validate, build-binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: List release artifacts
+        shell: bash
+        run: |
+          ls -la release-artifacts/ || echo "No artifacts (CLI source not ready)"
+
+      - name: Publish Release in public repo
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          IS_PRE: ${{ needs.validate.outputs.is-prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::error::Secret PUBLIC_REPO_TOKEN not set. См. SETUP.md."
+            exit 1
+          fi
+          PRE_FLAG=""
+          if [[ "$IS_PRE" == "true" ]]; then PRE_FLAG="--prerelease"; fi
+
+          NOTES_FILE=$(mktemp)
+          cat > "$NOTES_FILE" <<EOF
+          api-tracker CLI \`apit\` v${VERSION}
+
+          Установка — см. README в этом репозитории и docs.apitracker.ru.
+
+          Канонiчный источник: GitHub Releases (этот репо).
+          Также доступно: PyPI \`apit\`, Homebrew \`gaev-tech/apit/apit\`,
+          APT \`apt.apitracker.ru\`, npm \`@gaev-tech/apit\` (с M4).
+          EOF
+
+          ASSETS=()
+          if compgen -G "release-artifacts/*" > /dev/null; then
+            for f in release-artifacts/*; do
+              ASSETS+=("$f")
+            done
+          fi
+
+          gh release create "v${VERSION}" \
+            --repo "${{ env.PUBLIC_REPO }}" \
+            --title "v${VERSION}" \
+            --notes-file "$NOTES_FILE" \
+            $PRE_FLAG \
+            "${ASSETS[@]}"
+
+  publish-pypi:
+    needs: [validate, build-binaries]
+    if: false  # включается в M4 (implementation-plan.md §6.3.2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv python install 3.13
+      - working-directory: cli
+        run: uv build
+      - working-directory: cli
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: uv publish
+
+  publish-homebrew:
+    needs: [validate, publish-github-release]
+    if: false  # включается в M4 (implementation-plan.md §6.3.3)
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "TODO M4 — обновить Formula в gaev-tech/homebrew-apit"
+
+  publish-apt:
+    needs: [validate, build-binaries]
+    if: false  # включается в M4 (implementation-plan.md §6.3.4)
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "TODO M4 — собрать .deb, подписать GPG, aptly + SSH"
+
+  publish-npm:
+    needs: [validate, publish-github-release]
+    if: false  # включается в M4 (implementation-plan.md §6.3.5)
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "TODO M4 — npm publish @gaev-tech/apit"
