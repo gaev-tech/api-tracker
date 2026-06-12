@@ -1,0 +1,53 @@
+name: One-shot K8s teardown
+
+# Используется один раз для миграции с K8s на docker-compose
+# при переходе на новый стек (см. SETUP.md §2).
+# После успешного выполнения этот workflow можно удалить.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Напишите "delete" для подтверждения'
+        required: true
+
+jobs:
+  teardown:
+    if: github.event.inputs.confirm == 'delete'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decode kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Show cluster info
+        run: kubectl cluster-info && kubectl get ns
+
+      - name: Helm uninstall all releases
+        run: |
+          if command -v helm >/dev/null 2>&1; then HELM=helm; else
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+            HELM=helm
+          fi
+          for ns in $($HELM list -A -o json | jq -r '.[].namespace' | sort -u); do
+            $HELM list -n "$ns" -q | while read release; do
+              echo "uninstalling $release in $ns"
+              $HELM uninstall "$release" -n "$ns" --ignore-not-found || true
+            done
+          done
+
+      - name: Delete app namespaces
+        run: |
+          for ns in api-tracker monitoring kafka cert-manager ingress-nginx; do
+            kubectl delete namespace "$ns" --ignore-not-found --wait=false || true
+          done
+
+      - name: Delete cluster-scoped resources
+        run: |
+          kubectl delete clusterissuer --all --ignore-not-found || true
+          kubectl delete crd $(kubectl get crd -o name | grep -E 'cert-manager|kafka|prometheus' || true) --ignore-not-found || true
+
+      - name: Status after teardown
+        run: kubectl get ns && kubectl get pods -A || true
