@@ -212,23 +212,31 @@
 
 ## 5. clite login / logout / whoami (M2+)
 
+Терминальный magic-code flow (ARCH §4.2). Браузер не используется.
+
 ### 5.1 login — позитивные
 
-5.1.1 `clite login` → открывается браузер, после подтверждения возвращается в CLI, exit 0, stderr `logged in as <email>`.
+5.1.1 `clite login` (интерактивный): запрашивает email на stdin → отправляет magic-code на почту → запрашивает paste кода → exit 0, stderr `logged in as <email>`. credentials.yaml создан.
 
-5.1.2 `clite login --device` → печатает user_code, после approve в браузере поллинг возвращает токен, exit 0.
+5.1.2 `clite login --email <e>` (неинтерактивный email, intерактивный код): пропускает первый prompt → exit 0.
+
+5.1.3 `clite login --email <e> --code <c>` (полностью неинтерактивный, для скриптов и e2e): exit 0 если code валиден.
 
 ### 5.2 login — негативные
 
-5.2.1 Браузер закрыт до подтверждения, таймаут 5 мин → exit 1, stderr `login timed out`.
+5.2.1 Невалидный email формат → exit 2, stderr `invalid email`.
 
-5.2.2 `clite login --device` с истекшим user_code → exit 1.
+5.2.2 Неверный/просроченный code → exit 1, stderr `invalid or expired code`. Login не выполнен.
 
-5.2.3 Сеть до auth-svc недоступна → exit 1.
+5.2.3 Сеть до auth-svc недоступна → exit 1, stderr `connection failed`.
+
+5.2.4 Email не отправляется (SMTP_HOST не настроен в auth-svc) → exit 1 c stderr `email delivery failed`; на dev-сервере код есть в логах auth-svc (loguru WARNING).
 
 ### 5.3 logout — позитивные
 
-5.3.1 `clite logout` → exit 0, локальный токен удалён, серверная сессия revoked.
+5.3.1 `clite logout` → exit 0, credentials.yaml удалён. (Серверная revoke — Post-MVP.)
+
+5.3.2 `clite logout` без credentials → exit 0, stderr `already logged out`.
 
 ### 5.4 whoami — позитивные
 
@@ -236,7 +244,7 @@
 
 ### 5.5 whoami — негативные
 
-5.5.1 Без токена → exit 3.
+5.5.1 Без credentials → exit 3, stderr `not authenticated, run clite login`.
 
 ## 6. clite team (M2+)
 

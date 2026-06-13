@@ -32,29 +32,40 @@ def login(
         str | None,
         typer.Option("--email", "-e", help="Если не задан — спросит интерактивно"),
     ] = None,
+    code: Annotated[
+        str | None,
+        typer.Option(
+            "--code",
+            "-c",
+            help="Magic-code (для скриптов и e2e); пропускает интерактивный prompt",
+        ),
+    ] = None,
 ) -> None:
     """Magic-code login через email. Открытая регистрация."""
     if email is None:
         email = typer.prompt("Email")
     email = email.strip().lower()
 
-    print(f"Отправляю magic-code на {email}...", file=sys.stderr)
-    try:
-        r = httpx.post(
-            f"{_auth_base()}/magic/start",
-            json={"email": email, "intent": "cli"},
-            timeout=30,
-        )
-    except httpx.HTTPError as e:
-        print(f"connection failed: {e}", file=sys.stderr)
-        raise typer.Exit(1) from e
+    if code is None:
+        print(f"Отправляю magic-code на {email}...", file=sys.stderr)
+        try:
+            r = httpx.post(
+                f"{_auth_base()}/magic/start",
+                json={"email": email, "intent": "cli"},
+                timeout=30,
+            )
+        except httpx.HTTPError as e:
+            print(f"connection failed: {e}", file=sys.stderr)
+            raise typer.Exit(1) from e
 
-    if r.status_code >= 400:
-        print(f"magic/start failed: {r.status_code} {r.text}", file=sys.stderr)
-        raise typer.Exit(1)
+        if r.status_code >= 400:
+            print(f"magic/start failed: {r.status_code} {r.text}", file=sys.stderr)
+            raise typer.Exit(1)
 
-    print(f"✉ Код отправлен на {email}.", file=sys.stderr)
-    code = typer.prompt("Code").strip()
+        print(f"✉ Код отправлен на {email}.", file=sys.stderr)
+        code = typer.prompt("Code").strip()
+    else:
+        code = code.strip()
 
     try:
         r = httpx.post(
