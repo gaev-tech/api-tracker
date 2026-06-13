@@ -16,16 +16,20 @@ async def test_import_servicer() -> None:
 async def test_jwks_returns_pem() -> None:
     """GetJWKS возвращает валидный PEM публичного ключа."""
     import grpc
-
     from auth.v1 import auth_pb2, auth_pb2_grpc
+
     from auth_service.grpc_server import start_grpc_server
 
     server = await start_grpc_server(port=0)
-    port = next(
-        int(s.split(":")[-1])
-        for s in dir(server)
-        if False  # порт получаем иначе
-    ) if False else None
+    port = (
+        next(
+            int(s.split(":")[-1])
+            for s in dir(server)
+            if False  # порт получаем иначе
+        )
+        if False
+        else None
+    )
 
     # grpc.aio.server.add_insecure_port возвращает выделенный порт; запрашиваем заново.
     # Простой обход: пересоздать с фиксированным портом (для тестов).
