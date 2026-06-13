@@ -193,3 +193,17 @@ async def list_members(session: AsyncSession, *, team_id: UUID) -> list[TeamMemb
         select(TeamMember).where(TeamMember.team_id == team_id).order_by(TeamMember.user_id)
     )
     return list(result.scalars().all())
+
+
+async def list_teams_for_user(session: AsyncSession, *, user: User) -> list[Team]:
+    """Все команды, в которых current user — участник (≥1 разрешение)."""
+    member_team_ids = await session.execute(
+        select(TeamMember.team_id).where(TeamMember.user_id == user.id)
+    )
+    team_ids = list(member_team_ids.scalars().all())
+    if not team_ids:
+        return []
+    result = await session.execute(
+        select(Team).where(Team.id.in_(team_ids)).order_by(Team.created_at, Team.id)
+    )
+    return list(result.scalars().all())

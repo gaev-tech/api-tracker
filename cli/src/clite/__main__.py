@@ -6,6 +6,7 @@ from clite import __version__
 from clite.commands import auth_cmd
 from clite.commands import history as history_cmd
 from clite.commands import task as task_cmd
+from clite.commands import team as team_cmd
 
 app = typer.Typer(
     name="clite",
@@ -15,6 +16,7 @@ app = typer.Typer(
 )
 app.add_typer(task_cmd.app, name="task")
 app.add_typer(history_cmd.app, name="history")
+app.add_typer(team_cmd.app, name="team")
 app.registered_commands.extend(auth_cmd.app.registered_commands)
 
 

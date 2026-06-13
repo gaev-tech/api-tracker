@@ -23,6 +23,7 @@ from tasks_service.services.teams import (
     create_team,
     get_team,
     list_members,
+    list_teams_for_user,
     set_member_permissions,
     update_name,
 )
@@ -71,6 +72,13 @@ async def create(payload: TeamCreateRequest, session: SessionDep, user: CurrentU
         _handle_team_error(e)
         raise
     return await _team_to_read(session, team.id)
+
+
+@router.get("", response_model=list[TeamRead])
+async def list_teams(session: SessionDep, user: CurrentUserDep) -> list[TeamRead]:
+    """Все команды текущего пользователя (PRD §6.1.8 — read неявное)."""
+    teams = await list_teams_for_user(session, user=user)
+    return [await _team_to_read(session, t.id) for t in teams]
 
 
 @router.get("/{team_id}", response_model=TeamRead)

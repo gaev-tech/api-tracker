@@ -2078,6 +2078,30 @@
       }
     },
     "/v1/teams": {
+      "get": {
+        "description": "\u0412\u0441\u0435 \u043a\u043e\u043c\u0430\u043d\u0434\u044b \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f (PRD \u00a76.1.8 \u2014 read \u043d\u0435\u044f\u0432\u043d\u043e\u0435).",
+        "operationId": "list_teams_v1_teams_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamRead"
+                  },
+                  "title": "Response List Teams V1 Teams Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Teams",
+        "tags": [
+          "teams"
+        ]
+      },
       "post": {
         "operationId": "create_v1_teams_post",
         "requestBody": {
