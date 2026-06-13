@@ -9,6 +9,12 @@ class Settings(BaseSettings):
     solo_user_email: str = Field(
         default="solo@local", description="email одиночного пользователя в M0-M1"
     )
+    auth_grpc_host: str = Field(
+        default="auth-svc:50051",
+        description="endpoint gRPC сервера auth-service для JWKS и GetUserByEmail",
+    )
+    jwt_issuer: str = Field(default="apitracker.ru")
+    jwks_cache_ttl_seconds: int = Field(default=300, description="TTL кеша публичного ключа JWT")
     database_url: str = Field(
         default="postgresql+asyncpg://tasks_app:postgres@localhost:5432/tasks",
         description="async DSN, схема postgresql+asyncpg",
