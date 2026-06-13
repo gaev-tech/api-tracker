@@ -9,6 +9,7 @@ from tasks_service.bootstrap import ensure_solo_user, run_migrations
 from tasks_service.config import settings
 from tasks_service.db import dispose_engine, get_sessionmaker
 from tasks_service.grpc_client import close_channel
+from tasks_service.routers.projects import router as projects_router
 from tasks_service.routers.tasks import router as tasks_router
 from tasks_service.routers.teams import router as teams_router
 
@@ -54,6 +55,7 @@ def create_app(*, with_lifespan: bool = True) -> FastAPI:
 
     app.include_router(tasks_router)
     app.include_router(teams_router)
+    app.include_router(projects_router)
     return app
 
 

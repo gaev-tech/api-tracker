@@ -156,3 +156,44 @@ class TeamRead(BaseModel):
     name: str
     created_at: datetime
     members: list[TeamMemberRead] = Field(default_factory=list)
+
+
+# === Project CRUD (M2.7) ===
+
+
+class ProjectCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Annotated[str, Field(min_length=1, max_length=200)]
+
+
+class ProjectUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Annotated[str, Field(min_length=1, max_length=200)]
+
+
+class ProjectMemberSetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    perms: list[str] = Field(default_factory=list)
+
+
+class ProjectUserMemberRead(BaseModel):
+    user_email: str
+    perms: list[str]
+
+
+class ProjectTeamMemberRead(BaseModel):
+    team_id: UUID
+    team_name: str
+    perms: list[str]
+
+
+class ProjectRead(BaseModel):
+    id: UUID
+    name: str
+    created_at: datetime
+    user_members: list[ProjectUserMemberRead] = Field(default_factory=list)
+    team_members: list[ProjectTeamMemberRead] = Field(default_factory=list)
+    task_ids: list[UUID] = Field(default_factory=list)
