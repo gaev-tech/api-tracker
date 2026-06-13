@@ -6,8 +6,11 @@ from pydantic import BaseModel
 
 from tasks_service import __version__
 from tasks_service.bootstrap import ensure_solo_user, run_migrations
+from tasks_service.config import settings
 from tasks_service.db import dispose_engine, get_sessionmaker
+from tasks_service.grpc_client import close_channel
 from tasks_service.routers.tasks import router as tasks_router
+from tasks_service.routers.teams import router as teams_router
 
 
 class HealthResponse(BaseModel):
@@ -22,11 +25,13 @@ class PingResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     run_migrations()
-    sm = get_sessionmaker()
-    async with sm() as session:
-        await ensure_solo_user(session)
-        await session.commit()
+    if settings.auth_mode == "disabled":
+        sm = get_sessionmaker()
+        async with sm() as session:
+            await ensure_solo_user(session)
+            await session.commit()
     yield
+    await close_channel()
     await dispose_engine()
 
 
@@ -48,6 +53,7 @@ def create_app(*, with_lifespan: bool = True) -> FastAPI:
         return PingResponse(message="pong")
 
     app.include_router(tasks_router)
+    app.include_router(teams_router)
     return app
 
 
