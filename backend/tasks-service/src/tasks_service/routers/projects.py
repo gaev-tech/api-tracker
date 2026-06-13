@@ -100,6 +100,25 @@ async def create(
     return await _to_read(session, p.id)
 
 
+@router.get("", response_model=list[ProjectRead])
+async def list_projects(session: SessionDep, user: CurrentUserDep) -> list[ProjectRead]:
+    """Все проекты текущего пользователя (PRD §6.1.8)."""
+    from sqlalchemy import select as sql_select
+
+    from tasks_service.models import ProjectUserMember
+
+    rows = await session.execute(
+        sql_select(ProjectUserMember.project_id).where(ProjectUserMember.user_id == user.id)
+    )
+    project_ids = list(rows.scalars().all())
+    if not project_ids:
+        return []
+    proj_rows = await session.execute(
+        sql_select(Project).where(Project.id.in_(project_ids)).order_by(Project.created_at)
+    )
+    return [await _to_read(session, p.id) for p in proj_rows.scalars().all()]
+
+
 @router.get("/{project_id}", response_model=ProjectRead)
 async def get(project_id: UUID, session: SessionDep, user: CurrentUserDep) -> ProjectRead:
     try:

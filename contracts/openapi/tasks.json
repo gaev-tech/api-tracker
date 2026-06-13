@@ -1042,6 +1042,30 @@
       }
     },
     "/v1/projects": {
+      "get": {
+        "description": "\u0412\u0441\u0435 \u043f\u0440\u043e\u0435\u043a\u0442\u044b \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f (PRD \u00a76.1.8).",
+        "operationId": "list_projects_v1_projects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectRead"
+                  },
+                  "title": "Response List Projects V1 Projects Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Projects",
+        "tags": [
+          "projects"
+        ]
+      },
       "post": {
         "operationId": "create_v1_projects_post",
         "requestBody": {
