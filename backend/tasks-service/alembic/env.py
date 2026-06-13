@@ -36,18 +36,16 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        # advisory-lock защищает от race при rolling-up (ARCH §3.3).
-        connection.exec_driver_sql("SELECT pg_advisory_lock(20260613)")
-        try:
-            context.configure(
-                connection=connection,
-                target_metadata=target_metadata,
-                compare_type=True,
-            )
-            with context.begin_transaction():
-                context.run_migrations()
-        finally:
-            connection.exec_driver_sql("SELECT pg_advisory_unlock(20260613)")
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+        )
+        with context.begin_transaction():
+            # advisory-lock защищает от race при rolling-up (ARCH §3.3).
+            # Внутри той же транзакции, чтобы lock освободился при rollback/commit.
+            connection.exec_driver_sql("SELECT pg_advisory_xact_lock(20260613)")
+            context.run_migrations()
 
 
 if context.is_offline_mode():

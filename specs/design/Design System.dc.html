@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#141318; }
+  ::selection{ background:#E23B2C; color:#fff; }
+  @keyframes wdnSpin{ to{ transform:rotate(360deg) } }
+</style>
+</helmet>
+
+<div style="position:relative; background:#141318; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:#F1EEE7; overflow:hidden;">
+
+  <!-- ===================== HERO ===================== -->
+  <div style="position:relative; padding:64px 56px 56px; overflow:hidden; border-bottom:3px solid #E23B2C;">
+    <!-- dotted concentric rings -->
+    <div style="position:absolute; top:50%; right:-260px; width:760px; height:760px; transform:translateY(-50%); pointer-events:none; opacity:.5;">
+      <div style="position:absolute; inset:0; border-radius:50%; border:2px dotted rgba(255,255,255,.10); animation:wdnSpin 160s linear infinite;"></div>
+      <div style="position:absolute; inset:90px; border-radius:50%; border:2px dotted rgba(226,59,44,.45);"></div>
+      <div style="position:absolute; inset:190px; border-radius:50%; border:1px dashed rgba(255,255,255,.10);"></div>
+      <div style="position:absolute; inset:280px; border-radius:50%; border:2px dotted rgba(216,161,42,.45); animation:wdnSpin 90s linear infinite reverse;"></div>
+    </div>
+
+    <div style="position:relative; max-width:1180px; margin:0 auto;">
+      <div>
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:62px; line-height:.92; letter-spacing:.04em; text-transform:uppercase;">Design System</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.34em; color:#D8A12A; text-transform:uppercase; margin-top:10px;">CLI Task Tracker · Interface Foundation</div>
+      </div>
+
+      <div style="margin-top:40px; display:flex; align-items:center; gap:20px;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:15px; letter-spacing:.3em; text-transform:uppercase;">Sicut in terra</div>
+        <div style="width:120px; height:2px; background:#E23B2C;"></div>
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:15px; letter-spacing:.3em; text-transform:uppercase; color:#9C978D;">Ut in caelo</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1180px; margin:0 auto; padding:56px 56px 110px;">
+
+    <!-- ===================== DIRECTION NOTE ===================== -->
+    <div style="display:grid; grid-template-columns:2fr 1fr; gap:0; border:1px solid rgba(255,255,255,.12);">
+      <div style="padding:34px 36px; border-right:1px solid rgba(255,255,255,.12);">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:15px; letter-spacing:.28em; color:#E23B2C; text-transform:uppercase; margin-bottom:16px;">Direction · Revised</div>
+        <p style="margin:0 0 12px; font-size:16px; line-height:1.7; color:#DDD9D0;">Less futuristic HUD, more <b>printed emblem</b>. The language now borrows from constructivist posters and heraldry: flat pictograms locked in circles, heavy condensed type, stencil numerals, diagonal ribbon banners.</p>
+        <p style="margin:0; font-size:15px; line-height:1.7; color:#9C978D;">Color is loud and high-contrast — vermilion red leads, ultramarine blue answers, gold marks the brand, and cream gives us a paper surface for inverted, poster-style moments.</p>
+      </div>
+      <div style="padding:34px 36px; background:#1C1B22;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.26em; color:#D8A12A; text-transform:uppercase; margin-bottom:18px;">Shifts</div>
+        <div style="display:flex; flex-direction:column; gap:13px; font-size:13px;">
+          <div style="display:flex; align-items:center; gap:10px;"><span style="color:#9C978D; text-decoration:line-through;">thin cyan glow</span><span style="color:#625E57;">→</span><span style="color:#E23B2C; font-weight:700;">bold red</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span style="color:#9C978D; text-decoration:line-through;">line icons</span><span style="color:#625E57;">→</span><span style="color:#F1EEE7; font-weight:700;">solid pictograms</span></div>
+          <div style="display:flex; align-items:center; gap:10px;"><span style="color:#9C978D; text-decoration:line-through;">light grotesk</span><span style="color:#625E57;">→</span><span style="color:#F1EEE7; font-weight:700;">condensed caps</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== COLOR ===================== -->
+    <div style="margin-top:64px;">
+      <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:30px;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:30px; letter-spacing:.06em; text-transform:uppercase;">Color</div>
+        <div style="flex:1; height:2px; background:rgba(255,255,255,.14);"></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.2em; color:#625E57;">HIGH CONTRAST</div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:0; border:1px solid rgba(255,255,255,.12);">
+        <div style="background:#E23B2C; height:150px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; border-right:1px solid rgba(0,0,0,.2);"><div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:.1em; color:#fff;">RED</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,.85);">#E23B2C</div><div style="font-size:10px; color:rgba(255,255,255,.7); letter-spacing:.08em; margin-top:2px;">PRIMARY</div></div>
+        <div style="background:#2F57D6; height:150px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; border-right:1px solid rgba(0,0,0,.2);"><div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:.1em; color:#fff;">BLUE</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,.85);">#2F57D6</div><div style="font-size:10px; color:rgba(255,255,255,.7); letter-spacing:.08em; margin-top:2px;">SECONDARY</div></div>
+        <div style="background:#D8A12A; height:150px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; border-right:1px solid rgba(0,0,0,.2);"><div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:.1em; color:#141318;">GOLD</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(20,19,24,.8);">#D8A12A</div><div style="font-size:10px; color:rgba(20,19,24,.7); letter-spacing:.08em; margin-top:2px;">BRAND</div></div>
+        <div style="background:#ECE4D4; height:150px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; border-right:1px solid rgba(0,0,0,.2);"><div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:.1em; color:#1A1813;">PAPER</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(26,24,19,.75);">#ECE4D4</div><div style="font-size:10px; color:rgba(26,24,19,.65); letter-spacing:.08em; margin-top:2px;">LIGHT SURFACE</div></div>
+        <div style="background:#1C1B22; height:150px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; border-right:1px solid rgba(255,255,255,.08);"><div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:.1em; color:#F1EEE7;">PANEL</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9C978D;">#1C1B22</div><div style="font-size:10px; color:#625E57; letter-spacing:.08em; margin-top:2px;">SURFACE</div></div>
+        <div style="background:#141318; height:150px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end;"><div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:.1em; color:#F1EEE7;">INK</div><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9C978D;">#141318</div><div style="font-size:10px; color:#625E57; letter-spacing:.08em; margin-top:2px;">BASE</div></div>
+      </div>
+    </div>
+
+    <!-- ===================== TYPE ===================== -->
+    <div style="margin-top:64px;">
+      <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:30px;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:30px; letter-spacing:.06em; text-transform:uppercase;">Type</div>
+        <div style="flex:1; height:2px; background:rgba(255,255,255,.14);"></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.2em; color:#625E57;">SAIRA CONDENSED · HELVETICA · MONO</div>
+      </div>
+      <div style="border:1px solid rgba(255,255,255,.12);">
+        <div style="padding:24px 30px; border-bottom:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:space-between; gap:24px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.24em; color:#E23B2C; min-width:150px;">POSTER HEADLINE</div>
+          <div style="flex:1; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:54px; line-height:.95; letter-spacing:.02em; text-transform:uppercase;">Track the work</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#625E57; white-space:nowrap;">SAIRA 800</div>
+        </div>
+        <div style="padding:24px 30px; border-bottom:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:space-between; gap:24px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.24em; color:#E23B2C; min-width:150px;">SECTION LABEL</div>
+          <div style="flex:1; font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:18px; letter-spacing:.28em; text-transform:uppercase; color:#DDD9D0;">Getting Started</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#625E57; white-space:nowrap;">SAIRA 700 +28%</div>
+        </div>
+        <div style="padding:24px 30px; border-bottom:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:space-between; gap:24px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.24em; color:#E23B2C; min-width:150px;">BODY COPY</div>
+          <div style="flex:1; font-size:16px; line-height:1.65; color:#DDD9D0; max-width:560px;">The cli-tracker daemon watches your repositories and surfaces tasks the moment they change — no polling, no noise.</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#625E57; white-space:nowrap;">HELVETICA 16</div>
+        </div>
+        <div style="padding:24px 30px; display:flex; align-items:center; justify-content:space-between; gap:24px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.24em; color:#2F57D6; min-width:150px;">MONO / CLI</div>
+          <div style="flex:1; font-family:'JetBrains Mono',monospace; font-size:15px;"><span style="color:#E23B2C;">$</span> clt add <span style="color:#D8A12A;">"ship the docs"</span> --due <span style="color:#2F57D6;">fri</span></div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#625E57; white-space:nowrap;">JETBRAINS 15</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== PICTOGRAMS ===================== -->
+    <div style="margin-top:64px;">
+      <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:30px;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:30px; letter-spacing:.06em; text-transform:uppercase;">Pictograms</div>
+        <div style="flex:1; height:2px; background:rgba(255,255,255,.14);"></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.2em; color:#625E57;">EMBLEM KIT</div>
+      </div>
+
+      <!-- roundels -->
+      <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:0; border:1px solid rgba(255,255,255,.12); margin-bottom:0;">
+        <!-- crossed bars -->
+        <div style="padding:30px 0; display:flex; flex-direction:column; align-items:center; gap:16px; border-right:1px solid rgba(255,255,255,.1);">
+          <div style="position:relative; width:60px; height:60px; border-radius:50%; background:#E23B2C; display:flex; align-items:center; justify-content:center;">
+            <div style="position:absolute; width:34px; height:6px; background:#fff; transform:rotate(45deg);"></div>
+            <div style="position:absolute; width:34px; height:6px; background:#fff; transform:rotate(-45deg);"></div>
+          </div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:600; font-size:12px; letter-spacing:.16em; color:#9C978D;">TASK</div>
+        </div>
+        <!-- inverted triangle -->
+        <div style="padding:30px 0; display:flex; flex-direction:column; align-items:center; gap:16px; border-right:1px solid rgba(255,255,255,.1);">
+          <div style="width:60px; height:60px; border-radius:50%; background:#2F57D6; display:flex; align-items:flex-start; justify-content:center; padding-top:18px;">
+            <div style="width:0; height:0; border-left:15px solid transparent; border-right:15px solid transparent; border-top:24px solid #fff;"></div>
+          </div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:600; font-size:12px; letter-spacing:.16em; color:#9C978D;">DEPLOY</div>
+        </div>
+        <!-- target -->
+        <div style="padding:30px 0; display:flex; flex-direction:column; align-items:center; gap:16px; border-right:1px solid rgba(255,255,255,.1);">
+          <div style="width:60px; height:60px; border-radius:50%; background:#D8A12A; display:flex; align-items:center; justify-content:center;">
+            <div style="width:30px; height:30px; border-radius:50%; border:4px solid #141318; display:flex; align-items:center; justify-content:center;"><div style="width:9px; height:9px; border-radius:50%; background:#141318;"></div></div>
+          </div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:600; font-size:12px; letter-spacing:.16em; color:#9C978D;">FOCUS</div>
+        </div>
+        <!-- chevrons -->
+        <div style="padding:30px 0; display:flex; flex-direction:column; align-items:center; gap:16px; border-right:1px solid rgba(255,255,255,.1);">
+          <div style="width:60px; height:60px; border-radius:50%; background:#ECE4D4; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">
+            <div style="width:26px; height:8px; background:#E23B2C; clip-path:polygon(0 100%,50% 0,100% 100%);"></div>
+            <div style="width:26px; height:8px; background:#E23B2C; clip-path:polygon(0 100%,50% 0,100% 100%);"></div>
+          </div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:600; font-size:12px; letter-spacing:.16em; color:#9C978D;">PRIORITY</div>
+        </div>
+        <!-- bars -->
+        <div style="padding:30px 0; display:flex; flex-direction:column; align-items:center; gap:16px; border-right:1px solid rgba(255,255,255,.1);">
+          <div style="width:60px; height:60px; border-radius:50%; background:#1C1B22; border:2px solid #2F57D6; display:flex; align-items:flex-end; justify-content:center; gap:5px; padding-bottom:18px;">
+            <div style="width:6px; height:14px; background:#2F57D6;"></div>
+            <div style="width:6px; height:22px; background:#2F57D6;"></div>
+            <div style="width:6px; height:10px; background:#2F57D6;"></div>
+          </div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:600; font-size:12px; letter-spacing:.16em; color:#9C978D;">STATS</div>
+        </div>
+        <!-- diamond -->
+        <div style="padding:30px 0; display:flex; flex-direction:column; align-items:center; gap:16px;">
+          <div style="width:60px; height:60px; border-radius:50%; background:#E23B2C; display:flex; align-items:center; justify-content:center;">
+            <div style="width:22px; height:22px; background:#fff; transform:rotate(45deg);"></div>
+          </div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:600; font-size:12px; letter-spacing:.16em; color:#9C978D;">FLAG</div>
+        </div>
+      </div>
+
+      <!-- hazard diamonds -->
+      <div style="display:flex; gap:0; border:1px solid rgba(255,255,255,.12); border-top:none; padding:28px 30px; align-items:center; gap:30px;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; color:#625E57; text-transform:uppercase; writing-mode:horizontal-tb;">Hazard&nbsp;Diamonds</div>
+        <div style="display:flex; gap:18px;">
+          <div style="position:relative; width:52px; height:52px; background:#141318; border:1.5px solid #ECE4D4; transform:rotate(45deg); display:flex; align-items:center; justify-content:center;"><div style="transform:rotate(-45deg); width:0; height:0; border-left:9px solid transparent; border-right:9px solid transparent; border-bottom:15px solid #E23B2C;"></div></div>
+          <div style="position:relative; width:52px; height:52px; background:#141318; border:1.5px solid #ECE4D4; transform:rotate(45deg); display:flex; align-items:center; justify-content:center;"><div style="transform:rotate(-45deg); font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:26px; color:#D8A12A;">!</div></div>
+          <div style="position:relative; width:52px; height:52px; background:#141318; border:1.5px solid #ECE4D4; transform:rotate(45deg); display:flex; align-items:center; justify-content:center;"><div style="transform:rotate(-45deg); width:16px; height:16px; border-radius:50%; border:3px solid #2F57D6;"></div></div>
+          <div style="position:relative; width:52px; height:52px; background:#141318; border:1.5px solid #ECE4D4; transform:rotate(45deg); display:flex; align-items:center; justify-content:center;"><div style="transform:rotate(-45deg); width:16px; height:16px; background:#ECE4D4; transform:rotate(-45deg) rotate(45deg);"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== COMPONENTS ===================== -->
+    <div style="margin-top:64px;">
+      <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:30px;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:30px; letter-spacing:.06em; text-transform:uppercase;">Components</div>
+        <div style="flex:1; height:2px; background:rgba(255,255,255,.14);"></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.2em; color:#625E57;">LIVE</div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid rgba(255,255,255,.12);">
+        <!-- buttons -->
+        <div style="padding:30px 32px; border-right:1px solid rgba(255,255,255,.1); border-bottom:1px solid rgba(255,255,255,.1);">
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; color:#625E57; text-transform:uppercase; margin-bottom:22px;">Buttons</div>
+          <div style="display:flex; flex-wrap:wrap; gap:13px; align-items:center;">
+            <button style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:15px; letter-spacing:.16em; text-transform:uppercase; color:#fff; background:#E23B2C; border:none; padding:13px 28px; cursor:pointer;">Continue</button>
+            <button style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:15px; letter-spacing:.16em; text-transform:uppercase; color:#fff; background:#2F57D6; border:none; padding:13px 28px; cursor:pointer;">Secondary</button>
+            <button style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:15px; letter-spacing:.16em; text-transform:uppercase; color:#DDD9D0; background:transparent; border:2px solid rgba(255,255,255,.2); padding:11px 26px; cursor:pointer;">Ghost</button>
+          </div>
+          <button style="margin-top:16px; width:100%; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:16px; letter-spacing:.18em; text-transform:uppercase; color:#141318; background:#D8A12A; border:none; padding:15px; cursor:pointer;">▸&nbsp; Launch Daemon</button>
+        </div>
+        <!-- input -->
+        <div style="padding:30px 32px; border-bottom:1px solid rgba(255,255,255,.1);">
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; color:#625E57; text-transform:uppercase; margin-bottom:22px;">Input Field</div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.2em; color:#9C978D; text-transform:uppercase; margin-bottom:9px;">Email Address</div>
+          <div style="display:flex; align-items:center; background:#0E0D11; border:2px solid #E23B2C; padding:0 14px;">
+            <input value="guardian@cli-tracker.dev" readonly style="flex:1; background:transparent; border:none; outline:none; color:#F1EEE7; font-family:'JetBrains Mono',monospace; font-size:14px; padding:13px 0;"/>
+          </div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.2em; color:#9C978D; text-transform:uppercase; margin:18px 0 9px;">Default</div>
+          <div style="display:flex; align-items:center; background:#0E0D11; border:2px solid rgba(255,255,255,.14); padding:0 14px;">
+            <input placeholder="type a command…" readonly style="flex:1; background:transparent; border:none; outline:none; color:#625E57; font-family:'JetBrains Mono',monospace; font-size:14px; padding:13px 0;"/>
+          </div>
+        </div>
+        <!-- ribbon banners -->
+        <div style="padding:30px 32px; border-right:1px solid rgba(255,255,255,.1); border-bottom:1px solid rgba(255,255,255,.1);">
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; color:#625E57; text-transform:uppercase; margin-bottom:22px;">Ribbon Banners</div>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; align-items:stretch; height:38px;">
+              <div style="width:48px; background:#E23B2C; clip-path:polygon(0 0,100% 0,80% 100%,0 100%); display:flex; align-items:center; justify-content:center; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:20px; color:#fff;">01</div>
+              <div style="flex:1; background:#1C1B22; margin-left:-8px; clip-path:polygon(8px 0,100% 0,100% 100%,0 100%); display:flex; align-items:center; padding-left:22px; font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:14px; letter-spacing:.16em; text-transform:uppercase; color:#DDD9D0;">Initialize Workspace</div>
+            </div>
+            <div style="display:flex; align-items:stretch; height:38px;">
+              <div style="width:48px; background:#2F57D6; clip-path:polygon(0 0,100% 0,80% 100%,0 100%); display:flex; align-items:center; justify-content:center; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:20px; color:#fff;">02</div>
+              <div style="flex:1; background:#1C1B22; margin-left:-8px; clip-path:polygon(8px 0,100% 0,100% 100%,0 100%); display:flex; align-items:center; padding-left:22px; font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:14px; letter-spacing:.16em; text-transform:uppercase; color:#DDD9D0;">Authenticate</div>
+            </div>
+          </div>
+        </div>
+        <!-- progress -->
+        <div style="padding:30px 32px; border-bottom:1px solid rgba(255,255,255,.1);">
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; color:#625E57; text-transform:uppercase; margin-bottom:22px;">Progress &amp; Stats</div>
+          <div style="display:flex; align-items:center; gap:9px; margin-bottom:22px;">
+            <div style="width:16px; height:16px; background:#E23B2C; transform:rotate(45deg);"></div>
+            <div style="width:16px; height:16px; background:#E23B2C; transform:rotate(45deg);"></div>
+            <div style="width:16px; height:16px; background:#E23B2C; transform:rotate(45deg);"></div>
+            <div style="width:16px; height:16px; border:2px solid #625E57; transform:rotate(45deg);"></div>
+            <div style="width:16px; height:16px; border:2px solid #625E57; transform:rotate(45deg);"></div>
+            <div style="margin-left:10px; font-family:'JetBrains Mono',monospace; font-size:13px; color:#E23B2C;">03 / 05</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div><div style="font-family:'Saira Condensed',sans-serif; font-weight:600; font-size:12px; letter-spacing:.14em; color:#9C978D; margin-bottom:6px;">VELOCITY</div><div style="height:8px; background:#0E0D11;"><div style="width:72%; height:100%; background:#2F57D6;"></div></div></div>
+            <div><div style="font-family:'Saira Condensed',sans-serif; font-weight:600; font-size:12px; letter-spacing:.14em; color:#9C978D; margin-bottom:6px;">LOAD</div><div style="height:8px; background:#0E0D11;"><div style="width:46%; height:100%; background:#E23B2C;"></div></div></div>
+          </div>
+        </div>
+
+        <!-- card: poster (paper) -->
+        <div style="padding:30px 32px; border-right:1px solid rgba(255,255,255,.1);">
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; color:#625E57; text-transform:uppercase; margin-bottom:22px;">Poster Card · Paper</div>
+          <div style="background:#ECE4D4; color:#1A1813; position:relative; overflow:hidden;">
+            <div style="height:10px; background:#E23B2C;"></div>
+            <div style="padding:20px 22px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:34px; height:34px; border-radius:50%; background:#1A1813; display:flex; align-items:center; justify-content:center; position:relative;">
+                  <div style="position:absolute; width:18px; height:3.5px; background:#ECE4D4; transform:rotate(45deg);"></div>
+                  <div style="position:absolute; width:18px; height:3.5px; background:#ECE4D4; transform:rotate(-45deg);"></div>
+                </div>
+                <div style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:22px; letter-spacing:.04em; text-transform:uppercase;">Urbs Industria</div>
+              </div>
+              <p style="margin:14px 0 0; font-size:13px; line-height:1.6; color:#4A463E;">Inverted, poster-style surface for hero moments, empty states, and marketing.</p>
+            </div>
+          </div>
+        </div>
+        <!-- callout + code -->
+        <div style="padding:30px 32px;">
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; color:#625E57; text-transform:uppercase; margin-bottom:22px;">Callout &amp; Code</div>
+          <div style="display:flex; gap:0; margin-bottom:14px; border:1px solid rgba(47,87,214,.4);">
+            <div style="width:40px; background:#2F57D6; display:flex; align-items:center; justify-content:center; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:22px; color:#fff;">i</div>
+            <div style="flex:1; padding:11px 14px; font-size:13px; line-height:1.5; color:#DDD9D0;">Run as a background service for live sync.</div>
+          </div>
+          <div style="background:#0B0A0D; border:1px solid rgba(255,255,255,.1);">
+            <div style="display:flex; align-items:center; gap:7px; padding:9px 13px; border-bottom:1px solid rgba(255,255,255,.07);">
+              <div style="width:8px; height:8px; background:#E23B2C;"></div>
+              <div style="width:8px; height:8px; background:#D8A12A;"></div>
+              <div style="width:8px; height:8px; background:#2F57D6;"></div>
+              <div style="margin-left:6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#625E57;">terminal</div>
+            </div>
+            <div style="padding:13px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.8;">
+              <div><span style="color:#E23B2C;">$</span> <span style="color:#F1EEE7;">clt init</span></div>
+              <div style="color:#625E57;">✓ workspace linked</div>
+              <div><span style="color:#E23B2C;">$</span> <span style="color:#F1EEE7;">clt ls</span> <span style="color:#D8A12A;">--open</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- footer -->
+    <div style="margin-top:72px; display:flex; align-items:center; justify-content:space-between; border-top:2px solid rgba(255,255,255,.14); padding-top:22px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.22em; color:#625E57;">CLI-TRACKER · DESIGN SYSTEM</div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:10px; height:10px; background:#E23B2C; transform:rotate(45deg);"></div>
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.3em; text-transform:uppercase; color:#9C978D;">Shared Foundation</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

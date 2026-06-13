@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#141318; }
+  ::selection{ background:#E23B2C; color:#fff; }
+  @keyframes wdnBlink{ 50%{ opacity:0 } }
+  @keyframes wdnSpin{ to{ transform:rotate(360deg) } }
+  a{ text-decoration:none; color:inherit; }
+  .wdn-side:hover{ color:#F1EEE7 !important; }
+</style>
+</helmet>
+
+<div style="position:relative; min-height:100vh; background:#141318; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:#F1EEE7; display:flex; align-items:flex-start;">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside style="width:280px; flex:none; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,.1); background:#161519;">
+    <div style="height:4px; background:#E23B2C; flex:none;"></div>
+
+    <!-- brand -->
+    <div style="padding:24px 24px 20px; flex:none;">
+      <div style="display:flex; align-items:center; gap:11px; white-space:nowrap;">
+        <div style="display:flex; align-items:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:19px; color:#F1EEE7;">cli-tracker<span style="display:inline-block; width:8px; height:16px; background:#E23B2C; margin-left:4px; transform:translateY(1px); animation:wdnBlink 1.1s steps(1) infinite;"></span></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.06em; color:#9C978D; border:1px solid rgba(255,255,255,.16); padding:2px 6px;">v2.4.0</div>
+      </div>
+    </div>
+
+    <!-- search -->
+    <div style="padding:0 20px 18px; flex:none;">
+      <div style="display:flex; align-items:center; gap:10px; background:#0E0D11; border:1px solid rgba(255,255,255,.14); padding:9px 12px;">
+        <span style="position:relative; display:inline-block; width:13px; height:13px; flex:none;">
+          <span style="position:absolute; top:0; left:0; width:10px; height:10px; border:2px solid #9C978D; border-radius:50%;"></span>
+          <span style="position:absolute; bottom:0; right:0; width:6px; height:2px; background:#9C978D; transform:rotate(45deg); transform-origin:right;"></span>
+        </span>
+        <span style="flex:1; font-family:'JetBrains Mono',monospace; font-size:12px; color:#625E57;">Search docs…</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9C978D; border:1px solid rgba(255,255,255,.16); padding:0 6px; border-radius:3px;">/</span>
+      </div>
+    </div>
+
+    <div style="height:1px; background:rgba(255,255,255,.08); margin:0 20px; flex:none;"></div>
+
+    <!-- nav (scrolls) -->
+    <nav style="flex:1; overflow:auto; padding:22px 20px;">
+      <div style="margin-bottom:26px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <div style="width:13px; height:13px; background:#E23B2C; transform:rotate(45deg);"></div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; text-transform:uppercase; color:#DDD9D0;">Getting Started</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:1px; padding-left:6px;">
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="width:5px; height:5px; background:#625E57; transform:rotate(45deg); flex:none;"></span><span style="font-size:14px;">Installation</span></div>
+          <div style="display:flex; align-items:center; gap:11px; padding:8px 12px; background:rgba(226,59,44,.1); border-left:3px solid #E23B2C; color:#F1EEE7;"><span style="width:6px; height:6px; background:#E23B2C; transform:rotate(45deg); flex:none;"></span><span style="font-size:14px; font-weight:500;">Quickstart</span></div>
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="width:5px; height:5px; background:#625E57; transform:rotate(45deg); flex:none;"></span><span style="font-size:14px;">Configuration</span></div>
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="width:5px; height:5px; background:#625E57; transform:rotate(45deg); flex:none;"></span><span style="font-size:14px;">Authentication</span></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:26px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <div style="width:13px; height:13px; background:#2F57D6; transform:rotate(45deg);"></div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; text-transform:uppercase; color:#DDD9D0;">Core Concepts</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:1px; padding-left:6px;">
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="width:5px; height:5px; background:#625E57; transform:rotate(45deg); flex:none;"></span><span style="font-size:14px;">Tasks &amp; Flags</span></div>
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="width:5px; height:5px; background:#625E57; transform:rotate(45deg); flex:none;"></span><span style="font-size:14px;">Workspaces</span></div>
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="width:5px; height:5px; background:#625E57; transform:rotate(45deg); flex:none;"></span><span style="font-size:14px;">The Daemon</span></div>
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="width:5px; height:5px; background:#625E57; transform:rotate(45deg); flex:none;"></span><span style="font-size:14px;">Sync &amp; Conflicts</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <div style="width:13px; height:13px; background:#D8A12A; transform:rotate(45deg);"></div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.24em; text-transform:uppercase; color:#DDD9D0;">CLI Reference</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:1px; padding-left:6px;">
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="font-family:'JetBrains Mono',monospace; font-size:13px;">clt add</span></div>
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="font-family:'JetBrains Mono',monospace; font-size:13px;">clt ls</span></div>
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="font-family:'JetBrains Mono',monospace; font-size:13px;">clt done</span></div>
+          <div class="wdn-side" style="display:flex; align-items:center; gap:11px; padding:8px 12px; color:#9C978D; cursor:pointer; transition:color .12s;"><span style="font-family:'JetBrains Mono',monospace; font-size:13px;">clt sync</span></div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- user (optional · if authorized) -->
+    <sc-if value="{{ showUser }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:none; border-top:1px solid rgba(255,255,255,.1); padding:12px 16px; display:flex; align-items:center; gap:10px;">
+        <!-- user pictogram -->
+        <div style="position:relative; width:28px; height:28px; flex:none; background:#1C1B22; border:1px solid rgba(255,255,255,.14); display:flex; align-items:flex-end; justify-content:center; overflow:hidden;">
+          <div style="position:absolute; top:5px; width:9px; height:9px; border-radius:50%; background:#D8A12A;"></div>
+          <div style="width:18px; height:9px; border-radius:9px 9px 0 0; background:#D8A12A; margin-bottom:-1px;"></div>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#F1EEE7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ email }}</div>
+          <div style="font-family:'Saira Condensed',sans-serif; font-weight:600; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:#5B9B6B; margin-top:1px;">● Signed in</div>
+        </div>
+        <!-- logout button · exit-door glyph -->
+        <button onClick="{{ logout }}" title="Sign out" style="flex:none; width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid rgba(255,255,255,.14); cursor:pointer; transition:border-color .15s,background .15s;" style-hover="border-color:#E23B2C; background:rgba(226,59,44,.1);">
+          <span style="position:relative; display:inline-block; width:16px; height:14px;">
+            <span style="position:absolute; left:0; top:0; width:6px; height:14px; border:2px solid #B7B2A8; border-right:none;"></span>
+            <span style="position:absolute; right:0; top:50%; width:11px; height:2px; background:#B7B2A8; transform:translateY(-1px);"></span>
+            <span style="position:absolute; right:1px; top:50%; width:6px; height:6px; border-top:2px solid #B7B2A8; border-right:2px solid #B7B2A8; transform:translateY(-50%) rotate(45deg);"></span>
+          </span>
+        </button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showGuest }}">
+      <a href="Login.dc.html" style="flex:none; border-top:1px solid rgba(255,255,255,.1); padding:16px 18px; display:flex; align-items:center; gap:10px; cursor:pointer;">
+        <span style="width:8px; height:8px; background:#E23B2C; transform:rotate(45deg); flex:none;"></span>
+        <span style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.18em; text-transform:uppercase; color:#DDD9D0;">Sign in</span>
+      </a>
+    </sc-if>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main style="flex:1; min-width:0; padding:44px 56px 90px; position:relative; overflow:hidden;">
+    <div style="position:absolute; top:30px; right:-90px; width:300px; height:300px; pointer-events:none; opacity:.05;">
+      <div style="position:absolute; inset:0; border-radius:50%; border:2px dotted #fff; animation:wdnSpin 200s linear infinite;"></div>
+      <div style="position:absolute; inset:60px; border-radius:50%; border:2px dotted #E23B2C;"></div>
+    </div>
+
+    <div style="position:relative; display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#9C978D; margin-bottom:22px;">
+      <span>Docs</span>
+      <span style="width:0; height:0; border-top:4px solid transparent; border-bottom:4px solid transparent; border-left:5px solid #625E57;"></span>
+      <span>Getting Started</span>
+      <span style="width:0; height:0; border-top:4px solid transparent; border-bottom:4px solid transparent; border-left:5px solid #625E57;"></span>
+      <span style="color:#E23B2C;">Quickstart</span>
+    </div>
+
+    <h1 style="position:relative; margin:0; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:60px; line-height:.96; letter-spacing:.01em; text-transform:uppercase;">Quickstart</h1>
+    <p style="position:relative; margin:18px 0 0; font-size:18px; line-height:1.6; color:#B7B2A8; max-width:620px;">Get the cli-tracker daemon watching your first repository — and tracking your first task — in under a minute.</p>
+
+    <div style="position:relative; display:flex; align-items:center; gap:12px; margin:30px 0 40px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#625E57;">≈ 1 MIN READ</div>
+      <div style="width:5px; height:5px; background:#625E57; transform:rotate(45deg);"></div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#625E57;">UPDATED 2026-06-13</div>
+    </div>
+
+    <!-- STEP 01 -->
+    <div style="position:relative; display:flex; align-items:stretch; height:42px; margin-bottom:20px; max-width:620px;">
+      <div style="width:54px; background:#E23B2C; clip-path:polygon(0 0,100% 0,82% 100%,0 100%); display:flex; align-items:center; justify-content:center; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:22px; color:#fff;">01</div>
+      <div style="flex:1; background:#1C1B22; margin-left:-9px; clip-path:polygon(9px 0,100% 0,100% 100%,0 100%); display:flex; align-items:center; padding-left:24px; font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:19px; letter-spacing:.12em; text-transform:uppercase; color:#F1EEE7;">Install the binary</div>
+    </div>
+    <p style="margin:0 0 16px; font-size:16px; line-height:1.7; color:#DDD9D0; max-width:620px;">cli-tracker ships as a single static binary named <code style="font-family:'JetBrains Mono',monospace; font-size:14px; background:#0E0D11; color:#D8A12A; padding:2px 7px; border:1px solid rgba(255,255,255,.1);">clt</code>. Install it with your package manager of choice:</p>
+
+    <div style="background:#0B0A0D; border:1px solid rgba(255,255,255,.1); max-width:620px; margin-bottom:36px;">
+      <div style="display:flex; align-items:center; gap:7px; padding:9px 14px; border-bottom:1px solid rgba(255,255,255,.07);">
+        <div style="width:8px; height:8px; background:#E23B2C;"></div>
+        <div style="width:8px; height:8px; background:#D8A12A;"></div>
+        <div style="width:8px; height:8px; background:#2F57D6;"></div>
+        <div style="margin-left:6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#625E57;">install.sh</div>
+      </div>
+      <div style="padding:16px; font-family:'JetBrains Mono',monospace; font-size:14px; line-height:1.9;">
+        <div><span style="color:#625E57;"># Homebrew</span></div>
+        <div><span style="color:#E23B2C;">$</span> <span style="color:#F1EEE7;">brew install</span> <span style="color:#D8A12A;">cli-tracker</span></div>
+        <div style="height:10px;"></div>
+        <div><span style="color:#625E57;"># or curl</span></div>
+        <div><span style="color:#E23B2C;">$</span> <span style="color:#F1EEE7;">curl -fsSL</span> <span style="color:#2F57D6;">get.cli-tracker.dev</span> <span style="color:#F1EEE7;">| sh</span></div>
+      </div>
+    </div>
+
+    <div style="display:flex; border:1px solid rgba(47,87,214,.45); max-width:620px; margin-bottom:36px;">
+      <div style="width:44px; background:#2F57D6; display:flex; align-items:flex-start; justify-content:center; padding-top:16px; flex:none;">
+        <div style="width:8px; height:8px; border-radius:50%; background:#fff;"></div>
+      </div>
+      <div style="padding:15px 18px;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.22em; text-transform:uppercase; color:#5C82E8; margin-bottom:6px;">Note</div>
+        <div style="font-size:15px; line-height:1.6; color:#DDD9D0;">The binary runs a lightweight background daemon. It uses filesystem events — no polling — so it costs nothing while idle.</div>
+      </div>
+    </div>
+
+    <!-- STEP 02 -->
+    <div style="display:flex; align-items:stretch; height:42px; margin-bottom:20px; max-width:620px;">
+      <div style="width:54px; background:#2F57D6; clip-path:polygon(0 0,100% 0,82% 100%,0 100%); display:flex; align-items:center; justify-content:center; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:22px; color:#fff;">02</div>
+      <div style="flex:1; background:#1C1B22; margin-left:-9px; clip-path:polygon(9px 0,100% 0,100% 100%,0 100%); display:flex; align-items:center; padding-left:24px; font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:19px; letter-spacing:.12em; text-transform:uppercase; color:#F1EEE7;">Initialize a workspace</div>
+    </div>
+    <p style="margin:0 0 16px; font-size:16px; line-height:1.7; color:#DDD9D0; max-width:620px;">From the root of any repository, link it to cli-tracker:</p>
+    <div style="background:#0B0A0D; border:1px solid rgba(255,255,255,.1); max-width:620px; margin-bottom:36px;">
+      <div style="padding:16px; font-family:'JetBrains Mono',monospace; font-size:14px; line-height:1.9;">
+        <div><span style="color:#E23B2C;">$</span> <span style="color:#F1EEE7;">clt init</span></div>
+        <div style="color:#5B9B6B;">✓ workspace linked · .clt/ created</div>
+        <div style="color:#5B9B6B;">✓ daemon watching 1 path</div>
+      </div>
+    </div>
+
+    <!-- STEP 03 -->
+    <div style="display:flex; align-items:stretch; height:42px; margin-bottom:20px; max-width:620px;">
+      <div style="width:54px; background:#D8A12A; clip-path:polygon(0 0,100% 0,82% 100%,0 100%); display:flex; align-items:center; justify-content:center; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:22px; color:#141318;">03</div>
+      <div style="flex:1; background:#1C1B22; margin-left:-9px; clip-path:polygon(9px 0,100% 0,100% 100%,0 100%); display:flex; align-items:center; padding-left:24px; font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:19px; letter-spacing:.12em; text-transform:uppercase; color:#F1EEE7;">Add your first task</div>
+    </div>
+    <div style="background:#0B0A0D; border:1px solid rgba(255,255,255,.1); max-width:620px; margin-bottom:36px;">
+      <div style="padding:16px; font-family:'JetBrains Mono',monospace; font-size:14px; line-height:1.9;">
+        <div><span style="color:#E23B2C;">$</span> <span style="color:#F1EEE7;">clt add</span> <span style="color:#D8A12A;">"ship the docs"</span> <span style="color:#9C978D;">--due</span> <span style="color:#2F57D6;">fri</span> <span style="color:#9C978D;">--flag</span> <span style="color:#2F57D6;">high</span></div>
+        <div style="color:#5B9B6B;">✓ #4012 created</div>
+      </div>
+    </div>
+
+    <h2 style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:30px; letter-spacing:.04em; text-transform:uppercase; margin:0 0 4px;">Command Reference</h2>
+    <div style="width:60px; height:3px; background:#E23B2C; margin-bottom:24px;"></div>
+    <div style="border:1px solid rgba(255,255,255,.12); max-width:620px; margin-bottom:36px;">
+      <div style="display:grid; grid-template-columns:180px 1fr; background:#1C1B22; border-bottom:2px solid #E23B2C;">
+        <div style="padding:11px 16px; font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:#9C978D;">Command</div>
+        <div style="padding:11px 16px; font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:#9C978D;">Description</div>
+      </div>
+      <div style="display:grid; grid-template-columns:180px 1fr; border-bottom:1px solid rgba(255,255,255,.08);"><div style="padding:13px 16px; font-family:'JetBrains Mono',monospace; font-size:13px; color:#D8A12A;">clt add</div><div style="padding:13px 16px; font-size:14px; color:#DDD9D0;">Create a task with optional due date and flags.</div></div>
+      <div style="display:grid; grid-template-columns:180px 1fr; border-bottom:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.012);"><div style="padding:13px 16px; font-family:'JetBrains Mono',monospace; font-size:13px; color:#D8A12A;">clt ls</div><div style="padding:13px 16px; font-size:14px; color:#DDD9D0;">List tasks. Filter with <code style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#5C82E8;">--open</code> / <code style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#5C82E8;">--due</code>.</div></div>
+      <div style="display:grid; grid-template-columns:180px 1fr; border-bottom:1px solid rgba(255,255,255,.08);"><div style="padding:13px 16px; font-family:'JetBrains Mono',monospace; font-size:13px; color:#D8A12A;">clt done</div><div style="padding:13px 16px; font-size:14px; color:#DDD9D0;">Close one or more tasks by id.</div></div>
+      <div style="display:grid; grid-template-columns:180px 1fr;"><div style="padding:13px 16px; font-family:'JetBrains Mono',monospace; font-size:13px; color:#D8A12A;">clt sync</div><div style="padding:13px 16px; font-size:14px; color:#DDD9D0;">Push and pull task state across machines.</div></div>
+    </div>
+
+    <div style="display:flex; border:1px solid rgba(226,59,44,.5); max-width:620px; margin-bottom:48px;">
+      <div style="width:44px; background:#E23B2C; display:flex; align-items:flex-start; justify-content:center; padding-top:14px; flex:none;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:24px; color:#fff;">!</div>
+      </div>
+      <div style="padding:15px 18px;">
+        <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.22em; text-transform:uppercase; color:#E96456; margin-bottom:6px;">Danger</div>
+        <div style="font-size:15px; line-height:1.6; color:#DDD9D0;"><code style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#E96456;">clt reset --hard</code> erases all local task state and cannot be undone. Sync first.</div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:14px; max-width:620px;">
+      <a class="wdn-navlink" style="flex:1; display:flex; align-items:center; gap:14px; background:#1A191F; border:1px solid rgba(255,255,255,.1); padding:16px 18px; cursor:pointer;">
+        <span style="width:0; height:0; border-top:8px solid transparent; border-bottom:8px solid transparent; border-right:11px solid #9C978D; flex:none;"></span>
+        <div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:#625E57;">PREV</div><div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:16px; letter-spacing:.1em; text-transform:uppercase; color:#DDD9D0; margin-top:3px;">Installation</div></div>
+      </a>
+      <a class="wdn-navlink" style="flex:1; display:flex; align-items:center; justify-content:flex-end; gap:14px; background:#1A191F; border:1px solid rgba(255,255,255,.1); padding:16px 18px; cursor:pointer; text-align:right;">
+        <div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; color:#625E57;">NEXT</div><div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:16px; letter-spacing:.1em; text-transform:uppercase; color:#DDD9D0; margin-top:3px;">Configuration</div></div>
+        <span style="width:0; height:0; border-top:8px solid transparent; border-bottom:8px solid transparent; border-left:11px solid #E23B2C; flex:none;"></span>
+      </a>
+    </div>
+  </main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;authed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;email&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;guardian@cli-tracker.dev&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { authed: null };
+
+  renderVals() {
+    const authed = this.state.authed !== null ? this.state.authed : (this.props.authed ?? true);
+    return {
+      showUser: authed,
+      showGuest: !authed,
+      email: this.props.email ?? 'guardian@cli-tracker.dev',
+      logout: () => this.setState({ authed: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>
