@@ -24,7 +24,8 @@ FROM python:3.13-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/opt/venv/bin:$PATH"
+    PATH="/opt/venv/bin:$PATH" \
+    ALEMBIC_DIR=/app
 
 RUN useradd --create-home --shell /bin/bash --uid 1000 app
 
