@@ -57,3 +57,4 @@ logs/
 .claude/worktrees/
 .superpowers/
 specs/.!*!.DS_Store
+.claude/scheduled_tasks.lock
