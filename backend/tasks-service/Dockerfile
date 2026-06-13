@@ -16,7 +16,7 @@ COPY pyproject.toml ./
 COPY src ./src
 
 RUN uv venv /opt/venv && \
-    uv pip install --no-cache --python /opt/venv/bin/python -e .
+    uv pip install --no-cache --python /opt/venv/bin/python .
 
 # ---
 
