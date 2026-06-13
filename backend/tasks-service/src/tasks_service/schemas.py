@@ -123,3 +123,36 @@ class HistoryPage(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     detail: str | None = None
+
+
+# === Team CRUD (M2.7) ===
+
+
+class TeamCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Annotated[str, Field(min_length=1, max_length=200)]
+
+
+class TeamUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Annotated[str, Field(min_length=1, max_length=200)]
+
+
+class TeamMemberSetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    perms: list[str] = Field(default_factory=list)
+
+
+class TeamMemberRead(BaseModel):
+    user_email: str
+    perms: list[str]
+
+
+class TeamRead(BaseModel):
+    id: UUID
+    name: str
+    created_at: datetime
+    members: list[TeamMemberRead] = Field(default_factory=list)
