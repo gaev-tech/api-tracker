@@ -23,6 +23,9 @@ docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull
 echo "### docker compose up -d"
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --remove-orphans
 
+echo "### nginx reload (для изменений в conf.d без recreate контейнера)"
+docker exec api-tracker-nginx nginx -s reload 2>&1 || echo "nginx reload skipped (контейнер не запущен ещё)"
+
 echo "### docker image prune (старые образы)"
 docker image prune -f --filter "until=72h"
 
