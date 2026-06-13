@@ -41,6 +41,8 @@ jobs:
         run: uv run pytest -q
       - working-directory: backend/auth-service
         run: uv run pytest -q
+      - name: cli-cases-coverage (M2.16, ARCH §18.1.5)
+        run: uv run python scripts/check_cli_coverage.py
 
   build-push:
     runs-on: ubuntu-latest
