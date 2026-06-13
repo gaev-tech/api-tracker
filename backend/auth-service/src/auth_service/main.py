@@ -18,6 +18,9 @@ class HealthResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    # Миграции уже запущены в __main__._serve() до старта uvicorn,
+    # чтобы gRPC мог стартовать сразу. Но при with_lifespan=True
+    # (запуск через uvicorn auth_service.main:app) нужно подстраховаться.
     run_migrations()
     yield
     await dispose_engine()

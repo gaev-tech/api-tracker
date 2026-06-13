@@ -13,6 +13,9 @@ src = [
   "backend/auth-service/src",
   "cli/src",
 ]
+extend-exclude = [
+  "backend/*/src/*/generated",  # сгенерированные protobuf/gRPC stubs
+]
 
 [tool.ruff.lint]
 select = [
@@ -54,6 +57,18 @@ no_implicit_reexport = true
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "auth.v1.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "grpc.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "auth_service.generated.*"
+ignore_errors = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

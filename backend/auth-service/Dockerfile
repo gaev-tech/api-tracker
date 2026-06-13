@@ -36,7 +36,7 @@ COPY --chown=app:app alembic /app/alembic
 USER app
 WORKDIR /app
 
-EXPOSE 8000
+EXPOSE 8000 50051
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()" || exit 1

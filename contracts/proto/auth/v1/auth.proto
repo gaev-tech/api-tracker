@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package auth.v1;
+
+// Внутренний gRPC-API auth-service.
+// Используется tasks-service для резолва email↔user_id и получения JWKS.
+// См. architecture.md §6.
+
+service AuthService {
+  // Найти пользователя по email; возвращает NOT_FOUND если нет.
+  rpc GetUserByEmail(GetUserByEmailRequest) returns (User);
+
+  // Батчевый резолв id→User; неизвестные id опускаются в ответе.
+  rpc GetUsersByIds(GetUsersByIdsRequest) returns (GetUsersByIdsResponse);
+
+  // Публичные ключи для верификации JWT (RS256), PEM.
+  rpc GetJWKS(GetJWKSRequest) returns (GetJWKSResponse);
+}
+
+message User {
+  string id = 1;          // UUID, строковое представление
+  string email = 2;
+  string created_at = 3;  // ISO-8601 UTC
+}
+
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message GetUsersByIdsRequest {
+  repeated string ids = 1;
+}
+
+message GetUsersByIdsResponse {
+  repeated User users = 1;
+}
+
+message GetJWKSRequest {}
+
+message GetJWKSResponse {
+  // PEM-encoded RSA public key для проверки JWT (algorithm=RS256).
+  string public_key_pem = 1;
+}

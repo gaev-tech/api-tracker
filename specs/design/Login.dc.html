@@ -10,7 +10,7 @@
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; background:#141318; }
@@ -122,7 +122,7 @@
               <span style="position:absolute; top:0; left:3.5px; width:10px; height:11px; border:2.5px solid #D8A12A; border-bottom:none; border-radius:7px 7px 0 0;"></span>
               <span style="position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:3px; height:4px; background:#1A191F;"></span>
             </span>
-            <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:12px; letter-spacing:.34em; text-transform:uppercase; color:#D8A12A;">Authenticate</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:#D8A12A;">Authenticate</div>
             <div style="width:22px; height:2px; background:#E23B2C;"></div>
           </div>
         </div>
@@ -139,15 +139,15 @@
               <span style="position:relative; display:inline-block; width:20px; height:14px; border:2px solid #9C978D; flex:none;">
                 <span style="position:absolute; top:-1px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:9px solid transparent; border-right:9px solid transparent; border-top:7px solid #9C978D;"></span>
               </span>
-              <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:13px; letter-spacing:.22em; text-transform:uppercase; color:#9C978D;">Email Address</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px; letter-spacing:.22em; text-transform:uppercase; color:#9C978D;">Email Address</div>
             </div>
             <div style="display:flex; align-items:center; gap:12px; background:#0E0D11; border:2px solid {{ emailBorder }}; padding:0 15px;">
-              <span style="width:8px; height:8px; background:#E23B2C; transform:rotate(45deg); flex:none;"></span>
+              <span style="width:8px; height:8px; background:#2F57D6; transform:rotate(45deg); flex:none;"></span>
               <input value="{{ email }}" onInput="{{ onEmail }}" onKeyDown="{{ onEmailKey }}" placeholder="you@studio.dev" autofocus style="flex:1; background:transparent; border:none; outline:none; color:#F1EEE7; font-family:'JetBrains Mono',monospace; font-size:15px; padding:14px 0;"/>
             </div>
             <div style="min-height:20px; margin-top:9px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#E23B2C;">{{ emailError }}</div>
 
-            <button onClick="{{ sendLink }}" style="margin-top:6px; width:100%; display:flex; align-items:center; justify-content:center; gap:12px; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:17px; letter-spacing:.16em; text-transform:uppercase; color:#fff; background:#E23B2C; border:none; padding:15px; cursor:pointer; transition:background .15s,transform .05s;" style-hover="background:#F04634;" style-active="transform:translateY(1px);">
+            <button onClick="{{ sendLink }}" style="margin-top:6px; width:100%; display:flex; align-items:center; justify-content:center; gap:12px; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:#fff; background:#2F57D6; border:none; padding:15px; cursor:pointer; transition:background .15s,transform .05s;" style-hover="background:#3F67E6;" style-active="transform:translateY(1px);">
               Continue with e-mail
               <span style="width:0; height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; border-left:12px solid #fff;"></span>
             </button>
@@ -161,12 +161,12 @@
             <div style="display:inline-block; position:relative; width:78px; height:52px; border:3px solid #D8A12A; margin-bottom:24px;">
               <div style="position:absolute; top:-3px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:39px solid transparent; border-right:39px solid transparent; border-top:31px solid #D8A12A;"></div>
             </div>
-            <div style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:32px; letter-spacing:.06em; text-transform:uppercase;">Check your inbox</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-weight:800; font-size:23px; letter-spacing:0; text-transform:uppercase;">Check your inbox</div>
             <div style="margin-top:12px; font-size:14px; line-height:1.6; color:#B7B2A8;">We sent a magic sign-in link to</div>
             <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#D8A12A; margin-top:5px;">{{ email }}</div>
             <div style="margin-top:10px; font-size:13px; line-height:1.6; color:#9C978D;">Open it on this device to finish signing in. The link expires in 10 minutes.</div>
 
-            <button onClick="{{ goDone }}" style="margin-top:26px; width:100%; display:flex; align-items:center; justify-content:center; gap:12px; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:17px; letter-spacing:.16em; text-transform:uppercase; color:#141318; background:#D8A12A; border:none; padding:15px; cursor:pointer; transition:background .15s,transform .05s;" style-hover="background:#E6B43E;" style-active="transform:translateY(1px);">
+            <button onClick="{{ goDone }}" style="margin-top:26px; width:100%; display:flex; align-items:center; justify-content:center; gap:12px; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:#141318; background:#D8A12A; border:none; padding:15px; cursor:pointer; transition:background .15s,transform .05s;" style-hover="background:#E6B43E;" style-active="transform:translateY(1px);">
               Open mail app
               <span style="width:0; height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; border-left:12px solid #141318;"></span>
             </button>
@@ -181,12 +181,12 @@
         <!-- ===== STEP: DONE ===== -->
         <sc-if value="{{ isDone }}">
           <div style="text-align:center; animation:wdnRise .35s ease both;">
-            <div style="display:inline-flex; align-items:center; justify-content:center; width:66px; height:66px; transform:rotate(45deg); background:#E23B2C; margin-bottom:24px; animation:wdnPop .45s cubic-bezier(.2,.8,.3,1.3) both;">
-              <div style="transform:rotate(-45deg); font-size:30px; color:#fff; font-weight:800; font-family:'Saira Condensed',sans-serif;">✓</div>
+            <div style="display:inline-flex; align-items:center; justify-content:center; width:66px; height:66px; transform:rotate(45deg); background:#2F57D6; margin-bottom:24px; animation:wdnPop .45s cubic-bezier(.2,.8,.3,1.3) both;">
+              <div style="transform:rotate(-45deg); font-size:30px; color:#fff; font-weight:800; font-family:'JetBrains Mono',monospace;">✓</div>
             </div>
-            <div style="font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:34px; letter-spacing:.1em; text-transform:uppercase;">Access Granted</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-weight:800; font-size:23px; letter-spacing:0; text-transform:uppercase;">Access Granted</div>
             <div style="margin-top:10px; font-size:14px; line-height:1.6; color:#B7B2A8;">Session is live. Welcome back to the deck.</div>
-            <button style="margin-top:28px; width:100%; display:flex; align-items:center; justify-content:center; gap:12px; font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:17px; letter-spacing:.16em; text-transform:uppercase; color:#fff; background:#E23B2C; border:none; padding:15px; cursor:pointer; transition:background .15s,transform .05s;" style-hover="background:#F04634;" style-active="transform:translateY(1px);">
+            <button style="margin-top:28px; width:100%; display:flex; align-items:center; justify-content:center; gap:12px; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:#fff; background:#2F57D6; border:none; padding:15px; cursor:pointer; transition:background .15s,transform .05s;" style-hover="background:#3F67E6;" style-active="transform:translateY(1px);">
               Enter clite
               <span style="width:0; height:0; border-top:7px solid transparent; border-bottom:7px solid transparent; border-left:12px solid #fff;"></span>
             </button>
@@ -225,7 +225,7 @@ class Component extends DCLogic {
       isDone:  s.step === 'done',
       email: s.email,
       emailError: s.emailError,
-      emailBorder: s.emailError ? '#E23B2C' : (s.email ? '#E23B2C' : 'rgba(255,255,255,.14)'),
+      emailBorder: s.emailError ? '#E23B2C' : (s.email ? '#2F57D6' : 'rgba(255,255,255,.14)'),
       onEmail: (e) => this.setState({ email: e.target.value, emailError: '' }),
       onEmailKey: (e) => { if (e.key === 'Enter') this.sendLink(); },
       sendLink: () => this.sendLink(),
