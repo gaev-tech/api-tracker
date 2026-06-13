@@ -14,7 +14,7 @@
 | `DEPLOY_HOST` | `91.218.114.168` |
 | `DEPLOY_USER` | Имя SSH-пользователя на прод-сервере |
 | `POSTGRES_PASSWORD` | Случайный пароль (32+ символа). Используется внутри compose-сети. |
-| `PUBLIC_REPO_TOKEN` | Personal Access Token с правом `contents:write` в `gaev-tech/cli-tracker` (для release.yml; создаётся в M1 при первом релизе). |
+| `PUBLIC_REPO_TOKEN` | Fine-grained PAT, scope только `gaev-tech/cli-tracker`, permissions: `Contents` → `Read and write`. Создаётся в [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new), выбрать "Only select repositories" → `gaev-tech/cli-tracker`. **Не использовать токены с broader scope** — это security-anti-pattern. |
 | `PYPI_TOKEN` | API-token на pypi.org (для release.yml publish-pypi; включается в M4). |
 | `NPM_TOKEN` | npmjs.com access-token (для release.yml publish-npm; включается в M4). |
 | `APT_GPG_KEY` | Приватный GPG-ключ для подписи .deb (для release.yml publish-apt; включается в M4). |
