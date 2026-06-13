@@ -46,12 +46,13 @@ for domain in "${DOMAINS[@]}"; do
   fi
   echo "### $domain: создаём dummy-сертификат"
   sudo mkdir -p "$cert_dir"
-  sudo docker run --rm -v "$CERTBOT_DATA:/etc/letsencrypt" \
+  sudo docker run --rm --entrypoint sh -v "$CERTBOT_DATA:/etc/letsencrypt" \
     certbot/certbot:latest \
-    sh -c "openssl req -x509 -nodes -newkey rsa:$RSA_KEY_SIZE -days 1 \
-      -keyout '/etc/letsencrypt/live/$domain/privkey.pem' \
-      -out '/etc/letsencrypt/live/$domain/fullchain.pem' \
-      -subj '/CN=localhost'"
+    -c "apk add --no-cache openssl >/dev/null 2>&1 || true; \
+        openssl req -x509 -nodes -newkey rsa:$RSA_KEY_SIZE -days 1 \
+          -keyout '/etc/letsencrypt/live/$domain/privkey.pem' \
+          -out '/etc/letsencrypt/live/$domain/fullchain.pem' \
+          -subj '/CN=localhost'"
 done
 
 # 3. Поднять nginx с dummy.
