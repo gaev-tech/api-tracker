@@ -35,15 +35,11 @@ _TASK_PERMS_SET: set[str] = set(ALL_TASK_PERMS)
 
 
 async def _user_team_ids(session: AsyncSession, user_id: UUID) -> list[UUID]:
-    result = await session.execute(
-        select(TeamMember.team_id).where(TeamMember.user_id == user_id)
-    )
+    result = await session.execute(select(TeamMember.team_id).where(TeamMember.user_id == user_id))
     return list(result.scalars().all())
 
 
-async def effective_task_perms(
-    session: AsyncSession, *, user: User, task_id: UUID
-) -> set[str]:
+async def effective_task_perms(session: AsyncSession, *, user: User, task_id: UUID) -> set[str]:
     """Возвращает множество перм-флагов, действующих у user на task = union(A, B).
 
     В AUTH_MODE=disabled SOLO_USER → все task-perms.
