@@ -1,14 +1,16 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from importlib.metadata import version as _pkg_version
 
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from auth_service import __version__
 from auth_service.bootstrap import run_migrations
 from auth_service.db import dispose_engine
 from auth_service.routers.cli import router as cli_router
 from auth_service.routers.magic import router as magic_router
+
+VERSION = _pkg_version("auth-service")
 
 
 class HealthResponse(BaseModel):
@@ -29,7 +31,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 def create_app(*, with_lifespan: bool = True) -> FastAPI:
     app = FastAPI(
         title="api-tracker auth-service",
-        version=__version__,
+        version=VERSION,
         docs_url="/docs",
         openapi_url="/openapi.json",
         lifespan=lifespan if with_lifespan else None,
@@ -37,7 +39,7 @@ def create_app(*, with_lifespan: bool = True) -> FastAPI:
 
     @app.get("/healthz", response_model=HealthResponse, tags=["meta"])
     async def healthz() -> HealthResponse:
-        return HealthResponse(status="ok", version=__version__)
+        return HealthResponse(status="ok", version=VERSION)
 
     app.include_router(magic_router)
     app.include_router(cli_router)

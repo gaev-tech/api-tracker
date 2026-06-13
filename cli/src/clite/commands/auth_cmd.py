@@ -87,7 +87,7 @@ def login(
 
 @app.command("logout")
 def logout() -> None:
-    """Удалить локальные credentials. Серверная сессия остаётся (revoke придёт в Post-MVP)."""
+    """Удалить локальные credentials. Серверная сессия остаётся (revoke — Post-MVP)."""
     if delete_credentials():
         print("✓ Logged out (local credentials удалены).", file=sys.stderr)
     else:

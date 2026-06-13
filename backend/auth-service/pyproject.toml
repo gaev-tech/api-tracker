@@ -17,6 +17,7 @@ dependencies = [
   "cryptography>=43.0.0",
   "grpcio>=1.68.0",
   "protobuf>=5.28.0",
+  "loguru>=0.7.2",
 ]
 
 [project.optional-dependencies]

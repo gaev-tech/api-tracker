@@ -31,9 +31,13 @@ class CannotGrantAboveSelf(TeamError):
 # --- helpers ---
 
 
-async def _get_member(session: AsyncSession, team_id: UUID, user_id: UUID) -> TeamMember | None:
+async def _get_member(
+    session: AsyncSession, team_id: UUID, user_id: UUID
+) -> TeamMember | None:
     result = await session.execute(
-        select(TeamMember).where(TeamMember.team_id == team_id, TeamMember.user_id == user_id)
+        select(TeamMember).where(
+            TeamMember.team_id == team_id, TeamMember.user_id == user_id
+        )
     )
     return result.scalar_one_or_none()
 
@@ -163,7 +167,9 @@ async def set_member_permissions(
     stmt = (
         pg_insert(TeamMember)
         .values(team_id=team.id, user_id=target_user_id, perms=perms)
-        .on_conflict_do_update(index_elements=["team_id", "user_id"], set_={"perms": perms})
+        .on_conflict_do_update(
+            index_elements=["team_id", "user_id"], set_={"perms": perms}
+        )
         .returning(TeamMember)
     )
     result = await session.execute(stmt)
@@ -190,7 +196,9 @@ def _check_within_self(target_perms: list[str], own_perms: list[str]) -> None:
 
 async def list_members(session: AsyncSession, *, team_id: UUID) -> list[TeamMember]:
     result = await session.execute(
-        select(TeamMember).where(TeamMember.team_id == team_id).order_by(TeamMember.user_id)
+        select(TeamMember)
+        .where(TeamMember.team_id == team_id)
+        .order_by(TeamMember.user_id)
     )
     return list(result.scalars().all())
 

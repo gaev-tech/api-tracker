@@ -11,7 +11,15 @@ from uuid import UUID
 from sqlalchemy import ColumnElement, and_, false, or_
 from sqlalchemy.sql.elements import ColumnClause
 
-from tasks_service.rsql.parser import And, Comparison, Node, Op, Or, RSQLError, parse_rsql
+from tasks_service.rsql.parser import (
+    And,
+    Comparison,
+    Node,
+    Op,
+    Or,
+    RSQLError,
+    parse_rsql,
+)
 
 type ValueCoercer = Callable[[object], object]
 
@@ -137,7 +145,9 @@ def _build_comparison(
     raise RSQLError(f"unknown operator {comp.op}")
 
 
-def _build(node: Node, specs: dict[str, FieldSpec], ctx: RSQLContext) -> ColumnElement[bool]:
+def _build(
+    node: Node, specs: dict[str, FieldSpec], ctx: RSQLContext
+) -> ColumnElement[bool]:
     if isinstance(node, Comparison):
         return _build_comparison(node, specs, ctx)
     if isinstance(node, And):

@@ -83,7 +83,7 @@ async def solo_user(session: AsyncSession) -> User:
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def app(engine: AsyncEngine, solo_user: User) -> AsyncIterator[FastAPI]:
-    # Lifespan не нужен — миграции не запускаем, схему создали через metadata.create_all.
+    # Lifespan не нужен — миграции не запускаем, схему через metadata.create_all.
     application = create_app(with_lifespan=False)
 
     sm = async_sessionmaker(engine, expire_on_commit=False)
@@ -105,7 +105,7 @@ async def app(engine: AsyncEngine, solo_user: User) -> AsyncIterator[FastAPI]:
 async def client(
     app: FastAPI, solo_user: User, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[httpx.AsyncClient]:
-    # Подменяем email SOLO_USER в settings, чтобы get_current_user находил тестового user.
+    # Подменяем email SOLO_USER в settings, чтобы get_current_user нашёл test user.
     from tasks_service.config import settings
 
     monkeypatch.setattr(settings, "solo_user_email", solo_user.email)

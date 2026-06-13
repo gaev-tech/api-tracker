@@ -86,7 +86,9 @@ async def update_task(
     user: CurrentUserDep,
 ) -> TaskRead:
     try:
-        item = await tasks.update_task(session, current_user=user, task_id=task_id, patch=payload)
+        item = await tasks.update_task(
+            session, current_user=user, task_id=task_id, patch=payload
+        )
     except TaskNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return TaskRead.model_validate(item)
@@ -147,7 +149,9 @@ async def bulk_create(
 
 
 @router.post(
-    "/tasks/batch-create", response_model=BatchCreateResult, status_code=status.HTTP_201_CREATED
+    "/tasks/batch-create",
+    response_model=BatchCreateResult,
+    status_code=status.HTTP_201_CREATED,
 )
 async def batch_create(
     payload: BulkCreateRequest,
@@ -173,11 +177,15 @@ async def list_history(
     if task_id is None and user_email is None:
         raise HTTPException(status_code=400, detail="task_id or user_id is required")
     if task_id is not None and user_email is not None:
-        raise HTTPException(status_code=400, detail="provide only one of task_id or user_id")
+        raise HTTPException(
+            status_code=400, detail="provide only one of task_id or user_id"
+        )
 
     if task_id is not None:
         try:
-            items, next_cursor = await history.list_history_for_task(session, task_id, cursor)
+            items, next_cursor = await history.list_history_for_task(
+                session, task_id, cursor
+            )
         except CursorError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         return HistoryPage(

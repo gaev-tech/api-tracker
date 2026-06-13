@@ -24,9 +24,13 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post(
-    "/magic/start", response_model=MagicStartResponse, status_code=status.HTTP_202_ACCEPTED
+    "/magic/start",
+    response_model=MagicStartResponse,
+    status_code=status.HTTP_202_ACCEPTED,
 )
-async def magic_start(payload: MagicStartRequest, session: SessionDep) -> MagicStartResponse:
+async def magic_start(
+    payload: MagicStartRequest, session: SessionDep
+) -> MagicStartResponse:
     """Создаёт magic-token и отправляет письмо на email пользователя."""
     email = str(payload.email).lower()
     token = await issue_magic_token(session, email=email, intent=payload.intent)
@@ -45,7 +49,9 @@ async def magic_verify(
 ) -> MagicVerifyResponse:
     """Верифицирует magic-token, создаёт пользователя если нет, выдаёт сессию."""
     try:
-        email = await verify_magic_token(session, token=payload.token, intent=payload.intent)
+        email = await verify_magic_token(
+            session, token=payload.token, intent=payload.intent
+        )
     except MagicTokenError as e:
         raise HTTPException(status_code=400, detail=f"invalid magic token: {e}") from e
     user = await get_or_create_user(session, email=email)

@@ -35,8 +35,10 @@ def run_migrations() -> None:
 
 
 async def ensure_solo_user(session: AsyncSession) -> UUID:
-    """SOLO_USER создаётся при первом старте в AUTH_MODE=disabled (architecture.md §4.1.3)."""
-    result = await session.execute(select(User).where(User.email == settings.solo_user_email))
+    """SOLO_USER создаётся при первом старте в AUTH_MODE=disabled (arch §4.1.3)."""
+    result = await session.execute(
+        select(User).where(User.email == settings.solo_user_email)
+    )
     user = result.scalar_one_or_none()
     if user is not None:
         return user.id

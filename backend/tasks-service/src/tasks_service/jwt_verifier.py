@@ -24,7 +24,9 @@ async def verify_access_token(token: str) -> dict[str, Any]:
     except jwt.InvalidSignatureError:
         key = await get_public_key(force_refresh=True)
         try:
-            return jwt.decode(token, key, algorithms=["RS256"], issuer=settings.jwt_issuer)
+            return jwt.decode(
+                token, key, algorithms=["RS256"], issuer=settings.jwt_issuer
+            )
         except jwt.PyJWTError as e:
             raise JWTError(str(e)) from e
     except jwt.PyJWTError as e:

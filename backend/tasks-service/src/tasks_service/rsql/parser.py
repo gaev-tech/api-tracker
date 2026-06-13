@@ -58,7 +58,7 @@ class _Parser:
         self._skip_ws()
         if self.pos != len(self.source):
             raise RSQLError(
-                f"unexpected character at position {self.pos}: {self.source[self.pos]!r}"
+                f"unexpected char at pos {self.pos}: {self.source[self.pos]!r}"
             )
         return node
 

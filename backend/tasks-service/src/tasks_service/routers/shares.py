@@ -56,7 +56,9 @@ async def _read_shares(session: SessionDep, task_id: UUID) -> TaskSharesRead:
         team_name_by_id = {t.id: t.name for t in team_rows.scalars().all()}
     return TaskSharesRead(
         user_shares=[
-            TaskShareUserRead(user_email=user_email_by_id.get(s.user_id, ""), perms=list(s.perms))
+            TaskShareUserRead(
+                user_email=user_email_by_id.get(s.user_id, ""), perms=list(s.perms)
+            )
             for s in u_shares
         ],
         team_shares=[
@@ -106,7 +108,9 @@ async def put_user_share(
 
 
 @router.delete("/users/me", response_model=TaskSharesRead)
-async def self_revoke(task_id: UUID, session: SessionDep, user: CurrentUserDep) -> TaskSharesRead:
+async def self_revoke(
+    task_id: UUID, session: SessionDep, user: CurrentUserDep
+) -> TaskSharesRead:
     """Self-revoke (PRD §7.8.1)."""
     try:
         await set_user_share(

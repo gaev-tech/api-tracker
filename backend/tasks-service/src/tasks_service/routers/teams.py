@@ -46,10 +46,14 @@ def _handle_team_error(e: Exception) -> None:
 async def _team_to_read(session: SessionDep, team_id: UUID) -> TeamRead:
     from tasks_service.models import Team
 
-    team_row = (await session.execute(select(Team).where(Team.id == team_id))).scalar_one()
+    team_row = (
+        await session.execute(select(Team).where(Team.id == team_id))
+    ).scalar_one()
     members = await list_members(session, team_id=team_id)
     if not members:
-        return TeamRead(id=team_row.id, name=team_row.name, created_at=team_row.created_at)
+        return TeamRead(
+            id=team_row.id, name=team_row.name, created_at=team_row.created_at
+        )
     user_ids = [m.user_id for m in members]
     user_rows = await session.execute(select(User).where(User.id.in_(user_ids)))
     id_to_email = {u.id: u.email for u in user_rows.scalars().all()}
@@ -58,14 +62,18 @@ async def _team_to_read(session: SessionDep, team_id: UUID) -> TeamRead:
         name=team_row.name,
         created_at=team_row.created_at,
         members=[
-            TeamMemberRead(user_email=id_to_email.get(m.user_id, ""), perms=list(m.perms))
+            TeamMemberRead(
+                user_email=id_to_email.get(m.user_id, ""), perms=list(m.perms)
+            )
             for m in members
         ],
     )
 
 
 @router.post("", response_model=TeamRead, status_code=status.HTTP_201_CREATED)
-async def create(payload: TeamCreateRequest, session: SessionDep, user: CurrentUserDep) -> TeamRead:
+async def create(
+    payload: TeamCreateRequest, session: SessionDep, user: CurrentUserDep
+) -> TeamRead:
     try:
         team = await create_team(session, creator=user, name=payload.name)
     except TeamError as e:
@@ -135,7 +143,9 @@ async def set_member(
 
 
 @router.delete("/{team_id}/members/me", response_model=TeamRead | None)
-async def leave(team_id: UUID, session: SessionDep, user: CurrentUserDep) -> TeamRead | None:
+async def leave(
+    team_id: UUID, session: SessionDep, user: CurrentUserDep
+) -> TeamRead | None:
     """Self-revoke (PRD §7.8.2). Всегда доступно текущему пользователю."""
     try:
         await set_member_permissions(
@@ -147,7 +157,9 @@ async def leave(team_id: UUID, session: SessionDep, user: CurrentUserDep) -> Tea
     # После leave команда может быть удалена (последний участник); вернём 204-like.
     from tasks_service.models import Team
 
-    team = (await session.execute(select(Team).where(Team.id == team_id))).scalar_one_or_none()
+    team = (
+        await session.execute(select(Team).where(Team.id == team_id))
+    ).scalar_one_or_none()
     if team is None:
         return None
     return await _team_to_read(session, team_id)
@@ -163,7 +175,9 @@ async def list_team_members(
         _handle_team_error(e)
         raise
     members = await list_members(session, team_id=team_id)
-    user_rows = await session.execute(select(User).where(User.id.in_([m.user_id for m in members])))
+    user_rows = await session.execute(
+        select(User).where(User.id.in_([m.user_id for m in members]))
+    )
     id_to_email = {u.id: u.email for u in user_rows.scalars().all()}
     return [
         TeamMemberRead(user_email=id_to_email.get(m.user_id, ""), perms=list(m.perms))

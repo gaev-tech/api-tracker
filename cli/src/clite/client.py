@@ -11,7 +11,9 @@ from clite.config import Config
 
 
 class APIError(Exception):
-    def __init__(self, status_code: int, message: str, detail: str | None = None) -> None:
+    def __init__(
+        self, status_code: int, message: str, detail: str | None = None
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.detail = detail
@@ -38,7 +40,9 @@ class Client:
     def __exit__(self, *_: object) -> None:
         self.close()
 
-    def request(self, method: str, path: str, **kwargs: object) -> dict[str, Any] | list[Any]:
+    def request(
+        self, method: str, path: str, **kwargs: object
+    ) -> dict[str, Any] | list[Any]:
         try:
             response = self._client.request(method, path, **kwargs)  # type: ignore[arg-type]
         except httpx.HTTPError as e:
@@ -65,7 +69,9 @@ class Client:
         except ValueError as e:
             raise APIError(response.status_code, f"invalid JSON response: {e}") from e
 
-    def get(self, path: str, params: dict[str, object] | None = None) -> dict[str, Any] | list[Any]:
+    def get(
+        self, path: str, params: dict[str, object] | None = None
+    ) -> dict[str, Any] | list[Any]:
         return self.request("GET", path, params=params)
 
     def post(
@@ -76,7 +82,9 @@ class Client:
     ) -> dict[str, Any] | list[Any]:
         return self.request("POST", path, json=json, params=params)
 
-    def patch(self, path: str, json: dict[str, object] | None = None) -> dict[str, Any] | list[Any]:
+    def patch(
+        self, path: str, json: dict[str, object] | None = None
+    ) -> dict[str, Any] | list[Any]:
         return self.request("PATCH", path, json=json)
 
 

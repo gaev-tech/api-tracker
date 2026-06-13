@@ -44,7 +44,9 @@ async def issue_cli_code(
 async def _get_or_create_state(
     session: AsyncSession, state: str, code_challenge: str
 ) -> CliAuthCode:
-    result = await session.execute(select(CliAuthCode).where(CliAuthCode.state == state))
+    result = await session.execute(
+        select(CliAuthCode).where(CliAuthCode.state == state)
+    )
     existing = result.scalar_one_or_none()
     if existing is not None:
         if existing.code_used_at is not None:
@@ -79,7 +81,9 @@ async def exchange_cli_code(
     )
 
     code_h = hash_token(code)
-    result = await session.execute(select(CliAuthCode).where(CliAuthCode.code_hash == code_h))
+    result = await session.execute(
+        select(CliAuthCode).where(CliAuthCode.code_hash == code_h)
+    )
     record = result.scalar_one_or_none()
     if record is None:
         raise HandoffError("code not found")
@@ -107,7 +111,8 @@ async def start_device_flow(session: AsyncSession) -> dict[str, object]:
     record = DeviceCode(
         device_code=device_plain,
         user_code=user_code,
-        expires_at=datetime.now(UTC) + timedelta(seconds=settings.device_code_ttl_seconds),
+        expires_at=datetime.now(UTC)
+        + timedelta(seconds=settings.device_code_ttl_seconds),
     )
     session.add(record)
     await session.flush()
@@ -120,9 +125,13 @@ async def start_device_flow(session: AsyncSession) -> dict[str, object]:
     }
 
 
-async def approve_device(session: AsyncSession, *, user_code: str, user_id: UUID) -> None:
+async def approve_device(
+    session: AsyncSession, *, user_code: str, user_id: UUID
+) -> None:
     """Помечает device_code как approved (вызывается из auth-client под Bearer)."""
-    result = await session.execute(select(DeviceCode).where(DeviceCode.user_code == user_code))
+    result = await session.execute(
+        select(DeviceCode).where(DeviceCode.user_code == user_code)
+    )
     record = result.scalar_one_or_none()
     if record is None:
         raise HandoffError("user_code not found")
@@ -137,7 +146,9 @@ async def approve_device(session: AsyncSession, *, user_code: str, user_id: UUID
 
 async def poll_device(session: AsyncSession, *, device_code: str) -> UUID:
     """Если device-code approved — возвращает user_id; иначе raise."""
-    result = await session.execute(select(DeviceCode).where(DeviceCode.device_code == device_code))
+    result = await session.execute(
+        select(DeviceCode).where(DeviceCode.device_code == device_code)
+    )
     record = result.scalar_one_or_none()
     if record is None:
         raise HandoffError("device_code not found")

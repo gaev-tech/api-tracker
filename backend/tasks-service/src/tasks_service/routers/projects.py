@@ -47,7 +47,9 @@ def _handle_error(e: Exception) -> None:
 
 
 async def _to_read(session: SessionDep, project_id: UUID) -> ProjectRead:
-    project = (await session.execute(select(Project).where(Project.id == project_id))).scalar_one()
+    project = (
+        await session.execute(select(Project).where(Project.id == project_id))
+    ).scalar_one()
     u_members = await list_user_members(session, project_id=project_id)
     t_members = await list_team_members(session, project_id=project_id)
     task_ids = await list_project_tasks(session, project_id=project_id)
@@ -108,19 +110,25 @@ async def list_projects(session: SessionDep, user: CurrentUserDep) -> list[Proje
     from tasks_service.models import ProjectUserMember
 
     rows = await session.execute(
-        sql_select(ProjectUserMember.project_id).where(ProjectUserMember.user_id == user.id)
+        sql_select(ProjectUserMember.project_id).where(
+            ProjectUserMember.user_id == user.id
+        )
     )
     project_ids = list(rows.scalars().all())
     if not project_ids:
         return []
     proj_rows = await session.execute(
-        sql_select(Project).where(Project.id.in_(project_ids)).order_by(Project.created_at)
+        sql_select(Project)
+        .where(Project.id.in_(project_ids))
+        .order_by(Project.created_at)
     )
     return [await _to_read(session, p.id) for p in proj_rows.scalars().all()]
 
 
 @router.get("/{project_id}", response_model=ProjectRead)
-async def get(project_id: UUID, session: SessionDep, user: CurrentUserDep) -> ProjectRead:
+async def get(
+    project_id: UUID, session: SessionDep, user: CurrentUserDep
+) -> ProjectRead:
     try:
         await get_project(session, current=user, project_id=project_id)
     except ProjectError as e:
@@ -137,7 +145,9 @@ async def patch_name(
     user: CurrentUserDep,
 ) -> ProjectRead:
     try:
-        await update_name(session, current=user, project_id=project_id, new_name=payload.name)
+        await update_name(
+            session, current=user, project_id=project_id, new_name=payload.name
+        )
     except ProjectError as e:
         _handle_error(e)
         raise
@@ -203,7 +213,9 @@ async def put_team_member(
 
 
 @router.delete("/{project_id}/members/me", response_model=ProjectRead | None)
-async def leave(project_id: UUID, session: SessionDep, user: CurrentUserDep) -> ProjectRead | None:
+async def leave(
+    project_id: UUID, session: SessionDep, user: CurrentUserDep
+) -> ProjectRead | None:
     """Self-revoke (PRD §7.8.3)."""
     try:
         await set_user_member(
@@ -232,7 +244,9 @@ async def add_task(
     user: CurrentUserDep,
 ) -> None:
     try:
-        await add_task_to_project(session, current=user, project_id=project_id, task_id=task_id)
+        await add_task_to_project(
+            session, current=user, project_id=project_id, task_id=task_id
+        )
     except ProjectError as e:
         _handle_error(e)
         raise

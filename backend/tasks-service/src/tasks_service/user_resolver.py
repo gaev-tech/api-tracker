@@ -39,7 +39,9 @@ async def resolve_email_to_user_id_via_grpc(email: str) -> UUID | None:
     """gRPC GetUserByEmail — возвращает UUID или None если NOT_FOUND."""
     stub = get_auth_stub()
     try:
-        response = await stub.GetUserByEmail(auth_pb2.GetUserByEmailRequest(email=email.lower()))
+        response = await stub.GetUserByEmail(
+            auth_pb2.GetUserByEmailRequest(email=email.lower())
+        )
     except grpc.RpcError as e:
         if hasattr(e, "code") and e.code() == grpc.StatusCode.NOT_FOUND:
             return None

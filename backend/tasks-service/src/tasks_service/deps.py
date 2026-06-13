@@ -30,7 +30,9 @@ SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
 async def _get_user_from_solo_mode(session: AsyncSession, request: Request) -> User:
-    result = await session.execute(select(User).where(User.email == settings.solo_user_email))
+    result = await session.execute(
+        select(User).where(User.email == settings.solo_user_email)
+    )
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=500, detail="solo user not bootstrapped")
@@ -80,7 +82,9 @@ async def get_current_user(
         return await _get_user_from_solo_mode(session, request)
     if settings.auth_mode == "jwt":
         return await _get_user_from_jwt(session, request)
-    raise HTTPException(status_code=500, detail=f"unknown AUTH_MODE: {settings.auth_mode}")
+    raise HTTPException(
+        status_code=500, detail=f"unknown AUTH_MODE: {settings.auth_mode}"
+    )
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]

@@ -27,7 +27,9 @@ def hash_token(token: str) -> str:
 def generate_user_code() -> str:
     """6-значный человекочитаемый код типа ABCD-1234 для device-flow."""
     alphabet = "ABCDEFGHJKLMNPQRSTVWXYZ23456789"  # без O,0,I,1,U
-    return "-".join("".join(secrets.choice(alphabet) for _ in range(4)) for _ in range(2))
+    return "-".join(
+        "".join(secrets.choice(alphabet) for _ in range(4)) for _ in range(2)
+    )
 
 
 def _generate_ephemeral_keypair() -> tuple[bytes, bytes]:

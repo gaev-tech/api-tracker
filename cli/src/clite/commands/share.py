@@ -70,7 +70,9 @@ def user_set(
 @user_app.command("remove")
 def user_remove(
     task_id: Annotated[UUID, typer.Argument()],
-    email: Annotated[str, typer.Option("--email", "-e", help="Email или 'me' для self-revoke")],
+    email: Annotated[
+        str, typer.Option("--email", "-e", help="Email или 'me' для self-revoke")
+    ],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     """Убрать пользователя из shares (PRD §7.8.1 для 'me')."""

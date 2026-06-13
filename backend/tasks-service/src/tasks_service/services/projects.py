@@ -95,7 +95,9 @@ async def create_project(session: AsyncSession, *, creator: User, name: str) -> 
     session.add(project)
     await session.flush()
     full_perms = sorted(_VALID_PROJECT_PERMS)
-    session.add(ProjectUserMember(project_id=project.id, user_id=creator.id, perms=full_perms))
+    session.add(
+        ProjectUserMember(project_id=project.id, user_id=creator.id, perms=full_perms)
+    )
     await session.flush()
     await record_audit(
         session,
@@ -108,7 +110,9 @@ async def create_project(session: AsyncSession, *, creator: User, name: str) -> 
     return project
 
 
-async def get_project(session: AsyncSession, *, current: User, project_id: UUID) -> Project:
+async def get_project(
+    session: AsyncSession, *, current: User, project_id: UUID
+) -> Project:
     project = await _get_project(session, project_id)
     member = await _get_user_member(session, project.id, current.id)
     if member is None or not member.perms:
@@ -180,7 +184,9 @@ async def set_user_member(
     stmt = (
         pg_insert(ProjectUserMember)
         .values(project_id=project.id, user_id=target_user_id, perms=perms)
-        .on_conflict_do_update(index_elements=["project_id", "user_id"], set_={"perms": perms})
+        .on_conflict_do_update(
+            index_elements=["project_id", "user_id"], set_={"perms": perms}
+        )
         .returning(ProjectUserMember)
     )
     result = await session.execute(stmt)
@@ -246,7 +252,9 @@ async def set_team_member(
     stmt = (
         pg_insert(ProjectTeamMember)
         .values(project_id=project.id, team_id=target_team_id, perms=perms)
-        .on_conflict_do_update(index_elements=["project_id", "team_id"], set_={"perms": perms})
+        .on_conflict_do_update(
+            index_elements=["project_id", "team_id"], set_={"perms": perms}
+        )
         .returning(ProjectTeamMember)
     )
     result = await session.execute(stmt)
@@ -319,7 +327,9 @@ async def remove_task_from_project(
     )
 
 
-async def list_user_members(session: AsyncSession, *, project_id: UUID) -> list[ProjectUserMember]:
+async def list_user_members(
+    session: AsyncSession, *, project_id: UUID
+) -> list[ProjectUserMember]:
     result = await session.execute(
         select(ProjectUserMember)
         .where(ProjectUserMember.project_id == project_id)
@@ -328,7 +338,9 @@ async def list_user_members(session: AsyncSession, *, project_id: UUID) -> list[
     return list(result.scalars().all())
 
 
-async def list_team_members(session: AsyncSession, *, project_id: UUID) -> list[ProjectTeamMember]:
+async def list_team_members(
+    session: AsyncSession, *, project_id: UUID
+) -> list[ProjectTeamMember]:
     result = await session.execute(
         select(ProjectTeamMember)
         .where(ProjectTeamMember.project_id == project_id)
@@ -349,10 +361,14 @@ async def _maybe_cascade_delete(session: AsyncSession, project: Project) -> None
     (PRD §6.1.6).
     """
     users_left = await session.execute(
-        select(ProjectUserMember.user_id).where(ProjectUserMember.project_id == project.id).limit(1)
+        select(ProjectUserMember.user_id)
+        .where(ProjectUserMember.project_id == project.id)
+        .limit(1)
     )
     teams_left = await session.execute(
-        select(ProjectTeamMember.team_id).where(ProjectTeamMember.project_id == project.id).limit(1)
+        select(ProjectTeamMember.team_id)
+        .where(ProjectTeamMember.project_id == project.id)
+        .limit(1)
     )
     if users_left.first() is None and teams_left.first() is None:
         await session.delete(project)

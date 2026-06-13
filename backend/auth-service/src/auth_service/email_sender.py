@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import smtplib
 from email.message import EmailMessage
 
-from auth_service.config import settings
+from loguru import logger
 
-logger = logging.getLogger(__name__)
+from auth_service.config import settings
 
 
 def _send_blocking(to: str, subject: str, body: str) -> None:
@@ -17,7 +16,8 @@ def _send_blocking(to: str, subject: str, body: str) -> None:
         # Dev-fallback: вывести письмо в лог на WARNING-уровне,
         # чтобы было видно при стандартной uvicorn-конфигурации.
         logger.warning(
-            "SMTP_HOST not set — email NOT sent. to=%s subject=%r\n--- body ---\n%s\n--- end ---",
+            "SMTP_HOST not set — email NOT sent. to={} subject={!r}\n"
+            "--- body ---\n{}\n--- end ---",
             to,
             subject,
             body,

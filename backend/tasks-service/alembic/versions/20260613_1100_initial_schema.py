@@ -32,7 +32,12 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("description_md", sa.Text(), nullable=False, server_default=""),
-        sa.Column("labels", postgresql.ARRAY(sa.String(100)), nullable=False, server_default="{}"),
+        sa.Column(
+            "labels",
+            postgresql.ARRAY(sa.String(100)),
+            nullable=False,
+            server_default="{}",
+        ),
         sa.Column("status", sa.String(20), nullable=False, server_default="open"),
         sa.Column(
             "assignee_id",

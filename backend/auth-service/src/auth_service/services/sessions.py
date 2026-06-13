@@ -18,14 +18,15 @@ async def create_session(
     label: str = "",
     user_agent: str = "",
 ) -> tuple[str, str, int]:
-    """Создаёт refresh+session, подписывает access. Возвращает (access, refresh, ttl_sec)."""
+    """Создаёт refresh+session, подписывает access. Returns (access, refresh, ttl)."""
     refresh_plain = generate_opaque_token(32)
     refresh = RefreshToken(
         token_hash=hash_token(refresh_plain),
         user_id=user.id,
         kind=kind,
         label=label,
-        expires_at=datetime.now(UTC) + timedelta(seconds=settings.refresh_token_ttl_seconds),
+        expires_at=datetime.now(UTC)
+        + timedelta(seconds=settings.refresh_token_ttl_seconds),
     )
     session.add(refresh)
     await session.flush()

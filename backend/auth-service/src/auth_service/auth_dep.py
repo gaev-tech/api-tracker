@@ -31,10 +31,14 @@ async def get_authenticated_user(request: Request, session: SessionDep) -> User:
         ) from e
     sub = claims.get("sub")
     if not sub:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="missing sub claim")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="missing sub claim"
+        )
     user = await _find_user(session, sub)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="user not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="user not found"
+        )
     return user
 
 

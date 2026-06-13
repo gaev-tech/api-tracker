@@ -133,7 +133,9 @@ async def set_user_share(
     stmt = (
         pg_insert(TaskUserShare)
         .values(task_id=task.id, user_id=target_user_id, perms=perms)
-        .on_conflict_do_update(index_elements=["task_id", "user_id"], set_={"perms": perms})
+        .on_conflict_do_update(
+            index_elements=["task_id", "user_id"], set_={"perms": perms}
+        )
     )
     await session.execute(stmt)
     await session.flush()
@@ -164,7 +166,9 @@ async def set_team_share(
     _check_within_self(perms, own)
 
     if perms:
-        if not await is_team_member(session, user_id=current.id, team_id=target_team_id):
+        if not await is_team_member(
+            session, user_id=current.id, team_id=target_team_id
+        ):
             raise PermissionDenied("must be a member of the team to share with it")
 
     # Проверяем существование команды.
@@ -204,7 +208,9 @@ async def set_team_share(
     stmt = (
         pg_insert(TaskTeamShare)
         .values(task_id=task.id, team_id=target_team_id, perms=perms)
-        .on_conflict_do_update(index_elements=["task_id", "team_id"], set_={"perms": perms})
+        .on_conflict_do_update(
+            index_elements=["task_id", "team_id"], set_={"perms": perms}
+        )
     )
     await session.execute(stmt)
     await session.flush()
@@ -246,7 +252,9 @@ async def _maybe_cascade_delete_task(session: AsyncSession, task: Task) -> None:
         await session.flush()
 
 
-async def list_user_shares(session: AsyncSession, *, task_id: UUID) -> list[TaskUserShare]:
+async def list_user_shares(
+    session: AsyncSession, *, task_id: UUID
+) -> list[TaskUserShare]:
     result = await session.execute(
         select(TaskUserShare)
         .where(TaskUserShare.task_id == task_id)
@@ -255,7 +263,9 @@ async def list_user_shares(session: AsyncSession, *, task_id: UUID) -> list[Task
     return list(result.scalars().all())
 
 
-async def list_team_shares(session: AsyncSession, *, task_id: UUID) -> list[TaskTeamShare]:
+async def list_team_shares(
+    session: AsyncSession, *, task_id: UUID
+) -> list[TaskTeamShare]:
     result = await session.execute(
         select(TaskTeamShare)
         .where(TaskTeamShare.task_id == task_id)
@@ -264,7 +274,9 @@ async def list_team_shares(session: AsyncSession, *, task_id: UUID) -> list[Task
     return list(result.scalars().all())
 
 
-async def add_creator_share(session: AsyncSession, *, task_id: UUID, creator_id: UUID) -> None:
+async def add_creator_share(
+    session: AsyncSession, *, task_id: UUID, creator_id: UUID
+) -> None:
     """Имплицитный user-share при создании задачи — creator получает все task-perms.
 
     Обеспечивает anchor-rule (PRD §6.6) автоматически в случае, когда явных

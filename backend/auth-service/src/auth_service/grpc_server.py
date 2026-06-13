@@ -36,7 +36,9 @@ class AuthServiceServicer(auth_pb2_grpc.AuthServiceServicer):  # type: ignore[mi
         async with sm() as session:
             user = await get_user_by_email(session, request.email.lower())
         if user is None:
-            await context.abort(grpc.StatusCode.NOT_FOUND, f"user not found: {request.email}")
+            await context.abort(
+                grpc.StatusCode.NOT_FOUND, f"user not found: {request.email}"
+            )
             raise AssertionError("unreachable")  # для mypy после abort
         return auth_pb2.User(
             id=str(user.id), email=user.email, created_at=user.created_at.isoformat()

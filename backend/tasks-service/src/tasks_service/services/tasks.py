@@ -13,13 +13,13 @@ from sqlalchemy.orm import selectinload
 from tasks_service.cursor import CursorError, decode_cursor, encode_cursor
 from tasks_service.deps import resolve_email_to_user_id
 from tasks_service.models import Task, TaskBlocker, User
-from tasks_service.rsql import (
+from tasks_service.rsql.fields import (
     FieldSpec,
     FieldType,
     RSQLContext,
-    RSQLError,
     build_sqlalchemy_filter,
 )
+from tasks_service.rsql.parser import RSQLError
 from tasks_service.schemas import TaskCreate, TaskUpdate
 from tasks_service.services.audit import record_audit
 
@@ -55,7 +55,9 @@ async def _to_read_dict(
     session: AsyncSession, task: Task, assignee_email_cache: dict[UUID, str]
 ) -> dict[str, object]:
     if task.assignee_id not in assignee_email_cache:
-        result = await session.execute(select(User.email).where(User.id == task.assignee_id))
+        result = await session.execute(
+            select(User.email).where(User.id == task.assignee_id)
+        )
         email = result.scalar_one_or_none() or ""
         assignee_email_cache[task.assignee_id] = email
 
@@ -78,7 +80,9 @@ async def _resolve_email_sync(session: AsyncSession, email: str) -> UUID | None:
     return await resolve_email_to_user_id(session, email)
 
 
-async def _build_rsql_filter(session: AsyncSession, filter_str: str, current_email: str) -> object:
+async def _build_rsql_filter(
+    session: AsyncSession, filter_str: str, current_email: str
+) -> object:
     cache: dict[str, UUID | None] = {}
 
     def resolve(email: str) -> UUID | None:
@@ -102,7 +106,9 @@ async def _build_rsql_filter(session: AsyncSession, filter_str: str, current_ema
             )
         return resolved[email]
 
-    ctx = RSQLContext(current_user_email=current_email, resolve_email_to_user_id=sync_resolve)
+    ctx = RSQLContext(
+        current_user_email=current_email, resolve_email_to_user_id=sync_resolve
+    )
     return build_sqlalchemy_filter(filter_str, _task_field_specs(), ctx)
 
 
@@ -119,7 +125,11 @@ async def list_tasks(
 
     if limit < 1 or limit > MAX_LIMIT:
         raise ValueError(f"limit must be in 1..{MAX_LIMIT}")
-    stmt = select(Task).options(selectinload(Task.blockers)).order_by(Task.created_at, Task.id)
+    stmt = (
+        select(Task)
+        .options(selectinload(Task.blockers))
+        .order_by(Task.created_at, Task.id)
+    )
     if filter_str:
         try:
             where = await _build_rsql_filter(session, filter_str, current_user.email)
@@ -131,7 +141,9 @@ async def list_tasks(
             ts, item_id = decode_cursor(cursor)
         except CursorError:
             raise
-        stmt = stmt.where(or_(Task.created_at > ts, and_(Task.created_at == ts, Task.id > item_id)))
+        stmt = stmt.where(
+            or_(Task.created_at > ts, and_(Task.created_at == ts, Task.id > item_id))
+        )
     # Берём с запасом, чтобы после фильтрации видимости остался полный limit.
     stmt = stmt.limit((limit + 1) * 3 if limit < 100 else limit + 50)
     result = await session.execute(stmt)
@@ -147,7 +159,11 @@ async def list_tasks(
     items = visible_rows[:limit]
     cache: dict[UUID, str] = {}
     out = [await _to_read_dict(session, t, cache) for t in items]
-    next_cursor = encode_cursor(items[-1].created_at, items[-1].id) if has_next and items else None
+    next_cursor = (
+        encode_cursor(items[-1].created_at, items[-1].id)
+        if has_next and items
+        else None
+    )
     return out, next_cursor
 
 
@@ -172,7 +188,9 @@ async def get_task(
     return await _to_read_dict(session, task, cache)
 
 
-async def _verify_blockers_exist(session: AsyncSession, blocker_ids: Sequence[UUID]) -> None:
+async def _verify_blockers_exist(
+    session: AsyncSession, blocker_ids: Sequence[UUID]
+) -> None:
     if not blocker_ids:
         return
     result = await session.execute(select(Task.id).where(Task.id.in_(blocker_ids)))
@@ -308,7 +326,12 @@ async def _select_filtered_ids(
     session: AsyncSession, filter_str: str, current_email: str
 ) -> list[UUID]:
     where = await _build_rsql_filter(session, filter_str, current_email)
-    stmt = select(Task.id).where(where).order_by(Task.created_at, Task.id).limit(MAX_MATCHES + 1)  # type: ignore[arg-type]
+    stmt = (
+        select(Task.id)
+        .where(where)  # type: ignore[arg-type]
+        .order_by(Task.created_at, Task.id)
+        .limit(MAX_MATCHES + 1)
+    )
     result = await session.execute(stmt)
     ids = list(result.scalars().all())
     if len(ids) > MAX_MATCHES:
@@ -330,7 +353,9 @@ async def bulk_update(
         # Каждая задача — своя savepoint, чтобы ошибка одной не откатывала остальные.
         sp = await session.begin_nested()
         try:
-            stmt = select(Task).options(selectinload(Task.blockers)).where(Task.id == tid)
+            stmt = (
+                select(Task).options(selectinload(Task.blockers)).where(Task.id == tid)
+            )
             row = await session.execute(stmt)
             t = row.scalar_one_or_none()
             if t is None:
@@ -343,7 +368,9 @@ async def bulk_update(
             succeeded += 1
         except Exception as e:
             await sp.rollback()
-            results.append({"task_id": tid, "status": "validation_failed", "error": str(e)})
+            results.append(
+                {"task_id": tid, "status": "validation_failed", "error": str(e)}
+            )
     return results, len(ids), succeeded
 
 
@@ -380,7 +407,9 @@ async def bulk_create(
             results.append({"index": idx, "status": "ok", "task_id": t["id"]})
         except (TaskNotFound, ValueError, IntegrityError) as e:
             await sp.rollback()
-            results.append({"index": idx, "status": "validation_failed", "error": str(e)})
+            results.append(
+                {"index": idx, "status": "validation_failed", "error": str(e)}
+            )
     return results
 
 

@@ -1,4 +1,4 @@
-"""initial schema — users, magic_tokens, refresh_tokens, sessions, cli_auth_codes, device_codes
+"""initial schema — users, magic_tokens, refresh_tokens, sessions, cli/device codes
 
 Revision ID: 20260613_1200
 Revises:
@@ -37,7 +37,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index("ix_magic_tokens_email", "magic_tokens", ["email"])
-    op.create_index("ix_magic_tokens_email_expires", "magic_tokens", ["email", "expires_at"])
+    op.create_index(
+        "ix_magic_tokens_email_expires", "magic_tokens", ["email", "expires_at"]
+    )
 
     op.create_table(
         "refresh_tokens",
@@ -55,8 +57,12 @@ def upgrade() -> None:
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_refresh_tokens_token_hash", "refresh_tokens", ["token_hash"], unique=True)
-    op.create_index("ix_refresh_tokens_user_revoked", "refresh_tokens", ["user_id", "revoked_at"])
+    op.create_index(
+        "ix_refresh_tokens_token_hash", "refresh_tokens", ["token_hash"], unique=True
+    )
+    op.create_index(
+        "ix_refresh_tokens_user_revoked", "refresh_tokens", ["user_id", "revoked_at"]
+    )
 
     op.create_table(
         "sessions",
@@ -85,7 +91,9 @@ def upgrade() -> None:
         ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_cli_auth_codes_code_hash", "cli_auth_codes", ["code_hash"], unique=True)
+    op.create_index(
+        "ix_cli_auth_codes_code_hash", "cli_auth_codes", ["code_hash"], unique=True
+    )
 
     op.create_table(
         "device_codes",
@@ -101,7 +109,9 @@ def upgrade() -> None:
         sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_device_codes_user_code", "device_codes", ["user_code"], unique=True)
+    op.create_index(
+        "ix_device_codes_user_code", "device_codes", ["user_code"], unique=True
+    )
 
 
 def downgrade() -> None:

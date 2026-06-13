@@ -11,11 +11,15 @@ from tasks_service.services.perms import filter_visible_task_ids
 HISTORY_LIMIT = 50  # фиксированный лимит, architecture.md §10.4
 
 
-async def _hydrate_actors(session: AsyncSession, events: Sequence[AuditEvent]) -> dict[UUID, str]:
+async def _hydrate_actors(
+    session: AsyncSession, events: Sequence[AuditEvent]
+) -> dict[UUID, str]:
     actor_ids = {e.actor_user_id for e in events}
     if not actor_ids:
         return {}
-    result = await session.execute(select(User.id, User.email).where(User.id.in_(actor_ids)))
+    result = await session.execute(
+        select(User.id, User.email).where(User.id.in_(actor_ids))
+    )
     return {row.id: row.email for row in result.all()}
 
 
@@ -44,7 +48,10 @@ async def list_history_for_task(
     if cursor:
         ts, eid = decode_cursor(cursor)
         stmt = stmt.where(
-            or_(AuditEvent.created_at < ts, and_(AuditEvent.created_at == ts, AuditEvent.id < eid))
+            or_(
+                AuditEvent.created_at < ts,
+                and_(AuditEvent.created_at == ts, AuditEvent.id < eid),
+            )
         )
     stmt = stmt.limit(HISTORY_LIMIT + 1)
     result = await session.execute(stmt)
@@ -55,7 +62,11 @@ async def list_history_for_task(
     actor_emails = await _hydrate_actors(session, items)
 
     out = [_event_to_dict(e, actor_emails) for e in items]
-    next_cursor = encode_cursor(items[-1].created_at, items[-1].id) if has_next and items else None
+    next_cursor = (
+        encode_cursor(items[-1].created_at, items[-1].id)
+        if has_next and items
+        else None
+    )
     return out, next_cursor
 
 
@@ -85,7 +96,10 @@ async def list_history_for_user(
     if cursor:
         ts, eid = decode_cursor(cursor)
         stmt = stmt.where(
-            or_(AuditEvent.created_at < ts, and_(AuditEvent.created_at == ts, AuditEvent.id < eid))
+            or_(
+                AuditEvent.created_at < ts,
+                and_(AuditEvent.created_at == ts, AuditEvent.id < eid),
+            )
         )
     stmt = stmt.limit(base_limit)
     result = await session.execute(stmt)
@@ -113,5 +127,9 @@ async def list_history_for_user(
     items = visible[:HISTORY_LIMIT]
     actor_emails = await _hydrate_actors(session, items)
     out = [_event_to_dict(e, actor_emails) for e in items]
-    next_cursor = encode_cursor(items[-1].created_at, items[-1].id) if has_next and items else None
+    next_cursor = (
+        encode_cursor(items[-1].created_at, items[-1].id)
+        if has_next and items
+        else None
+    )
     return out, next_cursor

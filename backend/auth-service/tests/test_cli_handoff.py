@@ -32,9 +32,13 @@ def clear_email_log() -> None:
 async def _bootstrap_session(client: AsyncClient, email: str) -> dict[str, str]:
     """Создаёт пользователя через magic-link и возвращает access+refresh."""
     with patch("auth_service.routers.magic.send_email", new=_fake_send):
-        await client.post("/auth/magic/start", json={"email": email, "intent": "browser"})
+        await client.post(
+            "/auth/magic/start", json={"email": email, "intent": "browser"}
+        )
     token = _extract_token(_SENT_EMAILS[-1][2])
-    r = await client.post("/auth/magic/verify", json={"token": token, "intent": "browser"})
+    r = await client.post(
+        "/auth/magic/verify", json={"token": token, "intent": "browser"}
+    )
     return r.json()
 
 
@@ -52,7 +56,9 @@ def _make_pkce_pair() -> tuple[str, str]:
 
 
 async def test_cli_code_requires_bearer(client: AsyncClient) -> None:
-    r = await client.post("/auth/cli/code", json={"state": "S" * 16, "code_challenge": "C" * 32})
+    r = await client.post(
+        "/auth/cli/code", json={"state": "S" * 16, "code_challenge": "C" * 32}
+    )
     assert r.status_code == 401
 
 
@@ -69,7 +75,9 @@ async def test_cli_pkce_full_flow(client: AsyncClient) -> None:
     assert r.status_code == 200, r.text
     code = r.json()["code"]
 
-    r2 = await client.post("/auth/cli/exchange", json={"code": code, "code_verifier": verifier})
+    r2 = await client.post(
+        "/auth/cli/exchange", json={"code": code, "code_verifier": verifier}
+    )
     assert r2.status_code == 200, r2.text
     body = r2.json()
     assert body["access_token"] and body["refresh_token"]
@@ -89,7 +97,8 @@ async def test_cli_exchange_wrong_verifier(client: AsyncClient) -> None:
     ).json()["code"]
 
     r = await client.post(
-        "/auth/cli/exchange", json={"code": code, "code_verifier": "wrong-verifier-12345678"}
+        "/auth/cli/exchange",
+        json={"code": code, "code_verifier": "wrong-verifier-12345678"},
     )
     assert r.status_code == 400
 
@@ -106,8 +115,12 @@ async def test_cli_code_reused_state_used(client: AsyncClient) -> None:
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
         )
     ).json()["code"]
-    await client.post("/auth/cli/exchange", json={"code": code, "code_verifier": verifier})
-    r = await client.post("/auth/cli/exchange", json={"code": code, "code_verifier": verifier})
+    await client.post(
+        "/auth/cli/exchange", json={"code": code, "code_verifier": verifier}
+    )
+    r = await client.post(
+        "/auth/cli/exchange", json={"code": code, "code_verifier": verifier}
+    )
     assert r.status_code == 400
 
 
@@ -122,7 +135,9 @@ async def test_device_flow(client: AsyncClient) -> None:
     assert start["user_code"] and start["device_code"]
 
     # До approve poll возвращает 400 authorization_pending.
-    pending = await client.post("/auth/cli/device-poll", json={"device_code": start["device_code"]})
+    pending = await client.post(
+        "/auth/cli/device-poll", json={"device_code": start["device_code"]}
+    )
     assert pending.status_code == 400
     assert "authorization_pending" in pending.json()["detail"]
 
@@ -135,7 +150,9 @@ async def test_device_flow(client: AsyncClient) -> None:
     assert approve.status_code == 200
 
     # Теперь poll возвращает токены.
-    poll = await client.post("/auth/cli/device-poll", json={"device_code": start["device_code"]})
+    poll = await client.post(
+        "/auth/cli/device-poll", json={"device_code": start["device_code"]}
+    )
     assert poll.status_code == 200, poll.text
     assert poll.json()["access_token"]
 
@@ -145,12 +162,16 @@ async def test_device_flow(client: AsyncClient) -> None:
 
 async def test_refresh_rotates(client: AsyncClient) -> None:
     tokens = await _bootstrap_session(client, "refresh@example.com")
-    r = await client.post("/auth/cli/refresh", json={"refresh_token": tokens["refresh_token"]})
+    r = await client.post(
+        "/auth/cli/refresh", json={"refresh_token": tokens["refresh_token"]}
+    )
     assert r.status_code == 200
     new = r.json()
     assert new["refresh_token"] != tokens["refresh_token"]
     # Старый refresh больше не валиден.
-    r2 = await client.post("/auth/cli/refresh", json={"refresh_token": tokens["refresh_token"]})
+    r2 = await client.post(
+        "/auth/cli/refresh", json={"refresh_token": tokens["refresh_token"]}
+    )
     assert r2.status_code == 400
 
 

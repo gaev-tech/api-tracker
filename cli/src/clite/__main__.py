@@ -1,14 +1,17 @@
 """clite — entrypoint."""
 
+from importlib.metadata import version as _pkg_version
+
 import typer
 
-from clite import __version__
 from clite.commands import auth_cmd
 from clite.commands import history as history_cmd
 from clite.commands import project as project_cmd
 from clite.commands import share as share_cmd
 from clite.commands import task as task_cmd
 from clite.commands import team as team_cmd
+
+VERSION = _pkg_version("clite")
 
 app = typer.Typer(
     name="clite",
@@ -27,7 +30,7 @@ app.registered_commands.extend(auth_cmd.app.registered_commands)
 @app.command("version")
 def version() -> None:
     """Показать версию CLI."""
-    print(__version__)
+    print(VERSION)
 
 
 def main() -> None:

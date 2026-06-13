@@ -3,21 +3,21 @@ from uuid import uuid4
 import pytest
 
 from tasks_service.models import Task
-from tasks_service.rsql import (
+from tasks_service.rsql.fields import (
     FieldSpec,
     FieldType,
     RSQLContext,
-    RSQLError,
     build_sqlalchemy_filter,
-    parse_rsql,
 )
-from tasks_service.rsql.parser import And, Comparison, Or
+from tasks_service.rsql.parser import And, Comparison, Or, RSQLError, parse_rsql
 
 TASK_FIELDS = [
     FieldSpec(name="status", column=Task.status, field_type=FieldType.STRING),
     FieldSpec(name="title", column=Task.title, field_type=FieldType.STRING),
     FieldSpec(name="labels", column=Task.labels, field_type=FieldType.STRING_ARRAY),
-    FieldSpec(name="assignee", column=Task.assignee_id, field_type=FieldType.USER_EMAIL),
+    FieldSpec(
+        name="assignee", column=Task.assignee_id, field_type=FieldType.USER_EMAIL
+    ),
     FieldSpec(name="created_at", column=Task.created_at, field_type=FieldType.DATETIME),
 ]
 

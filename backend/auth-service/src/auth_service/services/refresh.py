@@ -19,7 +19,9 @@ async def rotate_refresh(
 ) -> tuple[str, str, int]:
     """Заменяет refresh-token на новый, возвращает (access, refresh, ttl)."""
     th = hash_token(refresh_plain)
-    result = await session.execute(select(RefreshToken).where(RefreshToken.token_hash == th))
+    result = await session.execute(
+        select(RefreshToken).where(RefreshToken.token_hash == th)
+    )
     token = result.scalar_one_or_none()
     if token is None:
         raise RefreshError("refresh token not found")

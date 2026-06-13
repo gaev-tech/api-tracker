@@ -50,14 +50,22 @@ def _parse_set_pairs(set_pairs: list[str]) -> dict[str, object]:
 
 @app.command("create")
 def create(
-    title: Annotated[str | None, typer.Option("--title", help="Название задачи")] = None,
+    title: Annotated[
+        str | None, typer.Option("--title", help="Название задачи")
+    ] = None,
     description: Annotated[str, typer.Option("--description", "-d")] = "",
-    label: Annotated[list[str], typer.Option("--label", help="Метка (повторно)")] = None,  # type: ignore[assignment]
-    status: Annotated[str, typer.Option("--status", help="open|done|archived")] = "open",
+    label: Annotated[
+        list[str], typer.Option("--label", help="Метка (повторно)")
+    ] = None,  # type: ignore[assignment]
+    status: Annotated[
+        str, typer.Option("--status", help="open|done|archived")
+    ] = "open",
     blocked_by: Annotated[
         list[str], typer.Option("--blocked-by", help="UUID блокирующих задач")
     ] = None,  # type: ignore[assignment]
-    stdin_json: Annotated[bool, typer.Option("--stdin", "-", help="Читать JSON из stdin")] = False,
+    stdin_json: Annotated[
+        bool, typer.Option("--stdin", "-", help="Читать JSON из stdin")
+    ] = False,
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     """Создать новую задачу. Минимум: --title."""
@@ -167,7 +175,9 @@ def update_task(
 @app.command("bulk-update")
 def bulk_update_cmd(
     filter: Annotated[str, typer.Option("--filter", "-f", help="RSQL")],
-    set_pairs: Annotated[list[str], typer.Option("--set", "-s", help="field=value")] = None,  # type: ignore[assignment]
+    set_pairs: Annotated[
+        list[str], typer.Option("--set", "-s", help="field=value")
+    ] = None,  # type: ignore[assignment]
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     """Bulk-обновление по фильтру (partial success)."""
@@ -178,7 +188,9 @@ def bulk_update_cmd(
     with _client() as c:
         try:
             result = c.post(
-                "/v1/tasks/bulk-update", params={"filter": filter}, json={"patch": patch}
+                "/v1/tasks/bulk-update",
+                params={"filter": filter},
+                json={"patch": patch},
             )
         except APIError as e:
             _handle_api_error(e)
@@ -189,7 +201,9 @@ def bulk_update_cmd(
 @app.command("batch-update")
 def batch_update_cmd(
     filter: Annotated[str, typer.Option("--filter", "-f", help="RSQL")],
-    set_pairs: Annotated[list[str], typer.Option("--set", "-s", help="field=value")] = None,  # type: ignore[assignment]
+    set_pairs: Annotated[
+        list[str], typer.Option("--set", "-s", help="field=value")
+    ] = None,  # type: ignore[assignment]
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     """Атомарное обновление по фильтру (всё-или-ничего)."""
@@ -200,7 +214,9 @@ def batch_update_cmd(
     with _client() as c:
         try:
             result = c.post(
-                "/v1/tasks/batch-update", params={"filter": filter}, json={"patch": patch}
+                "/v1/tasks/batch-update",
+                params={"filter": filter},
+                json={"patch": patch},
             )
         except APIError as e:
             _handle_api_error(e)
@@ -210,7 +226,9 @@ def batch_update_cmd(
 
 @app.command("bulk-create")
 def bulk_create_cmd(
-    from_file: Annotated[Path, typer.Option("--from", help="JSON-файл со списком задач")],
+    from_file: Annotated[
+        Path, typer.Option("--from", help="JSON-файл со списком задач")
+    ],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     """Массовое создание задач из JSON-массива (partial success)."""
@@ -236,7 +254,9 @@ def bulk_create_cmd(
 
 @app.command("batch-create")
 def batch_create_cmd(
-    from_file: Annotated[Path, typer.Option("--from", help="JSON-файл со списком задач")],
+    from_file: Annotated[
+        Path, typer.Option("--from", help="JSON-файл со списком задач")
+    ],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     """Атомарное массовое создание задач."""

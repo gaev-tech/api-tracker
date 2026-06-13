@@ -14,14 +14,17 @@ class MagicTokenError(Exception):
     """Невалидный/использованный/просроченный magic-token."""
 
 
-async def issue_magic_token(session: AsyncSession, *, email: str, intent: MagicTokenIntent) -> str:
+async def issue_magic_token(
+    session: AsyncSession, *, email: str, intent: MagicTokenIntent
+) -> str:
     """Создаёт magic-token в БД, возвращает plaintext (только для отправки в email)."""
     token = generate_opaque_token(32)
     record = MagicToken(
         token_hash=hash_token(token),
         email=email.lower(),
         intent=intent,
-        expires_at=datetime.now(UTC) + timedelta(seconds=settings.magic_token_ttl_seconds),
+        expires_at=datetime.now(UTC)
+        + timedelta(seconds=settings.magic_token_ttl_seconds),
     )
     session.add(record)
     await session.flush()
@@ -33,10 +36,14 @@ def build_magic_link(token: str, intent: MagicTokenIntent) -> str:
     return f"{base}/auth/magic?token={token}&intent={intent.value}"
 
 
-async def verify_magic_token(session: AsyncSession, *, token: str, intent: MagicTokenIntent) -> str:
+async def verify_magic_token(
+    session: AsyncSession, *, token: str, intent: MagicTokenIntent
+) -> str:
     """Возвращает email, если токен валиден. Поднимает MagicTokenError иначе."""
     th = hash_token(token)
-    result = await session.execute(select(MagicToken).where(MagicToken.token_hash == th))
+    result = await session.execute(
+        select(MagicToken).where(MagicToken.token_hash == th)
+    )
     record = result.scalar_one_or_none()
     if record is None:
         raise MagicTokenError("token not found")

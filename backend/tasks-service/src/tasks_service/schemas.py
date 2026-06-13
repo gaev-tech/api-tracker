@@ -12,7 +12,9 @@ class TaskCreate(BaseModel):
 
     title: Annotated[str, Field(min_length=1, max_length=500)]
     description_md: str = ""
-    labels: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(default_factory=list)
+    labels: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(
+        default_factory=list
+    )
     status: TaskStatus = TaskStatus.OPEN
     blocked_by: list[UUID] = Field(default_factory=list)
 

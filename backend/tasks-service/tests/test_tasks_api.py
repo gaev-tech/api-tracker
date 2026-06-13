@@ -96,14 +96,18 @@ async def test_get_missing(client: AsyncClient) -> None:
 
 async def test_patch_title_and_status(client: AsyncClient) -> None:
     created = await _create(client, "old")
-    r = await client.patch(f"/v1/tasks/{created['id']}", json={"title": "new", "status": "done"})
+    r = await client.patch(
+        f"/v1/tasks/{created['id']}", json={"title": "new", "status": "done"}
+    )
     assert r.status_code == 200
     body = r.json()
     assert body["title"] == "new" and body["status"] == "done"
 
 
 async def test_patch_missing(client: AsyncClient) -> None:
-    r = await client.patch("/v1/tasks/00000000-0000-0000-0000-000000000000", json={"title": "x"})
+    r = await client.patch(
+        "/v1/tasks/00000000-0000-0000-0000-000000000000", json={"title": "x"}
+    )
     assert r.status_code == 404
 
 
