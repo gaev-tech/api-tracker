@@ -46,7 +46,7 @@ npm run build
 
 ## Production
 
-Единый домен `cliteracker.ru` с path-based маршрутизацией (см. `specs/architecture.md` §2):
+Единый домен `apitracker.ru` с path-based маршрутизацией (см. `specs/architecture.md` §2):
 
 - `/` — docs-client (справка, M4)
 - `/auth/` — auth-client (браузерная аутентификация, M2)

@@ -30,7 +30,7 @@
 
 2.2.4 Angular 20 workspace с двумя apps `auth-client` и `docs-client` (пустые скелеты).
 
-2.2.5 DNS: A-запись `cliteracker.ru` указана на сервер.
+2.2.5 DNS: A-запись `apitracker.ru` указана на сервер.
 
 2.2.6 docker-compose на проде: `nginx`, `postgres`, `tasks-svc` (с эндпоинтами `/healthz` и `/v1/ping`).
 
@@ -148,17 +148,15 @@
 
 4.2.2.6 `GET /v1/history?user_id=<email>` с проверкой видимости (ARCH §10.2.2).
 
-#### 4.2.3 Auth-client (Angular 20)
+#### 4.2.3 Auth-client (Angular 20) — отменено
 
-4.2.3.1 Страницы: `/`, `/magic`, `/cli-login`, `/sessions`, `/logout`.
+4.2.3.1 Решение пересмотрено в ходе M2: браузерный auth-клиент не входит в MVP. Аутентификация — terminal-only через CLI (ARCH §4.3, PRD §3.2, §10.5).
 
-4.2.3.2 orval-кодоген к auth-svc (ARCH §5.2).
-
-4.2.3.3 Zod-валидация ответов и storage (ARCH §5.3).
+4.2.3.2 Если в Post-MVP потребуется admin-UI — задача будет переоткрыта.
 
 #### 4.2.4 CLI
 
-4.2.4.1 `clite login`, `clite login --device`, `clite logout`, `clite whoami`.
+4.2.4.1 `clite login` (interactive email + magic-code paste), `clite logout`, `clite whoami`. Browser-handoff и device-code-flow упразднены вместе с auth-client.
 
 4.2.4.2 `clite team create/get/update/list`, `clite team member set/remove`, `clite team leave`.
 
@@ -190,7 +188,7 @@
 
 ### 4.3 Done criteria
 
-4.3.1 Автор приглашает второго пользователя по email; второй логинится через magic-link.
+4.3.1 Автор приглашает второго пользователя по email; второй логинится через `clite login` (получает код на email, вставляет в терминал).
 
 4.3.2 Автор шарит задачу второму пользователю; второй видит её в `clite task list`.
 
@@ -242,7 +240,7 @@
 
 ### 6.1 Цель
 
-6.1.1 Публичный справочник по корню `cliteracker.ru/` (ARCH §16.4).
+6.1.1 Публичный справочник по корню `apitracker.ru/` (ARCH §16.4).
 
 ### 6.2 Делverables
 
@@ -270,7 +268,7 @@
 
 6.2.4 Executable examples: куски из `cli-test-cases.md` встраиваются в туториалы через md-include.
 
-6.2.5 `cliteracker.ru/` отдаёт docs-client напрямую.
+6.2.5 `apitracker.ru/` отдаёт docs-client напрямую.
 
 ### 6.3 Multi-channel дистрибуция CLI
 

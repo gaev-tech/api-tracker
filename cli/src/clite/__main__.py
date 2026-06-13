@@ -3,6 +3,7 @@
 import typer
 
 from clite import __version__
+from clite.commands import auth_cmd
 from clite.commands import history as history_cmd
 from clite.commands import task as task_cmd
 
@@ -14,6 +15,7 @@ app = typer.Typer(
 )
 app.add_typer(task_cmd.app, name="task")
 app.add_typer(history_cmd.app, name="history")
+app.registered_commands.extend(auth_cmd.app.registered_commands)
 
 
 @app.command("version")

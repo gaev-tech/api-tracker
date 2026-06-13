@@ -14,7 +14,7 @@
 
 1.1.4 `auth-svc` — FastAPI, регистрация и сессии (поднимается с M2, см. IPLAN §4).
 
-1.1.5 `auth-client` — статика Angular, отдаётся через nginx (с M2).
+1.1.5 `auth-client` — не входит в MVP (см. §16.3); место зарезервировано на Post-MVP.
 
 1.1.6 `docs-client` — статика Angular, отдаётся через nginx (с M4).
 
@@ -30,19 +30,17 @@
 
 ## 2. Сетевая маршрутизация
 
-2.1 Единственный домен — `cliteracker.ru`; разводка по путям, поддоменов нет.
+2.1 Единственный домен — `apitracker.ru`; разводка по путям, поддоменов нет.
 
-2.2 `cliteracker.ru/healthz` → tasks-svc (мониторинг и проверка деплоя).
+2.2 `apitracker.ru/healthz` → tasks-svc (мониторинг и проверка деплоя).
 
-2.3 `cliteracker.ru/api/v1/*` → tasks-svc (REST с публичных клиентов; nginx стрипает префикс `/api`).
+2.3 `apitracker.ru/api/v1/*` → tasks-svc (REST с публичных клиентов; nginx стрипает префикс `/api`).
 
-2.4 `cliteracker.ru/api/auth/*` → auth-svc (REST; nginx стрипает `/api`, передаёт `/auth/*`).
+2.4 `apitracker.ru/api/auth/*` → auth-svc (REST; nginx стрипает `/api`, передаёт `/auth/*`).
 
-2.5 `cliteracker.ru/auth/*` (без `/api`) → auth-client (SPA; base href `/auth/`).
+2.5 `apitracker.ru/*` (остальное) → docs-client (SPA; base href `/`).
 
-2.6 `cliteracker.ru/*` (остальное) → docs-client (SPA; base href `/`).
-
-2.7 Внутри compose: `tasks-svc:50051` ↔ `auth-svc:50051` (gRPC).
+2.6 Внутри compose: `tasks-svc:50051` ↔ `auth-svc:50051` (gRPC).
 
 ## 3. База данных
 
@@ -116,43 +114,37 @@
 
 4.1.3 SOLO_USER создаётся при первом старте tasks-svc с `AUTH_MODE=disabled` в `tasks.users` (auth-svc может ещё не существовать).
 
-### 4.2 Magic-link
+### 4.2 Magic-code (terminal-only)
 
-4.2.1 `POST /api/magic/start {email, intent}` — генерит токен (32 байта random), хранит хеш в `auth.magic_tokens`, TTL 15 мин.
+4.2.1 `POST /api/auth/magic/start {email, intent: "cli"}` — генерит токен (32 байта random), хранит хеш в `auth.magic_tokens`, TTL 15 мин.
 
-4.2.2 SMTP отправляет письмо с ссылкой `https://apitracker.ru/auth/magic?token=<plain>&intent=<intent>`.
+4.2.2 SMTP отправляет письмо. Тело письма содержит код для вставки в терминал (plaintext token). URL-ссылок нет.
 
-4.2.3 `POST /api/magic/verify {token, intent}` — проверяет хеш, expiry, флаг `used_at`; помечает использованным; создаёт пользователя если нет; создаёт сессию (refresh + access).
+4.2.3 `POST /api/auth/magic/verify {token, intent: "cli"}` — проверяет хеш, expiry, флаг `used_at`; помечает использованным; создаёт пользователя если нет; создаёт сессию `kind=cli` (refresh + access).
 
-### 4.3 CLI handoff (Pattern A — local callback, основной)
+### 4.3 CLI login flow
 
 4.3.1 `clite login`:
 
-4.3.1.1 Генерит state (random), code_verifier (random), code_challenge = SHA256(verifier).
+4.3.1.1 Интерактивно спрашивает email.
 
-4.3.1.2 Стартует локальный HTTP-сервер на `127.0.0.1:<rnd_port>`.
+4.3.1.2 `POST /api/auth/magic/start {email, intent: "cli"}`.
 
-4.3.1.3 Открывает в браузере `https://apitracker.ru/auth/cli-login?state=...&redirect=http://127.0.0.1:<port>/cb&code_challenge=...`.
+4.3.1.3 Показывает: `✉ Code sent to <email>. Paste it below:`.
 
-4.3.2 Auth-client после успешного логина показывает confirmation; на согласии `POST /api/cli/code {state, code_challenge}` → возвращает одноразовый `code`.
+4.3.1.4 Интерактивно читает код.
 
-4.3.3 Auth-client редиректит браузер на `http://127.0.0.1:<port>/cb?state=...&code=...`.
+4.3.1.5 `POST /api/auth/magic/verify {token: <code>, intent: "cli"}` → `{access_token, refresh_token, expires_in}`.
 
-4.3.4 CLI ловит callback, `POST /api/cli/exchange {code, code_verifier}` → `{access_token, refresh_token}`.
+4.3.1.6 Сохраняет в `~/.config/clite/credentials.yaml` 0600.
 
-4.3.5 CLI сохраняет токены в keychain ОС или fallback `~/.config/clite/credentials` 0600.
+4.3.2 Браузер не задействован.
 
-### 4.4 CLI handoff (Pattern B — device code, fallback)
+### 4.4 Deprecated: browser-handoff endpoints
 
-4.4.1 `clite login --device`:
+4.4.1 Эндпоинты `/api/auth/cli/code`, `/exchange`, `/device-start`, `/device-approve`, `/device-poll` остаются на проде как backward compat для старых clite-клиентов, но новые CLI-релизы их не используют.
 
-4.4.1.1 `POST /api/cli/device-start` → `{device_code, user_code, verification_url, interval}`.
-
-4.4.1.2 CLI печатает: "Открой <url>, введи код <user_code>".
-
-4.4.2 Пользователь подтверждает в auth-client → `POST /api/cli/device-approve {user_code}`.
-
-4.4.3 CLI поллит `POST /api/cli/device-poll {device_code}` каждые `interval` сек → `{access_token, refresh_token}` либо ошибка `authorization_pending` / `expired`.
+4.4.2 В Post-MVP при добавлении браузерного admin-UI поток может вернуться; до тех пор код не развивается.
 
 ### 4.5 JWT-формат
 
@@ -170,15 +162,15 @@
 
 4.6.2 Любой refresh ротирует refresh-token (старый помечается `revoked_at`, выдаётся новый).
 
-4.6.3 Browser: `POST /api/auth/refresh` (cookie); CLI: `POST /api/cli/refresh {refresh_token}`.
+4.6.3 CLI: `POST /api/auth/cli/refresh {refresh_token}`. Browser-flow (cookie) — deprecated.
 
 ### 4.7 Сессии
 
-4.7.1 Все refresh-токены пользователя видны в auth-client → `/sessions`.
+4.7.1 Все refresh-токены пользователя видны через `clite session list`.
 
-4.7.2 Каждая помечена `kind` (`browser` | `cli`), `label`, `created_at`, `last_seen_at`.
+4.7.2 Каждая помечена `kind` (`cli` в MVP), `label`, `created_at`, `last_seen_at`.
 
-4.7.3 Revoke по UI или `clite logout`.
+4.7.3 Revoke через `clite session revoke <label>` или `clite logout` (revoke текущей).
 
 ## 5. Контракты и кодоген
 
@@ -408,7 +400,7 @@
 
 15.8.6 README публичного репо содержит:
 
-15.8.6.1 Краткое описание системы и ссылку на `cliteracker.ru` (docs).
+15.8.6.1 Краткое описание системы и ссылку на `apitracker.ru` (docs).
 
 15.8.6.2 По одной команде установки на OS (curl/Invoke-WebRequest, chmod, mv в PATH).
 
@@ -492,7 +484,7 @@
 
 16.1.1 Версия Angular — 20.
 
-16.1.2 Workspace содержит два apps: `auth-client`, `docs-client`.
+16.1.2 Workspace содержит `docs-client` (auth-client отложен до Post-MVP, см. §16.3).
 
 16.1.3 Общие либы в `frontend/libs/` (если возникнет потребность; на старте без них).
 
@@ -508,11 +500,11 @@
 
 16.2.5 Readonly везде где возможно.
 
-### 16.3 auth-client
+### 16.3 auth-client — не входит в MVP
 
-16.3.1 Страницы: `/` (вход), `/magic` (callback), `/cli-login` (handoff confirm), `/sessions`, `/logout`.
+16.3.1 Браузерный auth-клиент не входит в MVP (см. PRD §3.2). Аутентификация — terminal-only через CLI (см. §4.3).
 
-16.3.2 Использует сгенерированный orval-клиент к auth-svc.
+16.3.2 В Post-MVP при появлении admin-UI здесь будет описана структура SPA для управления сессиями, email-настройками и т.п.
 
 ### 16.4 docs-client
 
@@ -562,7 +554,7 @@
 
 ### 17.3 TLS
 
-17.3.1 Сертификат для `cliteracker.ru` — Let's Encrypt через certbot.
+17.3.1 Сертификат для `apitracker.ru` — Let's Encrypt через certbot.
 
 17.3.2 Авторенью каждые 12 часов (контейнер с cron).
 
