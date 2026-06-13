@@ -10,7 +10,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/tasks-svc
+  IMAGE_PREFIX: ${{ github.repository }}
 
 jobs:
   python-lint:
@@ -38,6 +38,8 @@ jobs:
       - run: uv python install 3.13
       - run: uv sync --all-extras
       - working-directory: backend/tasks-service
+        run: uv run pytest -q
+      - working-directory: backend/auth-service
         run: uv run pytest -q
 
   build-push:
@@ -67,10 +69,20 @@ jobs:
           context: backend/tasks-service
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.image-tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/tasks-svc:main
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/tasks-svc:${{ steps.meta.outputs.image-tag }}
+          cache-from: type=gha,scope=tasks-svc
+          cache-to: type=gha,mode=max,scope=tasks-svc
+      - name: Build and push auth-svc
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/auth-service
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/auth-svc:main
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/auth-svc:${{ steps.meta.outputs.image-tag }}
+          cache-from: type=gha,scope=auth-svc
+          cache-to: type=gha,mode=max,scope=auth-svc
 
   deploy:
     runs-on: ubuntu-latest

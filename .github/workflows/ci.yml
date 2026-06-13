@@ -41,6 +41,9 @@ jobs:
       - name: Pytest tasks-service
         working-directory: backend/tasks-service
         run: uv run pytest -q
+      - name: Pytest auth-service
+        working-directory: backend/auth-service
+        run: uv run pytest -q
 
   contracts-check:
     runs-on: ubuntu-latest
@@ -55,10 +58,13 @@ jobs:
       - name: Dump tasks OpenAPI
         run: |
           uv run python -c "import json; from tasks_service.main import app; print(json.dumps(app.openapi(), indent=2, sort_keys=True))" > contracts/openapi/tasks.json
+      - name: Dump auth OpenAPI
+        run: |
+          uv run python -c "import json; from auth_service.main import create_app; print(json.dumps(create_app(with_lifespan=False).openapi(), indent=2, sort_keys=True))" > contracts/openapi/auth.json
       - name: Verify OpenAPI committed and matches
         run: |
-          git diff --exit-code contracts/openapi/tasks.json || {
-            echo "::error::contracts/openapi/tasks.json out of sync. Run dump locally and commit."
+          git diff --exit-code contracts/openapi/tasks.json contracts/openapi/auth.json || {
+            echo "::error::contracts/openapi/*.json out of sync. Run dump locally and commit."
             exit 1
           }
 
@@ -74,5 +80,13 @@ jobs:
           context: backend/tasks-service
           push: false
           tags: tasks-svc:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=tasks-svc
+          cache-to: type=gha,mode=max,scope=tasks-svc
+      - name: Build auth-svc image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/auth-service
+          push: false
+          tags: auth-svc:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha,scope=auth-svc
+          cache-to: type=gha,mode=max,scope=auth-svc

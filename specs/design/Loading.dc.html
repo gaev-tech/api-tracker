@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#141318; }
+  ::selection{ background:#E23B2C; color:#fff; }
+  @keyframes wdnBlink{ 50%{ opacity:0 } }
+  @keyframes wdnSpin{ to{ transform:rotate(360deg) } }
+  @keyframes wdnSpinR{ to{ transform:rotate(-360deg) } }
+</style>
+</helmet>
+
+<div style="position:relative; min-height:100vh; display:flex; align-items:center; justify-content:center; overflow:hidden;
+   background:radial-gradient(900px 720px at 50% 45%, rgba(226,59,44,.09), transparent 60%), #141318;
+   font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:#F1EEE7;">
+
+  <!-- PROGRESS · concentric dotted rings (movement) -->
+  <div style="position:absolute; top:50%; left:50%; width:1000px; height:1000px; transform:translate(-50%,-50%); pointer-events:none; opacity:.5;">
+    <div style="position:absolute; inset:0; border-radius:50%; border:2px dotted rgba(255,255,255,.06); animation:wdnSpin 60s linear infinite;"></div>
+    <div style="position:absolute; inset:130px; border-radius:50%; border:2px dotted rgba(226,59,44,.20); animation:wdnSpinR 40s linear infinite;"></div>
+    <div style="position:absolute; inset:300px; border-radius:50%; border:1px dashed rgba(216,161,42,.18); animation:wdnSpin 28s linear infinite;"></div>
+  </div>
+
+  <div style="position:relative; width:520px; max-width:92vw; text-align:center;">
+
+    <!-- product name -->
+    <div style="display:inline-flex; align-items:center; white-space:nowrap; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:38px; letter-spacing:-.01em; color:#F1EEE7;">
+      <span style="color:#E23B2C;">cli</span>te
+    </div>
+    <div style="margin-top:14px; display:flex; align-items:center; justify-content:center; gap:12px;">
+      <div style="width:30px; height:2px; background:#E23B2C;"></div>
+      <div style="font-family:'Saira Condensed',sans-serif; font-weight:700; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:#9C978D;">Command Line Tracker Engine</div>
+      <div style="width:30px; height:2px; background:#E23B2C;"></div>
+    </div>
+
+    <!-- terminal -->
+    <div style="margin-top:38px; text-align:left; background:#0B0A0D; border:1px solid rgba(255,255,255,.12);">
+      <div style="display:flex; align-items:center; gap:7px; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.07);">
+        <div style="width:8px; height:8px; background:#E23B2C;"></div>
+        <div style="width:8px; height:8px; background:#D8A12A;"></div>
+        <div style="width:8px; height:8px; background:#2F57D6;"></div>
+        <div style="margin-left:6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#625E57;">boot.log</div>
+      </div>
+      <div style="padding:18px; font-family:'JetBrains Mono',monospace; font-size:16px; line-height:1.9;">
+        <div style="display:flex; align-items:center;">
+          <span style="color:#E23B2C; margin-right:10px;">$</span>
+          <span style="color:#F1EEE7;">{{ typed }}</span>
+          <span style="display:inline-block; width:9px; height:18px; background:#E23B2C; margin-left:3px; transform:translateY(3px); animation:wdnBlink 0.6s steps(1) infinite;"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:820}}">
+class Component extends DCLogic {
+  state = { i: 0 };
+  word = 'loading';
+
+  componentDidMount() {
+    this.timer = setInterval(() => {
+      this.setState(s => ({ i: s.i >= this.word.length + 3 ? 0 : s.i + 1 }));
+    }, 600);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  renderVals() {
+    const i = this.state.i;
+    const filled = Math.min(i, this.word.length);
+    const typed = this.word.slice(0, filled);
+    const dots = i > this.word.length ? '.'.repeat(Math.min(i - this.word.length, 3)) : '';
+    const percent = String(Math.round((filled / this.word.length) * 100));
+
+    const segs = Array.from({ length: this.word.length }, (_, k) => k < filled);
+    const bar = React.createElement(
+      'div',
+      { style: { display: 'flex', gap: '10px', alignItems: 'center' } },
+      segs.map((on, k) =>
+        React.createElement('div', {
+          key: k,
+          style: {
+            width: '16px', height: '16px', transform: 'rotate(45deg)',
+            background: on ? '#E23B2C' : 'transparent',
+            border: on ? 'none' : '2px solid #625E57',
+            transition: 'background .15s',
+          },
+        })
+      )
+    );
+
+    return { typed, dots, percent, bar };
+  }
+}
+</script>
+</body>
+</html>

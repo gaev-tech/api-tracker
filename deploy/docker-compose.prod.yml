@@ -62,6 +62,32 @@ services:
       retries: 5
       start_period: 30s
 
+  auth-svc:
+    image: ghcr.io/gaev-tech/api-tracker/auth-svc:main
+    container_name: api-tracker-auth-svc
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@postgres:5432/auth
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://apitracker.ru}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@apitracker.ru}
+      JWT_PRIVATE_KEY_B64: ${JWT_PRIVATE_KEY_B64:-}
+      JWT_PUBLIC_KEY_B64: ${JWT_PUBLIC_KEY_B64:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   certbot:
     image: certbot/certbot:latest
     container_name: api-tracker-certbot
