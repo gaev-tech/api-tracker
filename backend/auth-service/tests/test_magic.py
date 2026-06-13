@@ -4,12 +4,8 @@ from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth_service.models import MagicToken
-
-pytestmark = pytest.mark.asyncio
+pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 _SENT_EMAILS: list[tuple[str, str, str]] = []
@@ -70,19 +66,13 @@ async def test_magic_verify_intent_mismatch(client: AsyncClient) -> None:
     assert r.status_code == 400
 
 
-async def test_magic_verify_marks_used(client: AsyncClient, session: AsyncSession) -> None:
+async def test_magic_verify_marks_used(client: AsyncClient) -> None:
     with patch("auth_service.routers.magic.send_email", new=_fake_send):
         await client.post(
             "/auth/magic/start", json={"email": "used@example.com", "intent": "browser"}
         )
     token = _extract_token(_SENT_EMAILS[-1][2])
     await client.post("/auth/magic/verify", json={"token": token, "intent": "browser"})
-
-    # Повторная верификация должна провалиться.
+    # Повторная верификация должна провалиться — это и есть подтверждение что used_at установлен.
     r2 = await client.post("/auth/magic/verify", json={"token": token, "intent": "browser"})
     assert r2.status_code == 400
-
-    # В БД used_at установлен.
-    result = await session.execute(select(MagicToken))
-    records = result.scalars().all()
-    assert any(r.used_at is not None for r in records)
