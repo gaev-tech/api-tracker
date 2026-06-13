@@ -9,9 +9,6 @@ set -euo pipefail
 
 DOMAINS=(
   apitracker.ru
-  api.apitracker.ru
-  auth.apitracker.ru
-  docs.apitracker.ru
 )
 RSA_KEY_SIZE=4096
 EMAIL=""  # Заполните или установите через CERTBOT_EMAIL env

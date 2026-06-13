@@ -97,7 +97,7 @@ git commit --allow-empty -m "chore: trigger first deploy" && git push
 Проверить:
 
 ```bash
-curl https://api.apitracker.ru/healthz
+curl https://apitracker.ru/healthz
 # → {"status":"ok"}
 ```
 

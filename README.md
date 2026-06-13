@@ -46,9 +46,12 @@ npm run build
 
 ## Production
 
-- `apitracker.ru` → docs.apitracker.ru (redirect)
-- `docs.apitracker.ru` — справка
-- `auth.apitracker.ru` — браузерная аутентификация
-- `api.apitracker.ru` — REST API (только через CLI)
+Единый домен `apitracker.ru` с path-based маршрутизацией (см. `specs/architecture.md` §2):
+
+- `/` — docs-client (справка, M4)
+- `/auth/` — auth-client (браузерная аутентификация, M2)
+- `/api/v1/*` — tasks-svc REST (CLI)
+- `/api/auth/*` — auth-svc REST (M2)
+- `/healthz` — мониторинг
 
 Деплой автоматический на push в `main`.

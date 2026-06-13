@@ -30,17 +30,19 @@
 
 ## 2. Сетевая маршрутизация
 
-2.1 `apitracker.ru` → 301 → `docs.apitracker.ru`.
+2.1 Единственный домен — `apitracker.ru`; разводка по путям, поддоменов нет.
 
-2.2 `docs.apitracker.ru/` → docs-client (статика).
+2.2 `apitracker.ru/healthz` → tasks-svc (мониторинг и проверка деплоя).
 
-2.3 `auth.apitracker.ru/` → auth-client (статика).
+2.3 `apitracker.ru/api/v1/*` → tasks-svc (REST с публичных клиентов; nginx стрипает префикс `/api`).
 
-2.4 `auth.apitracker.ru/api/*` → auth-svc (REST).
+2.4 `apitracker.ru/api/auth/*` → auth-svc (REST; nginx стрипает `/api`, передаёт `/auth/*`).
 
-2.5 `api.apitracker.ru/*` → tasks-svc (REST).
+2.5 `apitracker.ru/auth/*` (без `/api`) → auth-client (SPA; base href `/auth/`).
 
-2.6 Внутри compose: `tasks-svc:50051` ↔ `auth-svc:50051` (gRPC).
+2.6 `apitracker.ru/*` (остальное) → docs-client (SPA; base href `/`).
+
+2.7 Внутри compose: `tasks-svc:50051` ↔ `auth-svc:50051` (gRPC).
 
 ## 3. База данных
 
@@ -118,7 +120,7 @@
 
 4.2.1 `POST /api/magic/start {email, intent}` — генерит токен (32 байта random), хранит хеш в `auth.magic_tokens`, TTL 15 мин.
 
-4.2.2 SMTP отправляет письмо с ссылкой `https://auth.apitracker.ru/magic?token=<plain>&intent=<intent>`.
+4.2.2 SMTP отправляет письмо с ссылкой `https://apitracker.ru/auth/magic?token=<plain>&intent=<intent>`.
 
 4.2.3 `POST /api/magic/verify {token, intent}` — проверяет хеш, expiry, флаг `used_at`; помечает использованным; создаёт пользователя если нет; создаёт сессию (refresh + access).
 
@@ -130,7 +132,7 @@
 
 4.3.1.2 Стартует локальный HTTP-сервер на `127.0.0.1:<rnd_port>`.
 
-4.3.1.3 Открывает в браузере `https://auth.apitracker.ru/cli-login?state=...&redirect=http://127.0.0.1:<port>/cb&code_challenge=...`.
+4.3.1.3 Открывает в браузере `https://apitracker.ru/auth/cli-login?state=...&redirect=http://127.0.0.1:<port>/cb&code_challenge=...`.
 
 4.3.2 Auth-client после успешного логина показывает confirmation; на согласии `POST /api/cli/code {state, code_challenge}` → возвращает одноразовый `code`.
 
@@ -232,9 +234,9 @@
 
 ## 7. Публичные REST API
 
-7.1 Базовый префикс tasks-svc: `https://api.apitracker.ru/v1/`.
+7.1 Базовый префикс tasks-svc: `https://apitracker.ru/api/v1/`.
 
-7.2 Базовый префикс auth-svc: `https://auth.apitracker.ru/api/`.
+7.2 Базовый префикс auth-svc: `https://apitracker.ru/api/auth/`.
 
 7.3 Эндпоинты поэлементно не перечисляются: генерируются из FastAPI кода в OpenAPI (см. 5.1). Соответствие сценариям PRD §7 контролируется через тесты и `cli-test-cases.md`.
 
@@ -364,7 +366,7 @@
 
 15.2 Один бинарь `apit` (через pip install или standalone через `shiv`/`pyinstaller` — решается на M1).
 
-15.3 Конфигурация: `~/.config/apit/config.yaml` (хост `api.apitracker.ru` по умолчанию, перекрывается env `APIT_API_URL`).
+15.3 Конфигурация: `~/.config/apit/config.yaml` (хост `https://apitracker.ru` по умолчанию, перекрывается env `APIT_API_URL`).
 
 15.4 Креды — в keychain (см. 4.3.5).
 
@@ -406,7 +408,7 @@
 
 15.8.6 README публичного репо содержит:
 
-15.8.6.1 Краткое описание системы и ссылку на `docs.apitracker.ru`.
+15.8.6.1 Краткое описание системы и ссылку на `apitracker.ru` (docs).
 
 15.8.6.2 По одной команде установки на OS (curl/Invoke-WebRequest, chmod, mv в PATH).
 
@@ -560,7 +562,7 @@
 
 ### 17.3 TLS
 
-17.3.1 Сертификаты для `apitracker.ru`, `*.apitracker.ru` — Let's Encrypt через certbot.
+17.3.1 Сертификат для `apitracker.ru` — Let's Encrypt через certbot.
 
 17.3.2 Авторенью каждые 12 часов (контейнер с cron).
 

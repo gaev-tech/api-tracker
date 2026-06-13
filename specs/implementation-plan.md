@@ -30,7 +30,7 @@
 
 2.2.4 Angular 20 workspace с двумя apps `auth-client` и `docs-client` (пустые скелеты).
 
-2.2.5 DNS: `apitracker.ru`, `docs.apitracker.ru`, `auth.apitracker.ru`, `api.apitracker.ru` указаны на сервер.
+2.2.5 DNS: A-запись `apitracker.ru` указана на сервер.
 
 2.2.6 docker-compose на проде: `nginx`, `postgres`, `tasks-svc` (с эндпоинтами `/healthz` и `/v1/ping`).
 
@@ -42,7 +42,7 @@
 
 ### 2.3 Done criteria
 
-2.3.1 `curl https://api.apitracker.ru/healthz` → 200.
+2.3.1 `curl https://apitracker.ru/healthz` → 200.
 
 2.3.2 Push в main — новый образ деплоится за <5 мин без ручных шагов.
 
@@ -62,21 +62,21 @@
 
 3.2.3 Эндпоинты:
 
-3.2.3.1 `GET /v1/tasks?filter=&cursor=&limit=`.
+3.2.3.1 `GET /api/v1/tasks?filter=&cursor=&limit=` (внутри tasks-svc — `/v1/tasks`, nginx стрипает `/api`).
 
-3.2.3.2 `POST /v1/tasks` (single create).
+3.2.3.2 `POST /api/v1/tasks` (single create).
 
-3.2.3.3 `PATCH /v1/tasks/{id}`.
+3.2.3.3 `PATCH /api/v1/tasks/{id}`.
 
-3.2.3.4 `POST /v1/tasks/bulk-update?filter=`.
+3.2.3.4 `POST /api/v1/tasks/bulk-update?filter=`.
 
-3.2.3.5 `POST /v1/tasks/batch-update?filter=`.
+3.2.3.5 `POST /api/v1/tasks/batch-update?filter=`.
 
-3.2.3.6 `POST /v1/tasks/bulk-create`.
+3.2.3.6 `POST /api/v1/tasks/bulk-create`.
 
-3.2.3.7 `POST /v1/tasks/batch-create`.
+3.2.3.7 `POST /api/v1/tasks/batch-create`.
 
-3.2.3.8 `GET /v1/history?task_id=&cursor=`.
+3.2.3.8 `GET /api/v1/history?task_id=&cursor=`.
 
 3.2.4 Audit-логирование на каждой мутации.
 
@@ -184,7 +184,7 @@
 
 4.2.6.1 Release-workflow расширяется на полную matrix-сборку (ARCH §15.8.3): macOS arm64+amd64, Linux amd64, Windows amd64.
 
-4.2.6.2 README в публичном репо: install-инструкции по 15.8.6, ссылка на docs.apitracker.ru.
+4.2.6.2 README в публичном репо: install-инструкции по 15.8.6, ссылка на apitracker.ru (docs).
 
 4.2.6.3 Первый стабильный релиз `v1.0.0` создаётся к моменту "done" M2.
 
@@ -242,7 +242,7 @@
 
 ### 6.1 Цель
 
-6.1.1 Публичный справочник на `docs.apitracker.ru` (ARCH §16.4).
+6.1.1 Публичный справочник по корню `apitracker.ru/` (ARCH §16.4).
 
 ### 6.2 Делverables
 
@@ -270,7 +270,7 @@
 
 6.2.4 Executable examples: куски из `cli-test-cases.md` встраиваются в туториалы через md-include.
 
-6.2.5 `apitracker.ru` → 301 → `docs.apitracker.ru`.
+6.2.5 `apitracker.ru/` отдаёт docs-client напрямую.
 
 ### 6.3 Multi-channel дистрибуция CLI
 
@@ -318,7 +318,7 @@
 
 ### 6.4 Done criteria
 
-6.4.1 Сторонний пользователь по docs.apitracker.ru может разобраться, поставить CLI, залогиниться, создать задачу — без помощи автора.
+6.4.1 Сторонний пользователь по apitracker.ru может разобраться, поставить CLI, залогиниться, создать задачу — без помощи автора.
 
 6.4.2 Установка через каждый из 5 каналов (GitHub Releases binary, PyPI, Homebrew, APT, npm) даёт работоспособный `apit --version` соответствующей версии.
 

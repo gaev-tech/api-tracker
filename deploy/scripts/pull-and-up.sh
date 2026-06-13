@@ -28,7 +28,7 @@ docker image prune -f --filter "until=72h"
 
 echo "### Проверка /healthz"
 sleep 5
-curl -fsS https://api.apitracker.ru/healthz || {
+curl -fsS https://apitracker.ru/healthz || {
   echo "ERROR: /healthz не вернул 200" >&2
   exit 1
 }
