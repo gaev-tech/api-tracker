@@ -6,6 +6,7 @@ from clite import __version__
 from clite.commands import auth_cmd
 from clite.commands import history as history_cmd
 from clite.commands import project as project_cmd
+from clite.commands import share as share_cmd
 from clite.commands import task as task_cmd
 from clite.commands import team as team_cmd
 
@@ -19,6 +20,7 @@ app.add_typer(task_cmd.app, name="task")
 app.add_typer(history_cmd.app, name="history")
 app.add_typer(team_cmd.app, name="team")
 app.add_typer(project_cmd.app, name="project")
+app.add_typer(share_cmd.app, name="share")
 app.registered_commands.extend(auth_cmd.app.registered_commands)
 
 

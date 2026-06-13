@@ -13,6 +13,15 @@ from clite.output import OutputFormat, emit
 app = typer.Typer(no_args_is_help=True, help="История изменений")
 
 
+def _handle(e: APIError) -> None:
+    print(e.args[0], file=sys.stderr)
+    if e.status_code == 401:
+        raise typer.Exit(3) from e
+    if e.status_code == 403:
+        raise typer.Exit(4) from e
+    raise typer.Exit(1) from e
+
+
 @app.command("task")
 def task_history(
     task_id: Annotated[UUID, typer.Argument()],
@@ -27,10 +36,28 @@ def task_history(
         try:
             result = c.get("/v1/history", params=params)
         except APIError as e:
-            print(e.args[0], file=sys.stderr)
-            if e.status_code == 401:
-                raise typer.Exit(3) from e
-            if e.status_code == 403:
-                raise typer.Exit(4) from e
-            raise typer.Exit(1) from e
+            _handle(e)
+            return
+    emit(result, output)
+
+
+@app.command("user")
+def user_history(
+    email: Annotated[
+        str,
+        typer.Argument(help="Email пользователя или 'me' для собственной истории"),
+    ],
+    cursor: Annotated[str | None, typer.Option("--cursor")] = None,
+    output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+) -> None:
+    """История действий пользователя с проверкой видимости (ARCH §10.2.2)."""
+    params: dict[str, object] = {"user_id": email}
+    if cursor:
+        params["cursor"] = cursor
+    with Client(load_config()) as c:
+        try:
+            result = c.get("/v1/history", params=params)
+        except APIError as e:
+            _handle(e)
+            return
     emit(result, output)
