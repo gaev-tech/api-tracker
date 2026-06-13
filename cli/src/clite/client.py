@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from apit.config import Config
+from clite.config import Config
 
 
 class APIError(Exception):
@@ -20,7 +20,7 @@ class APIError(Exception):
 class Client:
     def __init__(self, config: Config) -> None:
         self.config = config
-        headers: dict[str, str] = {"User-Agent": "apit-cli/0.1.0"}
+        headers: dict[str, str] = {"User-Agent": "clite/0.1.0"}
         if config.token:
             headers["Authorization"] = f"Bearer {config.token}"
         self._client = httpx.Client(
@@ -46,7 +46,7 @@ class Client:
             raise SystemExit(1) from e
 
         if response.status_code == 401:
-            raise APIError(401, "not authenticated, run `apit login`")
+            raise APIError(401, "not authenticated, run `clite login`")
         if response.status_code == 403:
             detail = _extract_detail(response)
             raise APIError(403, f"forbidden: {detail or 'access denied'}", detail)

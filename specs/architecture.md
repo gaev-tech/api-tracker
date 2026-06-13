@@ -30,17 +30,17 @@
 
 ## 2. Сетевая маршрутизация
 
-2.1 Единственный домен — `apitracker.ru`; разводка по путям, поддоменов нет.
+2.1 Единственный домен — `cliteracker.ru`; разводка по путям, поддоменов нет.
 
-2.2 `apitracker.ru/healthz` → tasks-svc (мониторинг и проверка деплоя).
+2.2 `cliteracker.ru/healthz` → tasks-svc (мониторинг и проверка деплоя).
 
-2.3 `apitracker.ru/api/v1/*` → tasks-svc (REST с публичных клиентов; nginx стрипает префикс `/api`).
+2.3 `cliteracker.ru/api/v1/*` → tasks-svc (REST с публичных клиентов; nginx стрипает префикс `/api`).
 
-2.4 `apitracker.ru/api/auth/*` → auth-svc (REST; nginx стрипает `/api`, передаёт `/auth/*`).
+2.4 `cliteracker.ru/api/auth/*` → auth-svc (REST; nginx стрипает `/api`, передаёт `/auth/*`).
 
-2.5 `apitracker.ru/auth/*` (без `/api`) → auth-client (SPA; base href `/auth/`).
+2.5 `cliteracker.ru/auth/*` (без `/api`) → auth-client (SPA; base href `/auth/`).
 
-2.6 `apitracker.ru/*` (остальное) → docs-client (SPA; base href `/`).
+2.6 `cliteracker.ru/*` (остальное) → docs-client (SPA; base href `/`).
 
 2.7 Внутри compose: `tasks-svc:50051` ↔ `auth-svc:50051` (gRPC).
 
@@ -126,7 +126,7 @@
 
 ### 4.3 CLI handoff (Pattern A — local callback, основной)
 
-4.3.1 `apit login`:
+4.3.1 `clite login`:
 
 4.3.1.1 Генерит state (random), code_verifier (random), code_challenge = SHA256(verifier).
 
@@ -140,11 +140,11 @@
 
 4.3.4 CLI ловит callback, `POST /api/cli/exchange {code, code_verifier}` → `{access_token, refresh_token}`.
 
-4.3.5 CLI сохраняет токены в keychain ОС или fallback `~/.config/apit/credentials` 0600.
+4.3.5 CLI сохраняет токены в keychain ОС или fallback `~/.config/clite/credentials` 0600.
 
 ### 4.4 CLI handoff (Pattern B — device code, fallback)
 
-4.4.1 `apit login --device`:
+4.4.1 `clite login --device`:
 
 4.4.1.1 `POST /api/cli/device-start` → `{device_code, user_code, verification_url, interval}`.
 
@@ -178,7 +178,7 @@
 
 4.7.2 Каждая помечена `kind` (`browser` | `cli`), `label`, `created_at`, `last_seen_at`.
 
-4.7.3 Revoke по UI или `apit logout`.
+4.7.3 Revoke по UI или `clite logout`.
 
 ## 5. Контракты и кодоген
 
@@ -266,9 +266,9 @@
 
 ### 10.2 Видимость
 
-10.2.1 `apit history task <uuid>` — доступна при наличии ≥1 разрешения на задаче (PRD §6.1.8).
+10.2.1 `clite history task <uuid>` — доступна при наличии ≥1 разрешения на задаче (PRD §6.1.8).
 
-10.2.2 `apit history user <email>`:
+10.2.2 `clite history user <email>`:
 
 10.2.2.1 Если запрашиваемый email == собственный email — все собственные события.
 
@@ -342,7 +342,7 @@
 
 13.2 Чтение — только в момент рендера Jinja-шаблона автоматизации; в API не возвращается.
 
-13.3 CRUD — через `apit secret set/list/delete` под правом `manage_secrets` (см. PRD §6.5.4).
+13.3 CRUD — через `clite secret set/list/delete` под правом `manage_secrets` (см. PRD §6.5.4).
 
 ## 14. Фоновые подсистемы в tasks-svc
 
@@ -364,9 +364,9 @@
 
 15.1 Стек — Python + typer.
 
-15.2 Один бинарь `apit` (через pip install или standalone через `shiv`/`pyinstaller` — решается на M1).
+15.2 Один бинарь `clite` (через pip install или standalone через `shiv`/`pyinstaller` — решается на M1).
 
-15.3 Конфигурация: `~/.config/apit/config.yaml` (хост `https://apitracker.ru` по умолчанию, перекрывается env `APIT_API_URL`).
+15.3 Конфигурация: `~/.config/clite/config.yaml` (хост `https://apitracker.ru` по умолчанию, перекрывается env `APIT_API_URL`).
 
 15.4 Креды — в keychain (см. 4.3.5).
 
@@ -394,13 +394,13 @@
 
 15.8.3 Сборка бинарей — pyinstaller в GHA-matrix по операционным системам:
 
-15.8.3.1 `macos-latest` (arm64) → артефакт `apit-vX.Y.Z-darwin-arm64`.
+15.8.3.1 `macos-latest` (arm64) → артефакт `clite-vX.Y.Z-darwin-arm64`.
 
-15.8.3.2 `macos-13` (amd64) → `apit-vX.Y.Z-darwin-amd64`.
+15.8.3.2 `macos-13` (amd64) → `clite-vX.Y.Z-darwin-amd64`.
 
-15.8.3.3 `ubuntu-latest` → `apit-vX.Y.Z-linux-amd64`.
+15.8.3.3 `ubuntu-latest` → `clite-vX.Y.Z-linux-amd64`.
 
-15.8.3.4 `windows-latest` → `apit-vX.Y.Z-windows-amd64.exe`.
+15.8.3.4 `windows-latest` → `clite-vX.Y.Z-windows-amd64.exe`.
 
 15.8.4 Триггер релиза: git tag `vX.Y.Z` в приватном monorepo запускает release-workflow в GHA.
 
@@ -408,7 +408,7 @@
 
 15.8.6 README публичного репо содержит:
 
-15.8.6.1 Краткое описание системы и ссылку на `apitracker.ru` (docs).
+15.8.6.1 Краткое описание системы и ссылку на `cliteracker.ru` (docs).
 
 15.8.6.2 По одной команде установки на OS (curl/Invoke-WebRequest, chmod, mv в PATH).
 
@@ -416,7 +416,7 @@
 
 15.8.7 Версионирование — semver `vX.Y.Z`; bump вручную через создание тега в monorepo.
 
-15.8.8 Обновление CLI пользователем: повторная установка из README; команда `apit --version` показывает текущую версию.
+15.8.8 Обновление CLI пользователем: повторная установка из README; команда `clite --version` показывает текущую версию.
 
 ### 15.9 Дистрибуция через пакетные площадки
 
@@ -426,23 +426,23 @@
 
 15.9.3 PyPI:
 
-15.9.3.1 Пакет `apit` публикуется на `pypi.org`.
+15.9.3.1 Пакет `clite` публикуется на `pypi.org`.
 
 15.9.3.2 Сборка — `uv build` из `cli/`, публикация — `uv publish` или `twine` с токеном из repo-secret `PYPI_TOKEN`.
 
-15.9.3.3 Установка пользователем: `pipx install apit` (рекомендуется) или `pip install apit`.
+15.9.3.3 Установка пользователем: `pipx install clite` (рекомендуется) или `pip install clite`.
 
 15.9.3.4 Зависимости пакета: те же, что у source-варианта; pyinstaller-обёртка не используется (pip ставит Python-источники).
 
 15.9.4 Homebrew (macOS):
 
-15.9.4.1 Отдельный публичный репозиторий `gaev-tech/homebrew-apit` со структурой Homebrew tap; содержит `Formula/apit.rb`.
+15.9.4.1 Отдельный публичный репозиторий `gaev-tech/homebrew-clite` со структурой Homebrew tap; содержит `Formula/clite.rb`.
 
 15.9.4.2 Formula ссылается на GitHub Releases по URL — отдельный URL для darwin-arm64 и darwin-amd64, с SHA256.
 
-15.9.4.3 Release-workflow генерирует обновлённый `Formula/apit.rb` и пушит в tap-репо через GitHub App token.
+15.9.4.3 Release-workflow генерирует обновлённый `Formula/clite.rb` и пушит в tap-репо через GitHub App token.
 
-15.9.4.4 Установка пользователем: `brew install gaev-tech/cli-tracker/apit`.
+15.9.4.4 Установка пользователем: `brew install gaev-tech/cli-tracker/clite`.
 
 15.9.5 APT (Debian/Ubuntu):
 
@@ -458,13 +458,13 @@
 
 15.9.5.4.2 `echo "deb [signed-by=/usr/share/keyrings/apit.gpg] https://apt.apitracker.ru stable main" | sudo tee /etc/apt/sources.list.d/apit.list`
 
-15.9.5.4.3 `sudo apt update && sudo apt install apit`.
+15.9.5.4.3 `sudo apt update && sudo apt install clite`.
 
 15.9.6 npm (binary-wrapper pattern):
 
 15.9.6.1 Пакет `@gaev-tech/cli-tracker` публикуется на npmjs.com.
 
-15.9.6.2 Структура — postinstall-скрипт определяет OS+arch и качает соответствующий бинарь из GitHub Releases (§15.8.3) в `node_modules/.bin/apit`.
+15.9.6.2 Структура — postinstall-скрипт определяет OS+arch и качает соответствующий бинарь из GitHub Releases (§15.8.3) в `node_modules/.bin/clite`.
 
 15.9.6.3 Публикация — `npm publish --registry https://registry.npmjs.org/` с токеном из repo-secret `NPM_TOKEN`.
 
@@ -484,7 +484,7 @@
 
 15.9.7.6 Job 6 — `npm-publish` через `npm publish --registry https://registry.npmjs.org/`.
 
-15.9.8 Чек-лист релиза: автоматический после успеха всех jobs — `apit --version` показывает корректную версию при установке из любого канала.
+15.9.8 Чек-лист релиза: автоматический после успеха всех jobs — `clite --version` показывает корректную версию при установке из любого канала.
 
 ## 16. Frontend-архитектура
 
@@ -562,7 +562,7 @@
 
 ### 17.3 TLS
 
-17.3.1 Сертификат для `apitracker.ru` — Let's Encrypt через certbot.
+17.3.1 Сертификат для `cliteracker.ru` — Let's Encrypt через certbot.
 
 17.3.2 Авторенью каждые 12 часов (контейнер с cron).
 

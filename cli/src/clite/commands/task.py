@@ -1,4 +1,4 @@
-"""apit task — CRUD, bulk, batch для задач."""
+"""clite task — CRUD, bulk, batch для задач."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from uuid import UUID
 
 import typer
 
-from apit.client import APIError, Client
-from apit.config import load_config
-from apit.output import OutputFormat, emit
+from clite.client import APIError, Client
+from clite.config import load_config
+from clite.output import OutputFormat, emit
 
 app = typer.Typer(no_args_is_help=True, help="Управление задачами")
 

@@ -1,4 +1,4 @@
-"""apit history — история событий."""
+"""clite history — история событий."""
 
 import sys
 from typing import Annotated
@@ -6,9 +6,9 @@ from uuid import UUID
 
 import typer
 
-from apit.client import APIError, Client
-from apit.config import load_config
-from apit.output import OutputFormat, emit
+from clite.client import APIError, Client
+from clite.config import load_config
+from clite.output import OutputFormat, emit
 
 app = typer.Typer(no_args_is_help=True, help="История изменений")
 

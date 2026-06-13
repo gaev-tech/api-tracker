@@ -1,4 +1,4 @@
-"""Конфигурация CLI: загрузка из ~/.config/apit/config.yaml + env."""
+"""Конфигурация CLI: загрузка из ~/.config/clite/config.yaml + env."""
 
 import os
 from dataclasses import dataclass
@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 DEFAULT_API_URL = "https://apitracker.ru"
-CONFIG_PATH = Path.home() / ".config" / "apit" / "config.yaml"
+CONFIG_PATH = Path.home() / ".config" / "clite" / "config.yaml"
 
 
 @dataclass(frozen=True)

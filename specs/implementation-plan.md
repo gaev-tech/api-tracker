@@ -30,7 +30,7 @@
 
 2.2.4 Angular 20 workspace с двумя apps `auth-client` и `docs-client` (пустые скелеты).
 
-2.2.5 DNS: A-запись `apitracker.ru` указана на сервер.
+2.2.5 DNS: A-запись `cliteracker.ru` указана на сервер.
 
 2.2.6 docker-compose на проде: `nginx`, `postgres`, `tasks-svc` (с эндпоинтами `/healthz` и `/v1/ping`).
 
@@ -52,7 +52,7 @@
 
 ### 3.1 Цель
 
-3.1.1 Автор начинает вести задачи разработки этого же проекта через `apit` без авторизации (`AUTH_MODE=disabled`).
+3.1.1 Автор начинает вести задачи разработки этого же проекта через `clite` без авторизации (`AUTH_MODE=disabled`).
 
 ### 3.2 Делverables
 
@@ -82,23 +82,23 @@
 
 3.2.5 CLI команды:
 
-3.2.5.1 `apit task create`.
+3.2.5.1 `clite task create`.
 
-3.2.5.2 `apit task list`.
+3.2.5.2 `clite task list`.
 
-3.2.5.3 `apit task get`.
+3.2.5.3 `clite task get`.
 
-3.2.5.4 `apit task update`.
+3.2.5.4 `clite task update`.
 
-3.2.5.5 `apit task bulk-update`.
+3.2.5.5 `clite task bulk-update`.
 
-3.2.5.6 `apit task batch-update`.
+3.2.5.6 `clite task batch-update`.
 
-3.2.5.7 `apit task bulk-create`.
+3.2.5.7 `clite task bulk-create`.
 
-3.2.5.8 `apit task batch-create`.
+3.2.5.8 `clite task batch-create`.
 
-3.2.5.9 `apit history task`.
+3.2.5.9 `clite history task`.
 
 3.2.6 Alembic-миграции в entrypoint (ARCH §3.3).
 
@@ -110,7 +110,7 @@
 
 ### 3.3 Done criteria
 
-3.3.1 Автор переносит roadmap M2–M4 в систему и работает с ним через `apit`.
+3.3.1 Автор переносит roadmap M2–M4 в систему и работает с ним через `clite`.
 
 3.3.2 Coverage по бэкенду измеряется в M1 и фиксируется как порог для следующих милстоунов.
 
@@ -158,15 +158,15 @@
 
 #### 4.2.4 CLI
 
-4.2.4.1 `apit login`, `apit login --device`, `apit logout`, `apit whoami`.
+4.2.4.1 `clite login`, `clite login --device`, `clite logout`, `clite whoami`.
 
-4.2.4.2 `apit team create/get/update/list`, `apit team member set/remove`, `apit team leave`.
+4.2.4.2 `clite team create/get/update/list`, `clite team member set/remove`, `clite team leave`.
 
-4.2.4.3 `apit project create/get/update/list`, `apit project member set/remove`, `apit project leave`, `apit project task add/remove`.
+4.2.4.3 `clite project create/get/update/list`, `clite project member set/remove`, `clite project leave`, `clite project task add/remove`.
 
-4.2.4.4 `apit share user set/remove`, `apit share team set/remove` на задаче.
+4.2.4.4 `clite share user set/remove`, `clite share team set/remove` на задаче.
 
-4.2.4.5 `apit history user`.
+4.2.4.5 `clite history user`.
 
 #### 4.2.5 CLI test cases
 
@@ -192,7 +192,7 @@
 
 4.3.1 Автор приглашает второго пользователя по email; второй логинится через magic-link.
 
-4.3.2 Автор шарит задачу второму пользователю; второй видит её в `apit task list`.
+4.3.2 Автор шарит задачу второму пользователю; второй видит её в `clite task list`.
 
 4.3.3 Создание команды, добавление участника, шаринг команде задачи — работает.
 
@@ -226,7 +226,7 @@
 
 5.2.8 Jinja-рендер с подстановкой `{{secrets.*}}`, `task.*`, `query(...)` (ARCH §11.5).
 
-5.2.9 CLI: `apit automation create/list/get/update/delete/run-now`, `apit secret set/list/delete`.
+5.2.9 CLI: `clite automation create/list/get/update/delete/run-now`, `clite secret set/list/delete`.
 
 5.2.10 CLI-test-cases расширяются (TC §9, §10) и сопровождаются автотестами.
 
@@ -242,7 +242,7 @@
 
 ### 6.1 Цель
 
-6.1.1 Публичный справочник по корню `apitracker.ru/` (ARCH §16.4).
+6.1.1 Публичный справочник по корню `cliteracker.ru/` (ARCH §16.4).
 
 ### 6.2 Делverables
 
@@ -270,7 +270,7 @@
 
 6.2.4 Executable examples: куски из `cli-test-cases.md` встраиваются в туториалы через md-include.
 
-6.2.5 `apitracker.ru/` отдаёт docs-client напрямую.
+6.2.5 `cliteracker.ru/` отдаёт docs-client напрямую.
 
 ### 6.3 Multi-channel дистрибуция CLI
 
@@ -278,19 +278,19 @@
 
 6.3.2 PyPI:
 
-6.3.2.1 Регистрация имени пакета `apit` на pypi.org; создание API-token, добавление в repo-secret `PYPI_TOKEN`.
+6.3.2.1 Регистрация имени пакета `clite` на pypi.org; создание API-token, добавление в repo-secret `PYPI_TOKEN`.
 
 6.3.2.2 GHA-job `pypi-publish` с `uv build` + `uv publish`.
 
-6.3.2.3 Проверка: `pipx install apit` ставит работоспособный CLI.
+6.3.2.3 Проверка: `pipx install clite` ставит работоспособный CLI.
 
 6.3.3 Homebrew:
 
-6.3.3.1 Создание публичного репо `gaev-tech/homebrew-apit` с `Formula/apit.rb`.
+6.3.3.1 Создание публичного репо `gaev-tech/homebrew-clite` с `Formula/clite.rb`.
 
 6.3.3.2 GHA-job `homebrew-publish` обновляет Formula с новой версией и SHA256, пушит в tap-репо через GitHub App.
 
-6.3.3.3 Проверка: `brew install gaev-tech/cli-tracker/apit` ставит работоспособный CLI на macOS.
+6.3.3.3 Проверка: `brew install gaev-tech/cli-tracker/clite` ставит работоспособный CLI на macOS.
 
 6.3.4 APT:
 
@@ -320,7 +320,7 @@
 
 6.4.1 Сторонний пользователь по apitracker.ru может разобраться, поставить CLI, залогиниться, создать задачу — без помощи автора.
 
-6.4.2 Установка через каждый из 5 каналов (GitHub Releases binary, PyPI, Homebrew, APT, npm) даёт работоспособный `apit --version` соответствующей версии.
+6.4.2 Установка через каждый из 5 каналов (GitHub Releases binary, PyPI, Homebrew, APT, npm) даёт работоспособный `clite --version` соответствующей версии.
 
 ## 7. Сквозные требования
 

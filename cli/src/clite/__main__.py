@@ -1,13 +1,13 @@
-"""apit — entrypoint."""
+"""clite — entrypoint."""
 
 import typer
 
-from apit import __version__
-from apit.commands import history as history_cmd
-from apit.commands import task as task_cmd
+from clite import __version__
+from clite.commands import history as history_cmd
+from clite.commands import task as task_cmd
 
 app = typer.Typer(
-    name="apit",
+    name="clite",
     no_args_is_help=True,
     help="api-tracker CLI",
     rich_markup_mode="rich",

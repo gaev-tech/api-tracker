@@ -17,7 +17,7 @@ AI-first таск-трекер: REST API + CLI + два Angular SPA (auth, docs)
 backend/
   tasks-service/   — FastAPI, основная бизнес-логика
   auth-service/    — FastAPI, аутентификация (с M2)
-cli/               — Python typer, CLI клиент `apit`
+cli/               — Python typer, CLI клиент `clite`
 contracts/
   proto/           — gRPC protobuf
   openapi/         — авто-экспорт OpenAPI из сервисов
@@ -46,7 +46,7 @@ npm run build
 
 ## Production
 
-Единый домен `apitracker.ru` с path-based маршрутизацией (см. `specs/architecture.md` §2):
+Единый домен `cliteracker.ru` с path-based маршрутизацией (см. `specs/architecture.md` §2):
 
 - `/` — docs-client (справка, M4)
 - `/auth/` — auth-client (браузерная аутентификация, M2)

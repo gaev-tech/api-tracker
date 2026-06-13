@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 env:
-  CLI_NAME: apit
+  CLI_NAME: clite
   PUBLIC_REPO: gaev-tech/cli-tracker
 
 jobs:
@@ -52,16 +52,16 @@ jobs:
       matrix:
         include:
           - os: macos-latest        # arm64 — M1+
-            asset: apit-darwin-arm64
+            asset: clite-darwin-arm64
             enabled-from: M1
           - os: macos-13            # amd64 — M2+
-            asset: apit-darwin-amd64
+            asset: clite-darwin-amd64
             enabled-from: M2
           - os: ubuntu-latest       # linux amd64 — M2+
-            asset: apit-linux-amd64
+            asset: clite-linux-amd64
             enabled-from: M2
           - os: windows-latest      # windows amd64 — M2+
-            asset: apit-windows-amd64.exe
+            asset: clite-windows-amd64.exe
             enabled-from: M2
     runs-on: ${{ matrix.os }}
     steps:
@@ -71,7 +71,7 @@ jobs:
         id: cli
         shell: bash
         run: |
-          if [[ -f cli/src/apit/__main__.py ]]; then
+          if [[ -f cli/src/clite/__main__.py ]]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -92,10 +92,10 @@ jobs:
         run: |
           uv sync --extra dev
           uv run pyinstaller \
-            --name apit \
+            --name clite \
             --onefile \
             --clean \
-            src/apit/__main__.py
+            src/clite/__main__.py
 
       - if: steps.cli.outputs.ready == 'true'
         name: Rename artifact
@@ -103,9 +103,9 @@ jobs:
         working-directory: cli/dist
         run: |
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            mv apit.exe "${{ matrix.asset }}"
+            mv clite.exe "${{ matrix.asset }}"
           else
-            mv apit "${{ matrix.asset }}"
+            mv clite "${{ matrix.asset }}"
             chmod +x "${{ matrix.asset }}"
           fi
 
@@ -163,12 +163,12 @@ jobs:
 
           NOTES_FILE=$(mktemp)
           cat > "$NOTES_FILE" <<EOF
-          api-tracker CLI \`apit\` v${VERSION}
+          api-tracker CLI \`clite\` v${VERSION}
 
           Установка — см. README в этом репозитории и docs.apitracker.ru.
 
           Канонiчный источник: GitHub Releases (этот репо).
-          Также доступно: PyPI \`apit\`, Homebrew \`gaev-tech/cli-tracker/apit\`,
+          Также доступно: PyPI \`clite\`, Homebrew \`gaev-tech/cli-tracker/clite\`,
           APT \`apt.apitracker.ru\`, npm \`@gaev-tech/cli-tracker\` (с M4).
           EOF
 
@@ -206,7 +206,7 @@ jobs:
     if: false  # включается в M4 (implementation-plan.md §6.3.3)
     runs-on: ubuntu-latest
     steps:
-      - run: echo "TODO M4 — обновить Formula в gaev-tech/homebrew-apit"
+      - run: echo "TODO M4 — обновить Formula в gaev-tech/homebrew-clite"
 
   publish-apt:
     needs: [validate, build-binaries]
