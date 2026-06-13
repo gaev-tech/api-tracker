@@ -57,7 +57,7 @@ done
 
 # 3. Поднять nginx с dummy.
 echo "### Поднимаем nginx с dummy-сертификатами..."
-docker compose -f docker-compose.prod.yml up -d nginx
+docker compose --env-file /opt/api-tracker/.env -f docker-compose.prod.yml up -d nginx
 
 sleep 5
 
@@ -79,7 +79,7 @@ for d in "${DOMAINS[@]}"; do
   domain_args="$domain_args -d $d"
 done
 
-docker compose -f docker-compose.prod.yml run --rm --entrypoint "\
+docker compose --env-file /opt/api-tracker/.env -f docker-compose.prod.yml run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     --email $EMAIL \
@@ -91,6 +91,6 @@ docker compose -f docker-compose.prod.yml run --rm --entrypoint "\
 
 # 5. Перезагрузить nginx.
 echo "### Перезагружаем nginx..."
-docker compose -f docker-compose.prod.yml exec nginx nginx -s reload
+docker compose --env-file /opt/api-tracker/.env -f docker-compose.prod.yml exec nginx nginx -s reload
 
 echo "### Готово! Проверьте: curl -I https://api.apitracker.ru/healthz"
