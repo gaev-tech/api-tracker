@@ -434,6 +434,20 @@
         "title": "ProjectUserMemberRead",
         "type": "object"
       },
+      "ShareSetRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "perms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Perms",
+            "type": "array"
+          }
+        },
+        "title": "ShareSetRequest",
+        "type": "object"
+      },
       "TaskCreate": {
         "additionalProperties": false,
         "properties": {
@@ -562,6 +576,74 @@
           "updated_at"
         ],
         "title": "TaskRead",
+        "type": "object"
+      },
+      "TaskShareTeamRead": {
+        "properties": {
+          "perms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Perms",
+            "type": "array"
+          },
+          "team_id": {
+            "format": "uuid",
+            "title": "Team Id",
+            "type": "string"
+          },
+          "team_name": {
+            "title": "Team Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_id",
+          "team_name",
+          "perms"
+        ],
+        "title": "TaskShareTeamRead",
+        "type": "object"
+      },
+      "TaskShareUserRead": {
+        "properties": {
+          "perms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Perms",
+            "type": "array"
+          },
+          "user_email": {
+            "title": "User Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_email",
+          "perms"
+        ],
+        "title": "TaskShareUserRead",
+        "type": "object"
+      },
+      "TaskSharesRead": {
+        "properties": {
+          "team_shares": {
+            "items": {
+              "$ref": "#/components/schemas/TaskShareTeamRead"
+            },
+            "title": "Team Shares",
+            "type": "array"
+          },
+          "user_shares": {
+            "items": {
+              "$ref": "#/components/schemas/TaskShareUserRead"
+            },
+            "title": "User Shares",
+            "type": "array"
+          }
+        },
+        "title": "TaskSharesRead",
         "type": "object"
       },
       "TaskStatus": {
@@ -1762,6 +1844,219 @@
         "summary": "Update Task",
         "tags": [
           "tasks"
+        ]
+      }
+    },
+    "/v1/tasks/{task_id}/share": {
+      "get": {
+        "operationId": "list_shares_v1_tasks__task_id__share_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskSharesRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Shares",
+        "tags": [
+          "shares"
+        ]
+      }
+    },
+    "/v1/tasks/{task_id}/share/teams/{team_id}": {
+      "put": {
+        "operationId": "put_team_share_v1_tasks__task_id__share_teams__team_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareSetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskSharesRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Team Share",
+        "tags": [
+          "shares"
+        ]
+      }
+    },
+    "/v1/tasks/{task_id}/share/users/me": {
+      "delete": {
+        "description": "Self-revoke (PRD \u00a77.8.1).",
+        "operationId": "self_revoke_v1_tasks__task_id__share_users_me_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskSharesRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Self Revoke",
+        "tags": [
+          "shares"
+        ]
+      }
+    },
+    "/v1/tasks/{task_id}/share/users/{email}": {
+      "put": {
+        "operationId": "put_user_share_v1_tasks__task_id__share_users__email__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "email",
+            "required": true,
+            "schema": {
+              "format": "email",
+              "title": "Email",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareSetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskSharesRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put User Share",
+        "tags": [
+          "shares"
         ]
       }
     },

@@ -197,3 +197,28 @@ class ProjectRead(BaseModel):
     user_members: list[ProjectUserMemberRead] = Field(default_factory=list)
     team_members: list[ProjectTeamMemberRead] = Field(default_factory=list)
     task_ids: list[UUID] = Field(default_factory=list)
+
+
+# === Task shares (M2.7c) ===
+
+
+class ShareSetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    perms: list[str] = Field(default_factory=list)
+
+
+class TaskShareUserRead(BaseModel):
+    user_email: str
+    perms: list[str]
+
+
+class TaskShareTeamRead(BaseModel):
+    team_id: UUID
+    team_name: str
+    perms: list[str]
+
+
+class TaskSharesRead(BaseModel):
+    user_shares: list[TaskShareUserRead] = Field(default_factory=list)
+    team_shares: list[TaskShareTeamRead] = Field(default_factory=list)

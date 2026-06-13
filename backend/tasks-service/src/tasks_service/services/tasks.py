@@ -193,6 +193,10 @@ async def create_task(
             "status": str(payload.status),
         },
     )
+    # Implicit user-share создателю (anchor-rule, PRD §6.6).
+    from tasks_service.services.shares import add_creator_share
+
+    await add_creator_share(session, task_id=task.id, creator_id=current_user.id)
     await session.refresh(task, ["blockers"])
     cache: dict[UUID, str] = {}
     return await _to_read_dict(session, task, cache)
