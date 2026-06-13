@@ -14,9 +14,14 @@ logger = logging.getLogger(__name__)
 
 def _send_blocking(to: str, subject: str, body: str) -> None:
     if not settings.smtp_host:
-        # Dev-fallback: вывести письмо в лог.
-        logger.warning("SMTP_HOST not set — printing email to log: %s — %s", to, subject)
-        logger.info("--- email body ---\n%s\n--- end ---", body)
+        # Dev-fallback: вывести письмо в лог на WARNING-уровне,
+        # чтобы было видно при стандартной uvicorn-конфигурации.
+        logger.warning(
+            "SMTP_HOST not set — email NOT sent. to=%s subject=%r\n--- body ---\n%s\n--- end ---",
+            to,
+            subject,
+            body,
+        )
         return
     msg = EmailMessage()
     msg["From"] = settings.smtp_from
