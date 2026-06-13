@@ -16,8 +16,7 @@ dist/
 build/
 *.egg
 
-# uv
-uv.lock
+# uv (lock-файл коммитим для reproducibility CI)
 
 # Node / Angular
 node_modules/

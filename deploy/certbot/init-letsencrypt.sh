@@ -57,7 +57,9 @@ done
 
 # 3. Поднять nginx с dummy.
 echo "### Поднимаем nginx с dummy-сертификатами..."
-docker compose --env-file /opt/api-tracker/.env -f docker-compose.prod.yml up -d nginx
+# --no-deps: до первого деплоя нет образа tasks-svc в GHCR,
+# nginx для ACME challenge от него не зависит.
+docker compose --env-file /opt/api-tracker/.env -f docker-compose.prod.yml up -d --no-deps nginx
 
 sleep 5
 
