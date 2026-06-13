@@ -166,12 +166,40 @@ async def list_history(
     session: SessionDep,
     user: CurrentUserDep,
     task_id: Annotated[UUID | None, Query()] = None,
+    user_email: Annotated[str | None, Query(alias="user_id")] = None,
     cursor: Annotated[str | None, Query()] = None,
 ) -> HistoryPage:
-    if task_id is None:
-        raise HTTPException(status_code=400, detail="task_id is required in M1")
+    """История по task_id или user_id (email). Ровно один параметр обязателен."""
+    if task_id is None and user_email is None:
+        raise HTTPException(status_code=400, detail="task_id or user_id is required")
+    if task_id is not None and user_email is not None:
+        raise HTTPException(status_code=400, detail="provide only one of task_id or user_id")
+
+    if task_id is not None:
+        try:
+            items, next_cursor = await history.list_history_for_task(session, task_id, cursor)
+        except CursorError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        return HistoryPage(
+            items=[HistoryEvent.model_validate(i) for i in items],
+            next_cursor=next_cursor,
+        )
+
+    # user_email path
+    assert user_email is not None
+    from tasks_service.user_resolver import resolve_and_cache_email
+
+    if user_email == "me":
+        target_user_id = user.id
+    else:
+        target_user_id_resolved = await resolve_and_cache_email(session, user_email)
+        if target_user_id_resolved is None:
+            raise HTTPException(status_code=404, detail=f"user not found: {user_email}")
+        target_user_id = target_user_id_resolved
     try:
-        items, next_cursor = await history.list_history_for_task(session, task_id, cursor)
+        items, next_cursor = await history.list_history_for_user(
+            session, requester=user, target_user_id=target_user_id, cursor=cursor
+        )
     except CursorError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return HistoryPage(
