@@ -85,9 +85,7 @@ def upgrade() -> None:
         ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index(
-        "ix_cli_auth_codes_code_hash", "cli_auth_codes", ["code_hash"], unique=True
-    )
+    op.create_index("ix_cli_auth_codes_code_hash", "cli_auth_codes", ["code_hash"], unique=True)
 
     op.create_table(
         "device_codes",
