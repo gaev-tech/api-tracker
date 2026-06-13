@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 try:
     from testcontainers.postgres import PostgresContainer
@@ -50,17 +51,17 @@ def postgres_container() -> Iterator[PostgresContainer]:
     container.stop()
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def engine(postgres_container: PostgresContainer) -> AsyncIterator[AsyncEngine]:
     url = postgres_container.get_connection_url()
-    eng = create_async_engine(url, echo=False)
+    eng = create_async_engine(url, echo=False, poolclass=NullPool)
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield eng
     await eng.dispose()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
     sm = async_sessionmaker(engine, expire_on_commit=False)
     # Очищаем таблицы перед каждым тестом, чтобы тесты были независимы.
@@ -71,7 +72,7 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
         yield s
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def solo_user(session: AsyncSession) -> User:
     user = User(email="solo@test")
     session.add(user)
@@ -80,7 +81,7 @@ async def solo_user(session: AsyncSession) -> User:
     return user
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def app(engine: AsyncEngine, solo_user: User) -> AsyncIterator[FastAPI]:
     # Lifespan не нужен — миграции не запускаем, схему создали через metadata.create_all.
     application = create_app(with_lifespan=False)
@@ -100,7 +101,7 @@ async def app(engine: AsyncEngine, solo_user: User) -> AsyncIterator[FastAPI]:
     yield application
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def client(
     app: FastAPI, solo_user: User, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[httpx.AsyncClient]:
