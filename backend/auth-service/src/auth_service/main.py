@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from auth_service import __version__
 from auth_service.bootstrap import run_migrations
 from auth_service.db import dispose_engine
+from auth_service.routers.magic import router as magic_router
 
 
 class HealthResponse(BaseModel):
@@ -34,6 +35,7 @@ def create_app(*, with_lifespan: bool = True) -> FastAPI:
     async def healthz() -> HealthResponse:
         return HealthResponse(status="ok", version=__version__)
 
+    app.include_router(magic_router)
     return app
 
 
