@@ -1,1 +1,1 @@
-# Placeholder. Implementation arrives in M1 — см. specs/implementation-plan.md §3.
+__version__ = "0.1.0"

@@ -33,6 +33,7 @@ ignore = [
   "RUF001",  # ruff жалуется на похожие кириллические/латинские в идентификаторах
   "RUF002",  # ... и в docstrings (у нас русские комментарии — false-positive)
   "RUF003",  # ... и в комментариях
+  "RUF013",  # implicit Optional — типичен для typer Options с default=None
 ]
 
 [tool.ruff.lint.per-file-ignores]
