@@ -56,3 +56,4 @@ logs/
 # Claude/superpowers worktrees
 .claude/worktrees/
 .superpowers/
+specs/.!*!.DS_Store
