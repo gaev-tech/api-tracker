@@ -31,13 +31,13 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
-      POSTGRES_DB: postgres
+      POSTGRES_DB: tasks
     volumes:
       - /var/lib/api-tracker/postgres:/var/lib/postgresql/data
     networks:
       - internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tasks"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -49,7 +49,7 @@ services:
     environment:
       AUTH_MODE: ${AUTH_MODE:-disabled}
       SOLO_USER_EMAIL: ${SOLO_USER_EMAIL:-solo@local}
-      DATABASE_URL: postgresql://tasks_app:${POSTGRES_PASSWORD}@postgres:5432/tasks
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@postgres:5432/tasks
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,10 +57,10 @@ services:
       - internal
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   certbot:
     image: certbot/certbot:latest

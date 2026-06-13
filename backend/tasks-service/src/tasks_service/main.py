@@ -30,13 +30,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await dispose_engine()
 
 
-def create_app() -> FastAPI:
+def create_app(*, with_lifespan: bool = True) -> FastAPI:
     app = FastAPI(
         title="api-tracker tasks-service",
         version=__version__,
         docs_url="/docs",
         openapi_url="/openapi.json",
-        lifespan=lifespan,
+        lifespan=lifespan if with_lifespan else None,
     )
 
     @app.get("/healthz", response_model=HealthResponse, tags=["meta"])

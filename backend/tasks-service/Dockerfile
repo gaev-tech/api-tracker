@@ -29,13 +29,15 @@ ENV PYTHONUNBUFFERED=1 \
 RUN useradd --create-home --shell /bin/bash --uid 1000 app
 
 COPY --from=builder --chown=app:app /opt/venv /opt/venv
+COPY --chown=app:app alembic.ini /app/alembic.ini
+COPY --chown=app:app alembic /app/alembic
 
 USER app
-WORKDIR /home/app
+WORKDIR /app
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()" || exit 1
 
 CMD ["python", "-m", "tasks_service"]

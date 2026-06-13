@@ -9,6 +9,11 @@ from tasks_service.config import settings
 from tasks_service.models import User
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
+# В Docker-runtime alembic.ini лежит в /app, а не в /opt/venv;
+# можно переопределить через env ALEMBIC_DIR.
+import os as _os  # noqa: E402
+
+ALEMBIC_DIR = Path(_os.environ.get("ALEMBIC_DIR", str(SERVICE_ROOT)))
 
 
 def run_migrations() -> None:
@@ -18,10 +23,14 @@ def run_migrations() -> None:
     alembic_bin = shutil.which("alembic")
     if alembic_bin is None:
         raise RuntimeError("alembic CLI not found in PATH")
+    ini_path = ALEMBIC_DIR / "alembic.ini"
+    if not ini_path.exists():
+        # Fallback на SERVICE_ROOT (uv dev-окружение).
+        ini_path = SERVICE_ROOT / "alembic.ini"
     subprocess.run(  # noqa: S603 — alembic_bin резолвится через which
-        [alembic_bin, "-c", str(SERVICE_ROOT / "alembic.ini"), "upgrade", "head"],
+        [alembic_bin, "-c", str(ini_path), "upgrade", "head"],
         check=True,
-        cwd=SERVICE_ROOT,
+        cwd=str(ini_path.parent),
     )
 
 
