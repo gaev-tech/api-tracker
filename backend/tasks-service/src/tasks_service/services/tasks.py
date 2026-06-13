@@ -114,6 +114,9 @@ async def list_tasks(
     cursor: str | None = None,
     limit: int = DEFAULT_LIMIT,
 ) -> tuple[list[dict[str, object]], str | None]:
+    """Возвращает страницу задач, видимых пользователю (effective_task_perms > 0)."""
+    from tasks_service.services.perms import filter_visible_task_ids
+
     if limit < 1 or limit > MAX_LIMIT:
         raise ValueError(f"limit must be in 1..{MAX_LIMIT}")
     stmt = select(Task).options(selectinload(Task.blockers)).order_by(Task.created_at, Task.id)
@@ -129,24 +132,42 @@ async def list_tasks(
         except CursorError:
             raise
         stmt = stmt.where(or_(Task.created_at > ts, and_(Task.created_at == ts, Task.id > item_id)))
-    stmt = stmt.limit(limit + 1)
+    # Берём с запасом, чтобы после фильтрации видимости остался полный limit.
+    stmt = stmt.limit((limit + 1) * 3 if limit < 100 else limit + 50)
     result = await session.execute(stmt)
-    rows = result.scalars().all()
+    rows = list(result.scalars().all())
 
-    has_next = len(rows) > limit
-    items = list(rows[:limit])
+    # Фильтр видимости (effective_task_perms > 0).
+    visible_ids = await filter_visible_task_ids(
+        session, user=current_user, task_ids=[t.id for t in rows]
+    )
+    visible_rows = [t for t in rows if t.id in visible_ids][: limit + 1]
+
+    has_next = len(visible_rows) > limit
+    items = visible_rows[:limit]
     cache: dict[UUID, str] = {}
     out = [await _to_read_dict(session, t, cache) for t in items]
     next_cursor = encode_cursor(items[-1].created_at, items[-1].id) if has_next and items else None
     return out, next_cursor
 
 
-async def get_task(session: AsyncSession, task_id: UUID) -> dict[str, object]:
+async def get_task(
+    session: AsyncSession,
+    task_id: UUID,
+    *,
+    current_user: User | None = None,
+) -> dict[str, object]:
     stmt = select(Task).options(selectinload(Task.blockers)).where(Task.id == task_id)
     result = await session.execute(stmt)
     task = result.scalar_one_or_none()
     if task is None:
         raise TaskNotFound(str(task_id))
+    if current_user is not None:
+        from tasks_service.services.perms import effective_task_perms
+
+        perms = await effective_task_perms(session, user=current_user, task_id=task.id)
+        if not perms:
+            raise TaskNotFound(str(task_id))
     cache: dict[UUID, str] = {}
     return await _to_read_dict(session, task, cache)
 

@@ -72,7 +72,7 @@ async def get_task(
     user: CurrentUserDep,
 ) -> TaskRead:
     try:
-        item = await tasks.get_task(session, task_id)
+        item = await tasks.get_task(session, task_id, current_user=user)
     except TaskNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return TaskRead.model_validate(item)
