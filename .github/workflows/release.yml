@@ -54,9 +54,10 @@ jobs:
           - os: macos-latest        # arm64 — M1+
             asset: clite-darwin-arm64
             enabled-from: M1
-          - os: macos-13            # amd64 — M2+
-            asset: clite-darwin-amd64
+          - os: macos-13            # amd64 — M2+ (Intel runner; free-tier queue
+            asset: clite-darwin-amd64 # may stall 30+ min — non-blocking for release)
             enabled-from: M2
+            continue-on-error: true
           - os: ubuntu-latest       # linux amd64 — M2+
             asset: clite-linux-amd64
             enabled-from: M2
@@ -64,6 +65,8 @@ jobs:
             asset: clite-windows-amd64.exe
             enabled-from: M2
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.continue-on-error == true }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -132,6 +135,7 @@ jobs:
 
   publish-github-release:
     needs: [validate, build-binaries]
+    if: always() && needs.validate.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
