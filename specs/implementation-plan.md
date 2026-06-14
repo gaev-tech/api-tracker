@@ -106,7 +106,7 @@
 
 3.2.8 Тесты: unit и integration (testcontainers с postgres) — минимум 1 happy path и 1 ошибочный сценарий на каждый эндпоинт.
 
-3.2.9 Публичный репозиторий `gaev-tech/cli-tracker` создан со скелетным README "coming soon"; release-workflow в GHA настроен для одной платформы (macOS arm64) и публикует pre-release `v0.1.0-dev` (ARCH §15.8).
+3.2.9 Публичный репозиторий `gaev-tech/clite` создан со скелетным README "coming soon"; release-workflow в GHA настроен для одной платформы (macOS arm64) и публикует pre-release `v0.1.0-dev` (ARCH §15.8).
 
 ### 3.3 Done criteria
 
@@ -288,7 +288,7 @@
 
 6.3.3.2 GHA-job `homebrew-publish` обновляет Formula с новой версией и SHA256, пушит в tap-репо через GitHub App.
 
-6.3.3.3 Проверка: `brew install gaev-tech/cli-tracker/clite` ставит работоспособный CLI на macOS.
+6.3.3.3 Проверка: `brew install gaev-tech/clite/clite` ставит работоспособный CLI на macOS.
 
 6.3.4 APT:
 
@@ -304,13 +304,13 @@
 
 6.3.5 npm:
 
-6.3.5.1 Регистрация имени `@gaev-tech/cli-tracker` на npmjs.com; создание токена, добавление в repo-secret `NPM_TOKEN`.
+6.3.5.1 Регистрация имени `@gaev-tech/clite` на npmjs.com; создание токена, добавление в repo-secret `NPM_TOKEN`.
 
 6.3.5.2 Пакет в `cli/npm-wrapper/` — postinstall-скрипт качает бинарь из GitHub Releases по OS+arch.
 
 6.3.5.3 GHA-job `npm-publish` с `npm publish --registry https://registry.npmjs.org/`.
 
-6.3.5.4 Проверка: `npx @gaev-tech/cli-tracker --version` и `npm install -g @gaev-tech/cli-tracker` работают.
+6.3.5.4 Проверка: `npx @gaev-tech/clite --version` и `npm install -g @gaev-tech/clite` работают.
 
 6.3.6 Документация в docs-client: страница "Installation" перечисляет все каналы установки с командами.
 

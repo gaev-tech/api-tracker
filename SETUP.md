@@ -14,7 +14,7 @@
 | `DEPLOY_HOST` | `91.218.114.168` |
 | `DEPLOY_USER` | Имя SSH-пользователя на прод-сервере |
 | `POSTGRES_PASSWORD` | Случайный пароль (32+ символа). Используется внутри compose-сети. |
-| `PUBLIC_REPO_TOKEN` | Fine-grained PAT, scope только `gaev-tech/cli-tracker`, permissions: `Contents` → `Read and write`. Создаётся в [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new), выбрать "Only select repositories" → `gaev-tech/cli-tracker`. **Не использовать токены с broader scope** — это security-anti-pattern. |
+| `PUBLIC_REPO_TOKEN` | Fine-grained PAT, scope только `gaev-tech/clite`, permissions: `Contents` → `Read and write`. Создаётся в [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new), выбрать "Only select repositories" → `gaev-tech/clite`. **Не использовать токены с broader scope** — это security-anti-pattern. |
 | `PYPI_TOKEN` | API-token на pypi.org (для release.yml publish-pypi; включается в M4). |
 | `NPM_TOKEN` | npmjs.com access-token (для release.yml publish-npm; включается в M4). |
 | `APT_GPG_KEY` | Приватный GPG-ключ для подписи .deb (для release.yml publish-apt; включается в M4). |
@@ -115,12 +115,12 @@ git push origin v0.1.0-dev
 Workflow `release.yml`:
 
 - Собирает CLI-бинари (matrix; в M0 — пропускает, в M1 — macOS arm64, в M2+ — все).
-- Создаёт Release в публичном репо `gaev-tech/cli-tracker` через `gh release create` с использованием `PUBLIC_REPO_TOKEN`.
+- Создаёт Release в публичном репо `gaev-tech/clite` через `gh release create` с использованием `PUBLIC_REPO_TOKEN`.
 - Jobs `publish-pypi`, `publish-homebrew`, `publish-apt`, `publish-npm` отключены (`if: false`) до M4 (см. `implementation-plan.md` §6.3).
 
 Перед первым релизом убедитесь, что:
 
-1. Создан публичный репо `gaev-tech/cli-tracker` (README + Releases).
+1. Создан публичный репо `gaev-tech/clite` (README + Releases).
 2. В этом приватном репо добавлен secret `PUBLIC_REPO_TOKEN` с правом `contents:write` в публичный репо.
 
 ## Откат

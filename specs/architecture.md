@@ -380,7 +380,7 @@
 
 ### 15.8 Распространение и релизы
 
-15.8.1 Публичный репозиторий `gaev-tech/cli-tracker` — отдельный от приватного monorepo `gaev-tech/api-tracker`.
+15.8.1 Публичный репозиторий `gaev-tech/clite` — отдельный от приватного monorepo `gaev-tech/api-tracker`.
 
 15.8.2 Содержимое публичного репо: README с инструкциями установки и GitHub Releases с бинарными артефактами; исходный код CLI остаётся в приватном monorepo (`cli/`).
 
@@ -434,7 +434,7 @@
 
 15.9.4.3 Release-workflow генерирует обновлённый `Formula/clite.rb` и пушит в tap-репо через GitHub App token.
 
-15.9.4.4 Установка пользователем: `brew install gaev-tech/cli-tracker/clite`.
+15.9.4.4 Установка пользователем: `brew install gaev-tech/clite/clite`.
 
 15.9.5 APT (Debian/Ubuntu):
 
@@ -454,13 +454,13 @@
 
 15.9.6 npm (binary-wrapper pattern):
 
-15.9.6.1 Пакет `@gaev-tech/cli-tracker` публикуется на npmjs.com.
+15.9.6.1 Пакет `@gaev-tech/clite` публикуется на npmjs.com.
 
 15.9.6.2 Структура — postinstall-скрипт определяет OS+arch и качает соответствующий бинарь из GitHub Releases (§15.8.3) в `node_modules/.bin/clite`.
 
 15.9.6.3 Публикация — `npm publish --registry https://registry.npmjs.org/` с токеном из repo-secret `NPM_TOKEN`.
 
-15.9.6.4 Установка пользователем: `npm install -g @gaev-tech/cli-tracker` или одноразовый запуск `npx @gaev-tech/cli-tracker ...`.
+15.9.6.4 Установка пользователем: `npm install -g @gaev-tech/clite` или одноразовый запуск `npx @gaev-tech/clite ...`.
 
 15.9.7 Release-workflow (расширение §15.8.5):
 
