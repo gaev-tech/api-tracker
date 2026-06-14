@@ -11,10 +11,8 @@ from tasks_service.schemas import (
     BatchResult,
     BulkCreateRequest,
     BulkCreateResult,
-    BulkCreateResultItem,
     BulkPatchRequest,
     BulkResult,
-    BulkResultItem,
     HistoryEvent,
     HistoryPage,
     TaskCreate,
@@ -46,10 +44,7 @@ async def list_tasks(
         )
     except (RSQLError, CursorError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return TaskListPage(
-        items=[TaskRead.model_validate(i) for i in items],
-        next_cursor=next_cursor,
-    )
+    return TaskListPage(items=items, next_cursor=next_cursor)
 
 
 @router.post("/tasks", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
@@ -59,10 +54,9 @@ async def create_task(
     user: CurrentUserDep,
 ) -> TaskRead:
     try:
-        item = await tasks.create_task(session, current_user=user, payload=payload)
+        return await tasks.create_task(session, current_user=user, payload=payload)
     except TaskNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return TaskRead.model_validate(item)
 
 
 @router.get("/tasks/{task_id}", response_model=TaskRead)
@@ -72,10 +66,9 @@ async def get_task(
     user: CurrentUserDep,
 ) -> TaskRead:
     try:
-        item = await tasks.get_task(session, task_id, current_user=user)
+        return await tasks.get_task(session, task_id, current_user=user)
     except TaskNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return TaskRead.model_validate(item)
 
 
 @router.patch("/tasks/{task_id}", response_model=TaskRead)
@@ -86,12 +79,11 @@ async def update_task(
     user: CurrentUserDep,
 ) -> TaskRead:
     try:
-        item = await tasks.update_task(
+        return await tasks.update_task(
             session, current_user=user, task_id=task_id, patch=payload
         )
     except TaskNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return TaskRead.model_validate(item)
 
 
 @router.post("/tasks/bulk-update", response_model=BulkResult)
@@ -109,11 +101,7 @@ async def bulk_update(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except (RSQLError, CursorError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return BulkResult(
-        results=[BulkResultItem(**r) for r in results],  # type: ignore[arg-type]
-        total=total,
-        succeeded=succeeded,
-    )
+    return BulkResult(results=results, total=total, succeeded=succeeded)
 
 
 @router.post("/tasks/batch-update", response_model=BatchResult)
@@ -143,9 +131,7 @@ async def bulk_create(
     user: CurrentUserDep,
 ) -> BulkCreateResult:
     results = await tasks.bulk_create(session, current_user=user, items=payload.items)
-    return BulkCreateResult(
-        results=[BulkCreateResultItem(**r) for r in results]  # type: ignore[arg-type]
-    )
+    return BulkCreateResult(results=results)
 
 
 @router.post(

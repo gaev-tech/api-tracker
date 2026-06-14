@@ -1,5 +1,6 @@
 """REST-эндпоинты проектов (M2.7, PRD §6.5)."""
 
+from typing import NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -37,13 +38,14 @@ from tasks_service.user_resolver import ensure_user, resolve_email_to_user_id_vi
 router = APIRouter(prefix="/v1/projects", tags=["projects"])
 
 
-def _handle_error(e: Exception) -> None:
+def _handle_error(e: Exception) -> NoReturn:
     if isinstance(e, ProjectNotFound):
         raise HTTPException(status_code=404, detail=str(e))
     if isinstance(e, PermissionDenied | CannotGrantAboveSelf):
         raise HTTPException(status_code=403, detail=str(e))
     if isinstance(e, ProjectError):
         raise HTTPException(status_code=400, detail=str(e))
+    raise HTTPException(status_code=500, detail=str(e))
 
 
 async def _to_read(session: SessionDep, project_id: UUID) -> ProjectRead:
@@ -98,7 +100,6 @@ async def create(
         p = await create_project(session, creator=user, name=payload.name)
     except ProjectError as e:
         _handle_error(e)
-        raise
     return await _to_read(session, p.id)
 
 
@@ -133,7 +134,6 @@ async def get(
         await get_project(session, current=user, project_id=project_id)
     except ProjectError as e:
         _handle_error(e)
-        raise
     return await _to_read(session, project_id)
 
 
@@ -150,7 +150,6 @@ async def patch_name(
         )
     except ProjectError as e:
         _handle_error(e)
-        raise
     return await _to_read(session, project_id)
 
 
@@ -176,7 +175,6 @@ async def put_user_member(
         )
     except ProjectError as e:
         _handle_error(e)
-        raise
     p = (
         await session.execute(select(Project).where(Project.id == project_id))
     ).scalar_one_or_none()
@@ -203,7 +201,6 @@ async def put_team_member(
         )
     except ProjectError as e:
         _handle_error(e)
-        raise
     p = (
         await session.execute(select(Project).where(Project.id == project_id))
     ).scalar_one_or_none()
@@ -227,7 +224,6 @@ async def leave(
         )
     except ProjectError as e:
         _handle_error(e)
-        raise
     p = (
         await session.execute(select(Project).where(Project.id == project_id))
     ).scalar_one_or_none()
@@ -249,7 +245,6 @@ async def add_task(
         )
     except ProjectError as e:
         _handle_error(e)
-        raise
 
 
 @router.delete("/{project_id}/tasks/{task_id}", status_code=204)
@@ -265,4 +260,3 @@ async def remove_task(
         )
     except ProjectError as e:
         _handle_error(e)
-        raise

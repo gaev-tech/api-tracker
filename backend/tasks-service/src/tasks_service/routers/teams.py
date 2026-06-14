@@ -1,5 +1,6 @@
 """REST-эндпоинты команд (M2.7, PRD §6.4)."""
 
+from typing import NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -32,15 +33,14 @@ from tasks_service.user_resolver import ensure_user, resolve_email_to_user_id_vi
 router = APIRouter(prefix="/v1/teams", tags=["teams"])
 
 
-def _handle_team_error(e: Exception) -> None:
+def _handle_team_error(e: Exception) -> NoReturn:
     if isinstance(e, TeamNotFound):
         raise HTTPException(status_code=404, detail=str(e))
-    if isinstance(e, PermissionDenied):
-        raise HTTPException(status_code=403, detail=str(e))
-    if isinstance(e, CannotGrantAboveSelf):
+    if isinstance(e, PermissionDenied | CannotGrantAboveSelf):
         raise HTTPException(status_code=403, detail=str(e))
     if isinstance(e, TeamError):
         raise HTTPException(status_code=400, detail=str(e))
+    raise HTTPException(status_code=500, detail=str(e))
 
 
 async def _team_to_read(session: SessionDep, team_id: UUID) -> TeamRead:
@@ -78,7 +78,6 @@ async def create(
         team = await create_team(session, creator=user, name=payload.name)
     except TeamError as e:
         _handle_team_error(e)
-        raise
     return await _team_to_read(session, team.id)
 
 
@@ -95,7 +94,6 @@ async def get(team_id: UUID, session: SessionDep, user: CurrentUserDep) -> TeamR
         await get_team(session, current=user, team_id=team_id)
     except TeamError as e:
         _handle_team_error(e)
-        raise
     return await _team_to_read(session, team_id)
 
 
@@ -110,7 +108,6 @@ async def patch_name(
         await update_name(session, current=user, team_id=team_id, new_name=payload.name)
     except TeamError as e:
         _handle_team_error(e)
-        raise
     return await _team_to_read(session, team_id)
 
 
@@ -138,7 +135,6 @@ async def set_member(
         )
     except TeamError as e:
         _handle_team_error(e)
-        raise
     return await _team_to_read(session, team_id)
 
 
@@ -153,7 +149,6 @@ async def leave(
         )
     except TeamError as e:
         _handle_team_error(e)
-        raise
     # После leave команда может быть удалена (последний участник); вернём 204-like.
     from tasks_service.models import Team
 
@@ -173,7 +168,6 @@ async def list_team_members(
         await get_team(session, current=user, team_id=team_id)
     except TeamError as e:
         _handle_team_error(e)
-        raise
     members = await list_members(session, team_id=team_id)
     user_rows = await session.execute(
         select(User).where(User.id.in_([m.user_id for m in members]))

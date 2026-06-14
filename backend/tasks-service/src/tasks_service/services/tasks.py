@@ -20,7 +20,13 @@ from tasks_service.rsql.fields import (
     build_sqlalchemy_filter,
 )
 from tasks_service.rsql.parser import RSQLError
-from tasks_service.schemas import TaskCreate, TaskUpdate
+from tasks_service.schemas import (
+    BulkCreateResultItem,
+    BulkResultItem,
+    TaskCreate,
+    TaskRead,
+    TaskUpdate,
+)
 from tasks_service.services.audit import record_audit
 
 DEFAULT_LIMIT = 50
@@ -51,29 +57,26 @@ def _task_field_specs() -> list[FieldSpec]:
     ]
 
 
-async def _to_read_dict(
+async def _to_read(
     session: AsyncSession, task: Task, assignee_email_cache: dict[UUID, str]
-) -> dict[str, object]:
+) -> TaskRead:
     if task.assignee_id not in assignee_email_cache:
         result = await session.execute(
             select(User.email).where(User.id == task.assignee_id)
         )
-        email = result.scalar_one_or_none() or ""
-        assignee_email_cache[task.assignee_id] = email
+        assignee_email_cache[task.assignee_id] = result.scalar_one_or_none() or ""
 
-    blocker_ids = [b.blocked_by_task_id for b in task.blockers]
-
-    return {
-        "id": task.id,
-        "title": task.title,
-        "description_md": task.description_md,
-        "labels": list(task.labels),
-        "status": task.status,
-        "assignee_email": assignee_email_cache[task.assignee_id],
-        "blocked_by": blocker_ids,
-        "created_at": task.created_at,
-        "updated_at": task.updated_at,
-    }
+    return TaskRead(
+        id=task.id,
+        title=task.title,
+        description_md=task.description_md,
+        labels=list(task.labels),
+        status=task.status,
+        assignee_email=assignee_email_cache[task.assignee_id],
+        blocked_by=[b.blocked_by_task_id for b in task.blockers],
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+    )
 
 
 async def _resolve_email_sync(session: AsyncSession, email: str) -> UUID | None:
@@ -119,7 +122,7 @@ async def list_tasks(
     filter_str: str | None = None,
     cursor: str | None = None,
     limit: int = DEFAULT_LIMIT,
-) -> tuple[list[dict[str, object]], str | None]:
+) -> tuple[list[TaskRead], str | None]:
     """Возвращает страницу задач, видимых пользователю (effective_task_perms > 0)."""
     from tasks_service.services.perms import filter_visible_task_ids
 
@@ -158,7 +161,7 @@ async def list_tasks(
     has_next = len(visible_rows) > limit
     items = visible_rows[:limit]
     cache: dict[UUID, str] = {}
-    out = [await _to_read_dict(session, t, cache) for t in items]
+    out = [await _to_read(session, t, cache) for t in items]
     next_cursor = (
         encode_cursor(items[-1].created_at, items[-1].id)
         if has_next and items
@@ -172,7 +175,7 @@ async def get_task(
     task_id: UUID,
     *,
     current_user: User | None = None,
-) -> dict[str, object]:
+) -> TaskRead:
     stmt = select(Task).options(selectinload(Task.blockers)).where(Task.id == task_id)
     result = await session.execute(stmt)
     task = result.scalar_one_or_none()
@@ -185,7 +188,7 @@ async def get_task(
         if not perms:
             raise TaskNotFound(str(task_id))
     cache: dict[UUID, str] = {}
-    return await _to_read_dict(session, task, cache)
+    return await _to_read(session, task, cache)
 
 
 async def _verify_blockers_exist(
@@ -205,7 +208,7 @@ async def create_task(
     *,
     current_user: User,
     payload: TaskCreate,
-) -> dict[str, object]:
+) -> TaskRead:
     await _verify_blockers_exist(session, payload.blocked_by)
 
     task = Task(
@@ -238,7 +241,7 @@ async def create_task(
     await add_creator_share(session, task_id=task.id, creator_id=current_user.id)
     await session.refresh(task, ["blockers"])
     cache: dict[UUID, str] = {}
-    return await _to_read_dict(session, task, cache)
+    return await _to_read(session, task, cache)
 
 
 async def _apply_patch(
@@ -246,7 +249,7 @@ async def _apply_patch(
     task: Task,
     patch: TaskUpdate,
     current_user: User,
-) -> dict[str, object]:
+) -> TaskRead:
     diff: dict[str, object] = {}
     if patch.title is not None and patch.title != task.title:
         diff["title"] = {"old": task.title, "new": patch.title}
@@ -304,7 +307,7 @@ async def _apply_patch(
         )
     await session.refresh(task, ["blockers"])
     cache: dict[UUID, str] = {}
-    return await _to_read_dict(session, task, cache)
+    return await _to_read(session, task, cache)
 
 
 async def update_task(
@@ -313,7 +316,7 @@ async def update_task(
     current_user: User,
     task_id: UUID,
     patch: TaskUpdate,
-) -> dict[str, object]:
+) -> TaskRead:
     stmt = select(Task).options(selectinload(Task.blockers)).where(Task.id == task_id)
     result = await session.execute(stmt)
     task = result.scalar_one_or_none()
@@ -345,9 +348,9 @@ async def bulk_update(
     current_user: User,
     filter_str: str,
     patch: TaskUpdate,
-) -> tuple[list[dict[str, object]], int, int]:
+) -> tuple[list[BulkResultItem], int, int]:
     ids = await _select_filtered_ids(session, filter_str, current_user.email)
-    results: list[dict[str, object]] = []
+    results: list[BulkResultItem] = []
     succeeded = 0
     for tid in ids:
         # Каждая задача — своя savepoint, чтобы ошибка одной не откатывала остальные.
@@ -360,16 +363,16 @@ async def bulk_update(
             t = row.scalar_one_or_none()
             if t is None:
                 await sp.rollback()
-                results.append({"task_id": tid, "status": "not_found"})
+                results.append(BulkResultItem(task_id=tid, status="not_found"))
                 continue
             await _apply_patch(session, t, patch, current_user)
             await sp.commit()
-            results.append({"task_id": tid, "status": "ok"})
+            results.append(BulkResultItem(task_id=tid, status="ok"))
             succeeded += 1
-        except Exception as e:
+        except (TaskNotFound, ValidationFailed, ValueError, IntegrityError) as e:
             await sp.rollback()
             results.append(
-                {"task_id": tid, "status": "validation_failed", "error": str(e)}
+                BulkResultItem(task_id=tid, status="validation_failed", error=str(e))
             )
     return results, len(ids), succeeded
 
@@ -397,18 +400,20 @@ async def bulk_create(
     *,
     current_user: User,
     items: Sequence[TaskCreate],
-) -> list[dict[str, object]]:
-    results: list[dict[str, object]] = []
+) -> list[BulkCreateResultItem]:
+    results: list[BulkCreateResultItem] = []
     for idx, payload in enumerate(items):
         sp = await session.begin_nested()
         try:
             t = await create_task(session, current_user=current_user, payload=payload)
             await sp.commit()
-            results.append({"index": idx, "status": "ok", "task_id": t["id"]})
+            results.append(BulkCreateResultItem(index=idx, status="ok", task_id=t.id))
         except (TaskNotFound, ValueError, IntegrityError) as e:
             await sp.rollback()
             results.append(
-                {"index": idx, "status": "validation_failed", "error": str(e)}
+                BulkCreateResultItem(
+                    index=idx, status="validation_failed", error=str(e)
+                )
             )
     return results
 
@@ -422,5 +427,5 @@ async def batch_create(
     ids: list[UUID] = []
     for payload in items:
         t = await create_task(session, current_user=current_user, payload=payload)
-        ids.append(t["id"])  # type: ignore[arg-type]
+        ids.append(t.id)
     return ids

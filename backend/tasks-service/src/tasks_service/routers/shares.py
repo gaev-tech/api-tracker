@@ -1,5 +1,6 @@
 """Share-эндпоинты задачи (M2.7c, PRD §6.2, §6.7)."""
 
+from typing import NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
@@ -30,13 +31,14 @@ from tasks_service.user_resolver import ensure_user, resolve_email_to_user_id_vi
 router = APIRouter(prefix="/v1/tasks/{task_id}/share", tags=["shares"])
 
 
-def _handle_error(e: Exception) -> None:
-    if isinstance(e, (TaskNotFound, TeamNotFound)):
+def _handle_error(e: Exception) -> NoReturn:
+    if isinstance(e, TaskNotFound | TeamNotFound):
         raise HTTPException(status_code=404, detail=str(e))
-    if isinstance(e, (PermissionDenied, CannotGrantAboveSelf)):
+    if isinstance(e, PermissionDenied | CannotGrantAboveSelf):
         raise HTTPException(status_code=403, detail=str(e))
     if isinstance(e, ShareError):
         raise HTTPException(status_code=400, detail=str(e))
+    raise HTTPException(status_code=500, detail=str(e))
 
 
 async def _read_shares(session: SessionDep, task_id: UUID) -> TaskSharesRead:
@@ -103,7 +105,6 @@ async def put_user_share(
         )
     except ShareError as e:
         _handle_error(e)
-        raise
     return await _read_shares(session, task_id)
 
 
@@ -118,7 +119,6 @@ async def self_revoke(
         )
     except ShareError as e:
         _handle_error(e)
-        raise
     return await _read_shares(session, task_id)
 
 
@@ -140,5 +140,4 @@ async def put_team_share(
         )
     except ShareError as e:
         _handle_error(e)
-        raise
     return await _read_shares(session, task_id)
