@@ -64,6 +64,8 @@ class Client:
                 response.status_code,
                 f"server error {response.status_code} (request-id: {request_id})",
             )
+        if response.status_code == 204 or not response.content:
+            return {}
         try:
             return response.json()  # type: ignore[no-any-return]
         except ValueError as e:

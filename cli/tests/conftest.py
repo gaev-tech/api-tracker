@@ -2,6 +2,10 @@
 
 Coverage map: `specs/cli-test-cases.md` — каждый тест в `e2e/` ссылается на TC-номер
 в имени (`test_TC_<section>_<n>_*`); CI step `cli-cases-coverage` (M2.16) сверяет.
+
+Nginx-stub: clite ожидает upstream под /api/* (prod: nginx стрипает /api перед
+tasks-svc, см. deploy/nginx/conf.d/apitracker.ru.conf). В harness'е роль nginx
+играет лёгкий stdlib-прокси (_NginxStub) — стрипает /api и форвардит на tasks-svc.
 """
 
 from __future__ import annotations
@@ -10,9 +14,13 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import time
+import urllib.error
+import urllib.request
 from collections.abc import Iterator
 from dataclasses import dataclass
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import httpx
@@ -45,6 +53,76 @@ class TasksSvcHandle:
     process: subprocess.Popen[bytes]
 
 
+@dataclass(frozen=True)
+class NginxStubHandle:
+    base_url: str
+    server: ThreadingHTTPServer
+    thread: threading.Thread
+
+
+def _make_nginx_stub(upstream: str) -> NginxStubHandle:
+    """HTTP proxy: стрипает префикс /api и форвардит на upstream (tasks-svc).
+
+    Mirrors deploy/nginx/conf.d/apitracker.ru.conf — `/api/v1/*` → `/v1/*`.
+    """
+
+    class _Handler(BaseHTTPRequestHandler):
+        def _forward(self) -> None:
+            path = self.path
+            if path.startswith("/api/"):
+                path = path[len("/api") :]
+            url = upstream.rstrip("/") + path
+            length = int(self.headers.get("Content-Length", "0"))
+            body = self.rfile.read(length) if length else None
+            req = urllib.request.Request(url, data=body, method=self.command)
+            for header, value in self.headers.items():
+                lower = header.lower()
+                if lower in ("host", "content-length", "connection"):
+                    continue
+                req.add_header(header, value)
+            try:
+                resp = urllib.request.urlopen(req, timeout=30)
+                status = resp.status
+                data = resp.read()
+                resp_headers = resp.headers
+            except urllib.error.HTTPError as e:
+                status = e.code
+                data = e.read()
+                resp_headers = e.headers
+            self.send_response(status)
+            for header, value in resp_headers.items():
+                if header.lower() in (
+                    "transfer-encoding",
+                    "connection",
+                    "content-encoding",
+                    "content-length",
+                ):
+                    continue
+                self.send_header(header, value)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        do_GET = _forward
+        do_POST = _forward
+        do_PUT = _forward
+        do_PATCH = _forward
+        do_DELETE = _forward
+        do_HEAD = _forward
+        do_OPTIONS = _forward
+
+        def log_message(self, format: str, *args: object) -> None:
+            return
+
+    port = _free_port()
+    server = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return NginxStubHandle(
+        base_url=f"http://127.0.0.1:{port}", server=server, thread=thread
+    )
+
+
 @pytest.fixture(scope="session")
 def postgres_dsn() -> Iterator[str]:
     """Поднимает postgres testcontainer и возвращает DSN."""
@@ -64,6 +142,10 @@ def tasks_svc(postgres_dsn: str) -> Iterator[TasksSvcHandle]:
     """Запускает tasks-svc subprocess'ом в AUTH_MODE=disabled."""
     port = _free_port()
     env = os.environ.copy()
+    # alembic запускается subprocess'ом из bootstrap.run_migrations через
+    # shutil.which("alembic") — нужно убедиться, что bin venv'а в PATH.
+    venv_bin = os.path.dirname(sys.executable)
+    env["PATH"] = f"{venv_bin}{os.pathsep}{env.get('PATH', '')}"
     env.update(
         {
             "DATABASE_URL": postgres_dsn,
@@ -119,6 +201,17 @@ def tasks_svc(postgres_dsn: str) -> Iterator[TasksSvcHandle]:
             proc.kill()
 
 
+@pytest.fixture(scope="session")
+def nginx_stub(tasks_svc: TasksSvcHandle) -> Iterator[NginxStubHandle]:
+    """Stdlib HTTP proxy: /api/* → tasks-svc/*. Заменяет nginx в e2e harness'е."""
+    stub = _make_nginx_stub(tasks_svc.base_url)
+    try:
+        yield stub
+    finally:
+        stub.server.shutdown()
+        stub.server.server_close()
+
+
 @pytest.fixture
 def clite_env_offline(tmp_path: Path) -> dict[str, str]:
     """Окружение clite без поднятого tasks-svc — для TC, проверяющих локальное поведение
@@ -133,15 +226,16 @@ def clite_env_offline(tmp_path: Path) -> dict[str, str]:
 
 
 @pytest.fixture
-def clite_env(tasks_svc: TasksSvcHandle, tmp_path: Path) -> dict[str, str]:
-    """Окружение для запуска clite в подпроцессе против поднятого tasks-svc.
+def clite_env(nginx_stub: NginxStubHandle, tmp_path: Path) -> dict[str, str]:
+    """Окружение для запуска clite в подпроцессе против nginx-stub→tasks-svc.
 
-    Создаёт временный HOME/.config/clite/config.yaml с api_url=tasks_svc.
+    Создаёт временный HOME/.config/clite/config.yaml с api_url = nginx-stub
+    (clite добавляет /api префикс — стрипается прокси и форвардится в tasks-svc).
     """
     home = tmp_path / "home"
     cfg_dir = home / ".config" / "clite"
     cfg_dir.mkdir(parents=True)
-    (cfg_dir / "config.yaml").write_text(f"api_url: {tasks_svc.base_url}\n")
+    (cfg_dir / "config.yaml").write_text(f"api_url: {nginx_stub.base_url}\n")
     env = os.environ.copy()
     env["HOME"] = str(home)
     return env
