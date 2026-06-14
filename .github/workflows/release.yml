@@ -95,6 +95,7 @@ jobs:
             --name clite \
             --onefile \
             --clean \
+            --copy-metadata clite \
             src/clite/__main__.py
 
       - if: steps.cli.outputs.ready == 'true'
