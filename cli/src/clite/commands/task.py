@@ -1,7 +1,7 @@
-"""clite task — list, get, create bulk/batch, update bulk/batch.
+"""clite task — массовые мутации: create bulk/batch, update bulk/batch.
 
-Single-task create и single-task update удалены: все мутации идут через
-bulk/batch (PRD §7.2, §7.3, §7.6).
+Single-task create/update, get и list удалены из CLI (M2.28, M2.29). Чтение
+задач выполняется через docs-client / API напрямую.
 """
 
 from __future__ import annotations
@@ -15,19 +15,11 @@ import typer
 
 from clite.client import APIError, Client
 from clite.config import load_config
-from clite.output import OutputFormat, emit, parse_fields
-
-FieldsOpt = Annotated[
-    str | None,
-    typer.Option("--fields", help="Только эти поля через запятую (PRD §7.9)"),
-]
-
-_DEFAULT_TASK_FIELDS = ["id", "title", "description_md"]
+from clite.output import OutputFormat, emit
 
 app = typer.Typer(
-    invoke_without_command=True,
-    help="Список задач с RSQL-фильтром (по умолчанию — все). "
-    "Подкоманды create/update для массовых мутаций.",
+    no_args_is_help=True,
+    help="Массовые мутации задач: create bulk/batch, update bulk/batch.",
 )
 
 create_app = typer.Typer(
@@ -97,39 +89,6 @@ def _load_items(data: str | None, file: Path | None) -> list[object]:
         print("JSON root must be array", file=sys.stderr)
         raise typer.Exit(2)
     return items
-
-
-# === task (callback) — список задач с RSQL-фильтром ===
-
-
-@app.callback(invoke_without_command=True)
-def list_tasks(
-    ctx: typer.Context,
-    filter: Annotated[str | None, typer.Option("--filter", "-f", help="RSQL")] = None,
-    cursor: Annotated[str | None, typer.Option("--cursor")] = None,
-    limit: Annotated[int, typer.Option("--limit", min=1, max=200)] = 50,
-    output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
-    fields: FieldsOpt = None,
-) -> None:
-    """Без подкоманды — вывод задач по RSQL-фильтру.
-
-    Для одной задачи: `clite task --filter 'id==<sha1-prefix>'`.
-    Курсорная пагинация PRD §7.1.2.
-    """
-    if ctx.invoked_subcommand is not None:
-        return
-    params: dict[str, object] = {"limit": limit}
-    if filter:
-        params["filter"] = filter
-    if cursor:
-        params["cursor"] = cursor
-    with _client() as c:
-        try:
-            result = c.get("/v1/tasks", params=params)
-        except APIError as e:
-            _handle_api_error(e)
-            return
-    emit(result, output, fields=parse_fields(fields) or _DEFAULT_TASK_FIELDS)
 
 
 # === task create bulk | task create batch ===

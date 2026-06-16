@@ -24,7 +24,7 @@ app.add_typer(history_cmd.app, name="history")
 app.add_typer(team_cmd.app, name="team")
 app.add_typer(project_cmd.app, name="project")
 app.add_typer(share_cmd.app, name="share")
-app.registered_commands.extend(auth_cmd.app.registered_commands)
+app.add_typer(auth_cmd.app, name="account")
 
 
 @app.command("version")

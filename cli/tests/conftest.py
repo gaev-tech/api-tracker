@@ -280,13 +280,15 @@ def clite_offline(clite_env_offline: dict[str, str]):
 
 
 @pytest.fixture
-def mk_task(clite):
-    """Создать одну задачу через bulk-create и вернуть её dict (M2.28).
+def mk_task(clite, nginx_stub):
+    """Создать одну задачу через bulk-create и вернуть её dict (M2.28+M2.29).
 
-    Замена legacy single-create — single-create endpoint удалён, единственный
-    путь создания: bulk/batch с массивом.
+    CLI не имеет read-команд для задач (get/list/--filter удалены в M2.29).
+    Для теста-удобства после создания дёргаем GET /v1/tasks/{id} напрямую
+    через nginx-stub.
     """
     import json as _json
+    import urllib.request
 
     def _make(title: str, **extra: object) -> dict:
         item = {"title": title, **extra}
@@ -295,19 +297,9 @@ def mk_task(clite):
         result = _json.loads(r.stdout)["results"][0]
         assert result["status"] == "ok", result
         task_id = result["task_id"]
-        g = clite(
-            [
-                "task",
-                "--filter",
-                f"id=={task_id[:10]}",
-                "--fields",
-                "id,title,status,description_md,labels",
-                "--output",
-                "json",
-            ]
-        )
-        assert g.returncode == 0, g.stderr
-        items = _json.loads(g.stdout)["items"]
-        return next(it for it in items if it["id"] == task_id)
+        with urllib.request.urlopen(
+            f"{nginx_stub.base_url}/api/v1/tasks/{task_id}"
+        ) as resp:
+            return _json.loads(resp.read())
 
     return _make
