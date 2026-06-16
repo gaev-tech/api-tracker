@@ -1,4 +1,3 @@
-
 import pytest
 
 from tasks_service.models import Task
