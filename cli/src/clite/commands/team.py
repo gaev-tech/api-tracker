@@ -16,6 +16,8 @@ FieldsOpt = Annotated[
     typer.Option("--fields", help="Только эти поля через запятую (PRD §7.9)"),
 ]
 
+_DEFAULT_TEAM_FIELDS = ["id", "name"]
+
 app = typer.Typer(no_args_is_help=True, help="Управление командами")
 member_app = typer.Typer(no_args_is_help=True, help="Управление участниками команды")
 app.add_typer(member_app, name="member")
@@ -59,7 +61,7 @@ def list_teams(
         except APIError as e:
             _handle_api_error(e)
             return
-    emit(result, output, fields=parse_fields(fields))
+    emit(result, output, fields=parse_fields(fields) or _DEFAULT_TEAM_FIELDS)
 
 
 @app.command("get")
@@ -74,7 +76,7 @@ def get_team(
         except APIError as e:
             _handle_api_error(e)
             return
-    emit(result, output, fields=parse_fields(fields))
+    emit(result, output, fields=parse_fields(fields) or _DEFAULT_TEAM_FIELDS)
 
 
 @app.command("update")

@@ -90,13 +90,13 @@
 
 3.2.5.4 `clite task update`.
 
-3.2.5.5 `clite task bulk-update`.
+3.2.5.5 `clite task update bulk`.
 
-3.2.5.6 `clite task batch-update`.
+3.2.5.6 `clite task update batch`.
 
-3.2.5.7 `clite task bulk-create`.
+3.2.5.7 `clite task create bulk`.
 
-3.2.5.8 `clite task batch-create`.
+3.2.5.8 `clite task create batch`.
 
 3.2.5.9 `clite history task`.
 

@@ -24,11 +24,11 @@
 
 ### 1.3 Формат вывода
 
-1.3.1 Default — table при TTY, json при пайпе.
+1.3.1 Default — построчный человеко-читаемый формат при TTY, json при пайпе.
 
 1.3.2 `--output json` принудительно JSON.
 
-1.3.3 `--output table` принудительно table.
+1.3.3 `--output table` — построчный формат `field: value`, пустая строка между сущностями (PRD §7.9.4). Имя флага исторически `table`, реальный рендер не табличный.
 
 1.3.4 `--fields a,b,c` — рендерить только указанные поля (применимо ко всем get/list-командам, PRD §7.9). Поле, отсутствующее в ответе, опускается. Без флага — дефолтный набор полей данной команды.
 
@@ -168,13 +168,13 @@
 
 3.8.2 `--status invalid` → exit 2.
 
-### 3.9 task bulk-update — позитивные
+### 3.9 task update bulk — позитивные
 
 3.9.1 `--filter "labels=in=(bug)" --set status=done` → exit 0. stdout: `results: [...]`, `total = N`, `succeeded = K`.
 
 3.9.2 Все попавшие задачи мне доступны → `succeeded == total`.
 
-### 3.10 task bulk-update — негативные
+### 3.10 task update bulk — негативные
 
 3.10.1 (M2+) Часть задач без прав → exit 0, в `results` есть `forbidden`-записи; остальные применены.
 
@@ -182,27 +182,27 @@
 
 3.10.3 Невалидный `--set field=value` (тип не совпадает) → exit 2.
 
-### 3.11 task batch-update — позитивные
+### 3.11 task update batch — позитивные
 
 3.11.1 `--filter ... --set ...` со всеми доступными мне задачами → exit 0, все обновлены.
 
-### 3.12 task batch-update — негативные
+### 3.12 task update batch — негативные
 
 3.12.1 (M2+) Хотя бы одна задача в выборке без прав → exit 4, stderr `atomic batch failed on task <id>: forbidden`. Состояние БД не изменилось.
 
 3.12.2 Невалидное значение для одной из задач → exit 2, ничего не изменилось.
 
-### 3.13 task bulk-create — позитивные
+### 3.13 task create bulk — позитивные
 
 3.13.1 `--from tasks.json` с массивом из N валидных задач → exit 0, stdout — массив `results` с per-item статусом.
 
-### 3.14 task bulk-create — негативные
+### 3.14 task create bulk — негативные
 
 3.14.1 Одна из задач не имеет якоря → exit 0, в `results` для этой задачи `status = validation_failed`.
 
 3.14.2 Невалидный JSON → exit 2 (см. 2.3).
 
-### 3.15 task batch-create
+### 3.15 task create batch
 
 3.15.1 Все валидны → exit 0, все созданы.
 

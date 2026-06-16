@@ -38,7 +38,9 @@ def test_TC_7_3_1_project_task_add(clite):
     add = clite(["project", "task", "add", project_id, "--task", task_id])
     assert add.returncode == 0, add.stderr
 
-    got = clite(["project", "get", project_id, "--output", "json"])
+    got = clite(
+        ["project", "get", project_id, "--fields", "id,task_ids", "--output", "json"]
+    )
     assert got.returncode == 0, got.stderr
     data = json.loads(got.stdout)
     assert task_id in data.get("task_ids", [])
@@ -55,7 +57,9 @@ def test_TC_7_3_2_project_task_remove(clite):
     rm = clite(["project", "task", "remove", project_id, "--task", task_id])
     assert rm.returncode == 0, rm.stderr
 
-    got = clite(["project", "get", project_id, "--output", "json"])
+    got = clite(
+        ["project", "get", project_id, "--fields", "id,task_ids", "--output", "json"]
+    )
     data = json.loads(got.stdout)
     assert task_id not in data.get("task_ids", [])
 

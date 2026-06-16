@@ -16,6 +16,8 @@ FieldsOpt = Annotated[
     typer.Option("--fields", help="Только эти поля через запятую (PRD §7.9)"),
 ]
 
+_DEFAULT_PROJECT_FIELDS = ["id", "name"]
+
 app = typer.Typer(no_args_is_help=True, help="Управление проектами")
 member_app = typer.Typer(no_args_is_help=True, help="Управление участниками проекта")
 task_app = typer.Typer(no_args_is_help=True, help="Управление задачами в проекте")
@@ -62,7 +64,7 @@ def list_projects(
         except APIError as e:
             _handle(e)
             return
-    emit(r, output, fields=parse_fields(fields))
+    emit(r, output, fields=parse_fields(fields) or _DEFAULT_PROJECT_FIELDS)
 
 
 @app.command("get")
@@ -77,7 +79,7 @@ def get_project(
         except APIError as e:
             _handle(e)
             return
-    emit(r, output, fields=parse_fields(fields))
+    emit(r, output, fields=parse_fields(fields) or _DEFAULT_PROJECT_FIELDS)
 
 
 @app.command("update")

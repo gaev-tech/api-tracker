@@ -82,7 +82,18 @@ def test_TC_3_3_2_list_filter_by_status(clite):
     )
     assert create_done.returncode == 0, create_done.stderr
 
-    r = clite(["task", "list", "--filter", "status==open", "--output", "json"])
+    r = clite(
+        [
+            "task",
+            "list",
+            "--filter",
+            "status==open",
+            "--fields",
+            "id,status",
+            "--output",
+            "json",
+        ]
+    )
     assert r.returncode == 0, r.stderr
     data = json.loads(r.stdout)
     statuses = {t["status"] for t in data["items"]}

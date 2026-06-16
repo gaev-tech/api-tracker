@@ -1,11 +1,8 @@
-"""Форматирование вывода: table (TTY) / json (pipe)."""
+"""Форматирование вывода: построчно (TTY) / json (pipe)."""
 
 import json
 import sys
 from typing import Literal
-
-from rich.console import Console
-from rich.table import Table
 
 OutputFormat = Literal["table", "json", "auto"]
 
@@ -56,44 +53,32 @@ def emit(data: object, fmt: OutputFormat, fields: list[str] | None = None) -> No
         print(json.dumps(data, indent=2, default=str, ensure_ascii=False))
         return
     if isinstance(data, list):
-        emit_table(data)
+        emit_items(data)
     elif isinstance(data, dict):
         if "items" in data and isinstance(data["items"], list):
-            emit_table(data["items"])
+            emit_items(data["items"])
             if data.get("next_cursor"):
                 print(f"\nnext_cursor: {data['next_cursor']}")
         else:
-            emit_object(data)
+            emit_items([data])
     else:
         print(data)
 
 
-def emit_table(rows: list[object]) -> None:
-    if not rows:
+def emit_items(items: list[object]) -> None:
+    """Каждый элемент рендерится построчно `key: value`; пустая строка
+    между элементами. Пустой список → "(empty)"."""
+    if not items:
         print("(empty)")
         return
-    if not isinstance(rows[0], dict):
-        for r in rows:
-            print(r)
-        return
-    columns = list(rows[0].keys())
-    table = Table(show_lines=False)
-    for col in columns:
-        table.add_column(col)
-    for row in rows:
-        if not isinstance(row, dict):
+    for i, item in enumerate(items):
+        if i > 0:
+            print()
+        if not isinstance(item, dict):
+            print(item)
             continue
-        table.add_row(*[_render_cell(row.get(c)) for c in columns])
-    Console().print(table)
-
-
-def emit_object(obj: dict[str, object]) -> None:
-    table = Table(show_header=False, show_lines=False)
-    table.add_column("key", style="bold")
-    table.add_column("value")
-    for k, v in obj.items():
-        table.add_row(k, _render_cell(v))
-    Console().print(table)
+        for k, v in item.items():
+            print(f"{k}: {_render_cell(v)}")
 
 
 def _render_cell(value: object) -> str:
