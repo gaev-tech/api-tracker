@@ -2,7 +2,6 @@
 
 from collections.abc import AsyncIterator
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
@@ -59,14 +58,12 @@ async def _get_user_from_jwt(session: AsyncSession, request: Request) -> User:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="missing sub/email claims"
         )
-    try:
-        user_id = UUID(sub)
-    except ValueError as e:
+    if not isinstance(sub, str) or len(sub) != 40:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid sub claim"
-        ) from e
+        )
 
-    user = await ensure_user(session, user_id=user_id, email=email)
+    user = await ensure_user(session, user_id=sub, email=email)
     request.state.user_id = user.id
     return user
 
@@ -90,6 +87,6 @@ async def get_current_user(
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 
-async def resolve_email_to_user_id(session: AsyncSession, email: str) -> UUID | None:
-    result = await session.execute(select(User.id).where(User.email == email))
+async def resolve_email_to_user_id(session: AsyncSession, email: str) -> str | None:
+    result = await session.execute(select(User.id).where(User.email == email.lower()))
     return result.scalar_one_or_none()

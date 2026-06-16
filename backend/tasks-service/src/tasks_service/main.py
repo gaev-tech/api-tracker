@@ -2,7 +2,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from importlib.metadata import version as _pkg_version
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from tasks_service.bootstrap import ensure_solo_user, run_migrations
@@ -13,6 +14,11 @@ from tasks_service.routers.projects import router as projects_router
 from tasks_service.routers.shares import router as shares_router
 from tasks_service.routers.tasks import router as tasks_router
 from tasks_service.routers.teams import router as teams_router
+from tasks_service.services.prefix_lookup import (
+    AmbiguousPrefix,
+    PrefixNotFound,
+    PrefixTooShort,
+)
 
 VERSION = _pkg_version("tasks-service")
 
@@ -60,6 +66,28 @@ def create_app(*, with_lifespan: bool = True) -> FastAPI:
     app.include_router(teams_router)
     app.include_router(projects_router)
     app.include_router(shares_router)
+
+    # PRD §5.2.7 prefix-lookup exceptions → HTTP.
+    @app.exception_handler(PrefixTooShort)
+    async def _prefix_too_short(_req: Request, _exc: PrefixTooShort) -> JSONResponse:
+        return JSONResponse(status_code=400, content={"detail": "prefix_too_short"})
+
+    @app.exception_handler(AmbiguousPrefix)
+    async def _ambiguous_prefix(_req: Request, exc: AmbiguousPrefix) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "detail": "ambiguous_prefix",
+                "candidates": [
+                    {"id": cid, "discriminator": d} for cid, d in exc.candidates
+                ],
+            },
+        )
+
+    @app.exception_handler(PrefixNotFound)
+    async def _prefix_not_found(_req: Request, _exc: PrefixNotFound) -> JSONResponse:
+        return JSONResponse(status_code=404, content={"detail": "not_found"})
+
     return app
 
 

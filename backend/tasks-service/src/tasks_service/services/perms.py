@@ -13,8 +13,6 @@
 
 from __future__ import annotations
 
-from uuid import UUID
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,7 +32,7 @@ ALL_TASK_PERMS: list[str] = sorted(p.value for p in TaskPermission)
 _TASK_PERMS_SET: set[str] = set(ALL_TASK_PERMS)
 
 
-async def _user_team_ids(session: AsyncSession, user_id: UUID) -> list[UUID]:
+async def _user_team_ids(session: AsyncSession, user_id: str) -> list[str]:
     result = await session.execute(
         select(TeamMember.team_id).where(TeamMember.user_id == user_id)
     )
@@ -42,7 +40,7 @@ async def _user_team_ids(session: AsyncSession, user_id: UUID) -> list[UUID]:
 
 
 async def effective_task_perms(
-    session: AsyncSession, *, user: User, task_id: UUID
+    session: AsyncSession, *, user: User, task_id: str
 ) -> set[str]:
     """Возвращает множество перм-флагов, действующих у user на task = union(A, B).
 
@@ -105,8 +103,8 @@ async def effective_task_perms(
 
 
 async def filter_visible_task_ids(
-    session: AsyncSession, *, user: User, task_ids: list[UUID]
-) -> set[UUID]:
+    session: AsyncSession, *, user: User, task_ids: list[str]
+) -> set[str]:
     """Возвращает подмножество task_ids, в которых у user есть ≥1 перм.
 
     Оптимизация: один SQL вместо N effective_task_perms.
@@ -117,7 +115,7 @@ async def filter_visible_task_ids(
     if settings.auth_mode == "disabled":
         return set(task_ids)
 
-    visible: set[UUID] = set()
+    visible: set[str] = set()
     user_team_ids = await _user_team_ids(session, user.id)
 
     # Path A user-share.
@@ -147,13 +145,13 @@ async def filter_visible_task_ids(
                 ProjectTask.task_id.in_(not_visible)
             )
         )
-        task_to_projects: dict[UUID, list[UUID]] = {}
+        task_to_projects: dict[str, list[str]] = {}
         for row in proj_rows:
             task_to_projects.setdefault(row.task_id, []).append(row.project_id)
 
         all_project_ids = [pid for pids in task_to_projects.values() for pid in pids]
         if all_project_ids:
-            visible_projects: set[UUID] = set()
+            visible_projects: set[str] = set()
             pum = await session.execute(
                 select(ProjectUserMember.project_id).where(
                     ProjectUserMember.project_id.in_(all_project_ids),
@@ -177,9 +175,7 @@ async def filter_visible_task_ids(
     return visible
 
 
-async def is_team_member(
-    session: AsyncSession, *, user_id: UUID, team_id: UUID
-) -> bool:
+async def is_team_member(session: AsyncSession, *, user_id: str, team_id: str) -> bool:
     result = await session.execute(
         select(TeamMember.user_id).where(
             TeamMember.team_id == team_id, TeamMember.user_id == user_id

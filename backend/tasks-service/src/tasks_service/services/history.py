@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from uuid import UUID
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +12,7 @@ HISTORY_LIMIT = 50  # фиксированный лимит, architecture.md §1
 
 async def _hydrate_actors(
     session: AsyncSession, events: Sequence[AuditEvent]
-) -> dict[UUID, str]:
+) -> dict[str, str]:
     actor_ids = {e.actor_user_id for e in events}
     if not actor_ids:
         return {}
@@ -23,7 +22,7 @@ async def _hydrate_actors(
     return {row.id: row.email for row in result.all()}
 
 
-def _event_to_dict(e: AuditEvent, actor_emails: dict[UUID, str]) -> dict[str, object]:
+def _event_to_dict(e: AuditEvent, actor_emails: dict[str, str]) -> dict[str, object]:
     return {
         "id": e.id,
         "actor_email": actor_emails.get(e.actor_user_id, ""),
@@ -37,7 +36,7 @@ def _event_to_dict(e: AuditEvent, actor_emails: dict[UUID, str]) -> dict[str, ob
 
 async def list_history_for_task(
     session: AsyncSession,
-    task_id: UUID,
+    task_id: str,
     cursor: str | None = None,
 ) -> tuple[list[dict[str, object]], str | None]:
     stmt = (
@@ -74,7 +73,7 @@ async def list_history_for_user(
     session: AsyncSession,
     *,
     requester: User,
-    target_user_id: UUID,
+    target_user_id: str,
     cursor: str | None = None,
 ) -> tuple[list[dict[str, object]], str | None]:
     """История действий пользователя с фильтрацией по видимости (ARCH §10.2.2).

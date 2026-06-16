@@ -11,7 +11,7 @@ import re
 
 import pytest
 
-UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+KEY_RE = re.compile(r"[0-9a-f]{40}")
 
 
 def test_TC_6_1_1_team_create_returns_uuid_and_creator_perms(clite):
@@ -21,7 +21,7 @@ def test_TC_6_1_1_team_create_returns_uuid_and_creator_perms(clite):
     r = clite(["team", "create", "--name", "TC-6.1.1", "--output", "json"])
     assert r.returncode == 0, r.stderr
     data = json.loads(r.stdout)
-    assert UUID_RE.fullmatch(data["id"])
+    assert KEY_RE.fullmatch(data["id"])
     assert data["name"] == "TC-6.1.1"
     members = data.get("members", [])
     assert len(members) == 1

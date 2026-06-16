@@ -6,7 +6,6 @@ import json
 import sys
 from pathlib import Path
 from typing import Annotated
-from uuid import UUID
 
 import typer
 
@@ -66,7 +65,7 @@ def create(
         str, typer.Option("--status", help="open|done|archived")
     ] = "open",
     blocked_by: Annotated[
-        list[str], typer.Option("--blocked-by", help="UUID блокирующих задач")
+        list[str], typer.Option("--blocked-by", help="SHA1 ключ блокирующих задач")
     ] = None,  # type: ignore[assignment]
     stdin_json: Annotated[
         bool, typer.Option("--stdin", "-", help="Читать JSON из stdin")
@@ -125,11 +124,11 @@ def list_tasks(
 
 @app.command("get")
 def get_task(
-    task_id: Annotated[UUID, typer.Argument()],
+    task_id: Annotated[str, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
     fields: FieldsOpt = None,
 ) -> None:
-    """Получить задачу по UUID."""
+    """Получить задачу по SHA1 ключу (или его уникальному префиксу, ≥4 символов)."""
     with _client() as c:
         try:
             result = c.get(f"/v1/tasks/{task_id}")
@@ -141,7 +140,7 @@ def get_task(
 
 @app.command("update")
 def update_task(
-    task_id: Annotated[UUID, typer.Argument()],
+    task_id: Annotated[str, typer.Argument()],
     title: Annotated[str | None, typer.Option("--title")] = None,
     description: Annotated[str | None, typer.Option("--description", "-d")] = None,
     status: Annotated[str | None, typer.Option("--status")] = None,

@@ -1,11 +1,11 @@
 import subprocess
 from pathlib import Path
-from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tasks_service.config import settings
+from tasks_service.ids import user_id_for
 from tasks_service.models import User
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
@@ -34,16 +34,15 @@ def run_migrations() -> None:
     )
 
 
-async def ensure_solo_user(session: AsyncSession) -> UUID:
+async def ensure_solo_user(session: AsyncSession) -> str:
     """SOLO_USER создаётся при первом старте в AUTH_MODE=disabled (arch §4.1.3)."""
-    result = await session.execute(
-        select(User).where(User.email == settings.solo_user_email)
-    )
+    email = settings.solo_user_email.lower()
+    result = await session.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user is not None:
         return user.id
 
-    user = User(email=settings.solo_user_email)
+    user = User(id=user_id_for(email), email=email)
     session.add(user)
     await session.flush()
     return user.id

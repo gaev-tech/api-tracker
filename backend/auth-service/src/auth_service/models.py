@@ -6,6 +6,8 @@ from sqlalchemy import DateTime, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+_USER_ID_LEN = 40  # SHA1 hex (ARCH §3.5.0)
+
 
 class Base(DeclarativeBase):
     pass
@@ -23,9 +25,7 @@ def _utcnow() -> datetime:
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid4
-    )
+    id: Mapped[str] = mapped_column(String(_USER_ID_LEN), primary_key=True)
     email: Mapped[str] = mapped_column(
         String(320), unique=True, index=True, nullable=False
     )
@@ -85,8 +85,10 @@ class RefreshToken(Base):
     token_hash: Mapped[str] = mapped_column(
         String(128), unique=True, index=True, nullable=False
     )
-    user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    user_id: Mapped[str] = mapped_column(
+        String(_USER_ID_LEN),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     kind: Mapped[SessionKind] = mapped_column(String(20), nullable=False)
     label: Mapped[str] = mapped_column(String(200), default="", nullable=False)
@@ -139,8 +141,10 @@ class CliAuthCode(Base):
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    user_id: Mapped[UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    user_id: Mapped[str | None] = mapped_column(
+        String(_USER_ID_LEN),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
@@ -163,8 +167,10 @@ class DeviceCode(Base):
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    user_id: Mapped[UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    user_id: Mapped[str | None] = mapped_column(
+        String(_USER_ID_LEN),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
     )
     approved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

@@ -1,10 +1,20 @@
 from datetime import datetime
 from typing import Annotated
-from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from tasks_service.models import TaskStatus
+
+# SHA1 hex (PRD §5.2.6), либо префикс ≥4 hex-символов (PRD §5.2.7).
+EntityKey = Annotated[
+    str,
+    Field(
+        min_length=4,
+        max_length=40,
+        pattern=r"^[0-9a-f]+$",
+        description="SHA1 key or unique prefix (PRD §5.2)",
+    ),
+]
 
 
 class TaskCreate(BaseModel):
@@ -16,7 +26,7 @@ class TaskCreate(BaseModel):
         default_factory=list
     )
     status: TaskStatus = TaskStatus.OPEN
-    blocked_by: list[UUID] = Field(default_factory=list)
+    blocked_by: list[EntityKey] = Field(default_factory=list)
 
     @field_validator("labels")
     @classmethod
@@ -37,20 +47,20 @@ class TaskUpdate(BaseModel):
     status: TaskStatus | None = None
     add_labels: list[str] | None = None
     remove_labels: list[str] | None = None
-    add_blockers: list[UUID] | None = None
-    remove_blockers: list[UUID] | None = None
+    add_blockers: list[EntityKey] | None = None
+    remove_blockers: list[EntityKey] | None = None
 
 
 class TaskRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: UUID
+    id: str
     title: str
     description_md: str
     labels: list[str]
     status: TaskStatus
     assignee_email: str
-    blocked_by: list[UUID] = Field(default_factory=list)
+    blocked_by: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -69,7 +79,7 @@ class BulkPatchRequest(BaseModel):
 
 
 class BulkResultItem(BaseModel):
-    task_id: UUID
+    task_id: str
     status: str  # "ok" | "forbidden" | "validation_failed" | "not_found"
     error: str | None = None
 
@@ -93,7 +103,7 @@ class BulkCreateRequest(BaseModel):
 class BulkCreateResultItem(BaseModel):
     index: int
     status: str
-    task_id: UUID | None = None
+    task_id: str | None = None
     error: str | None = None
 
 
@@ -102,16 +112,16 @@ class BulkCreateResult(BaseModel):
 
 
 class BatchCreateResult(BaseModel):
-    task_ids: list[UUID]
+    task_ids: list[str]
 
 
 class HistoryEvent(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: UUID
+    id: str
     actor_email: str
     target_type: str
-    target_id: UUID
+    target_id: str
     event_type: str
     payload: dict[str, object]
     created_at: datetime
@@ -154,7 +164,7 @@ class TeamMemberRead(BaseModel):
 
 
 class TeamRead(BaseModel):
-    id: UUID
+    id: str
     name: str
     created_at: datetime
     members: list[TeamMemberRead] = Field(default_factory=list)
@@ -187,18 +197,18 @@ class ProjectUserMemberRead(BaseModel):
 
 
 class ProjectTeamMemberRead(BaseModel):
-    team_id: UUID
+    team_id: str
     team_name: str
     perms: list[str]
 
 
 class ProjectRead(BaseModel):
-    id: UUID
+    id: str
     name: str
     created_at: datetime
     user_members: list[ProjectUserMemberRead] = Field(default_factory=list)
     team_members: list[ProjectTeamMemberRead] = Field(default_factory=list)
-    task_ids: list[UUID] = Field(default_factory=list)
+    task_ids: list[str] = Field(default_factory=list)
 
 
 # === Task shares (M2.7c) ===
@@ -216,7 +226,7 @@ class TaskShareUserRead(BaseModel):
 
 
 class TaskShareTeamRead(BaseModel):
-    team_id: UUID
+    team_id: str
     team_name: str
     perms: list[str]
 

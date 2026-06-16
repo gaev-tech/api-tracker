@@ -4,7 +4,6 @@
 """
 
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +27,7 @@ class AuthorizationPending(HandoffError):
 async def issue_cli_code(
     session: AsyncSession,
     *,
-    user_id: UUID,
+    user_id: str,
     state: str,
     code_challenge: str,
 ) -> str:
@@ -69,7 +68,7 @@ async def exchange_cli_code(
     *,
     code: str,
     code_verifier: str,
-) -> UUID:
+) -> str:
     """Возвращает user_id, если code+verifier валидны и не использованы."""
     import base64
     import hashlib
@@ -126,7 +125,7 @@ async def start_device_flow(session: AsyncSession) -> dict[str, object]:
 
 
 async def approve_device(
-    session: AsyncSession, *, user_code: str, user_id: UUID
+    session: AsyncSession, *, user_code: str, user_id: str
 ) -> None:
     """Помечает device_code как approved (вызывается из auth-client под Bearer)."""
     result = await session.execute(
@@ -144,7 +143,7 @@ async def approve_device(
     await session.flush()
 
 
-async def poll_device(session: AsyncSession, *, device_code: str) -> UUID:
+async def poll_device(session: AsyncSession, *, device_code: str) -> str:
     """Если device-code approved — возвращает user_id; иначе raise."""
     result = await session.execute(
         select(DeviceCode).where(DeviceCode.device_code == device_code)

@@ -2,7 +2,6 @@
 
 import sys
 from typing import Annotated
-from uuid import UUID
 
 import typer
 
@@ -29,7 +28,7 @@ def _handle(e: APIError) -> None:
 
 @app.command("task")
 def task_history(
-    task_id: Annotated[UUID, typer.Argument()],
+    task_id: Annotated[str, typer.Argument()],
     cursor: Annotated[str | None, typer.Option("--cursor")] = None,
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
     fields: FieldsOpt = None,

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 from typing import Annotated
-from uuid import UUID
 
 import typer
 
@@ -39,7 +38,7 @@ def _handle(e: APIError) -> None:
 
 @app.command("list")
 def list_shares(
-    task_id: Annotated[UUID, typer.Argument()],
+    task_id: Annotated[str, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
     fields: FieldsOpt = None,
 ) -> None:
@@ -54,7 +53,7 @@ def list_shares(
 
 @user_app.command("set")
 def user_set(
-    task_id: Annotated[UUID, typer.Argument()],
+    task_id: Annotated[str, typer.Argument()],
     email: Annotated[str, typer.Option("--email", "-e")],
     perm: Annotated[list[str], typer.Option("--perm", "-p")] = None,  # type: ignore[assignment]
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
@@ -75,7 +74,7 @@ def user_set(
 
 @user_app.command("remove")
 def user_remove(
-    task_id: Annotated[UUID, typer.Argument()],
+    task_id: Annotated[str, typer.Argument()],
     email: Annotated[
         str, typer.Option("--email", "-e", help="Email или 'me' для self-revoke")
     ],
@@ -100,8 +99,8 @@ def user_remove(
 
 @team_app.command("set")
 def team_set(
-    task_id: Annotated[UUID, typer.Argument()],
-    team_id: Annotated[UUID, typer.Option("--team")],
+    task_id: Annotated[str, typer.Argument()],
+    team_id: Annotated[str, typer.Option("--team")],
     perm: Annotated[list[str], typer.Option("--perm", "-p")] = None,  # type: ignore[assignment]
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
@@ -121,8 +120,8 @@ def team_set(
 
 @team_app.command("remove")
 def team_remove(
-    task_id: Annotated[UUID, typer.Argument()],
-    team_id: Annotated[UUID, typer.Option("--team")],
+    task_id: Annotated[str, typer.Argument()],
+    team_id: Annotated[str, typer.Option("--team")],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     with _client() as c:

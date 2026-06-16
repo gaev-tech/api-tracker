@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from uuid import UUID
-
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +52,7 @@ def _require_perm(member: ProjectUserMember | None, perm: ProjectPermission) -> 
         raise PermissionDenied(f"missing project permission: {perm.value}")
 
 
-async def _get_project(session: AsyncSession, project_id: UUID) -> Project:
+async def _get_project(session: AsyncSession, project_id: str) -> Project:
     result = await session.execute(select(Project).where(Project.id == project_id))
     p = result.scalar_one_or_none()
     if p is None:
@@ -63,7 +61,7 @@ async def _get_project(session: AsyncSession, project_id: UUID) -> Project:
 
 
 async def _get_user_member(
-    session: AsyncSession, project_id: UUID, user_id: UUID
+    session: AsyncSession, project_id: str, user_id: str
 ) -> ProjectUserMember | None:
     result = await session.execute(
         select(ProjectUserMember).where(
@@ -75,7 +73,7 @@ async def _get_user_member(
 
 
 async def _get_team_member(
-    session: AsyncSession, project_id: UUID, team_id: UUID
+    session: AsyncSession, project_id: str, team_id: str
 ) -> ProjectTeamMember | None:
     result = await session.execute(
         select(ProjectTeamMember).where(
@@ -89,9 +87,12 @@ async def _get_team_member(
 async def create_project(session: AsyncSession, *, creator: User, name: str) -> Project:
     """Создаёт проект; создатель — единственный участник со всеми правами
     (project- + task-уровневыми)."""
+    from tasks_service.ids import new_project_id
+
     if not name.strip():
         raise ProjectError("project name cannot be empty")
-    project = Project(name=name.strip())
+    clean_name = name.strip()
+    project = Project(id=new_project_id(clean_name), name=clean_name)
     session.add(project)
     await session.flush()
     full_perms = sorted(_VALID_PROJECT_PERMS)
@@ -111,7 +112,7 @@ async def create_project(session: AsyncSession, *, creator: User, name: str) -> 
 
 
 async def get_project(
-    session: AsyncSession, *, current: User, project_id: UUID
+    session: AsyncSession, *, current: User, project_id: str
 ) -> Project:
     project = await _get_project(session, project_id)
     member = await _get_user_member(session, project.id, current.id)
@@ -121,7 +122,7 @@ async def get_project(
 
 
 async def update_name(
-    session: AsyncSession, *, current: User, project_id: UUID, new_name: str
+    session: AsyncSession, *, current: User, project_id: str, new_name: str
 ) -> Project:
     project = await _get_project(session, project_id)
     member = await _get_user_member(session, project.id, current.id)
@@ -146,8 +147,8 @@ async def set_user_member(
     session: AsyncSession,
     *,
     current: User,
-    project_id: UUID,
-    target_user_id: UUID,
+    project_id: str,
+    target_user_id: str,
     perms: list[str],
 ) -> ProjectUserMember | None:
     """Add/edit/remove participant пользователя по правилам PRD §6.1.7 и §6.5.2."""
@@ -207,8 +208,8 @@ async def set_team_member(
     session: AsyncSession,
     *,
     current: User,
-    project_id: UUID,
-    target_team_id: UUID,
+    project_id: str,
+    target_team_id: str,
     perms: list[str],
 ) -> ProjectTeamMember | None:
     """Установить разрешения команды в проекте. Шарящий должен сам быть в команде
@@ -272,7 +273,7 @@ async def set_team_member(
 
 
 async def add_task_to_project(
-    session: AsyncSession, *, current: User, project_id: UUID, task_id: UUID
+    session: AsyncSession, *, current: User, project_id: str, task_id: str
 ) -> None:
     """Добавить задачу в проект. Требует manage_projects на проекте (PRD §6.5.5)."""
     project = await _get_project(session, project_id)
@@ -299,7 +300,7 @@ async def add_task_to_project(
 
 
 async def remove_task_from_project(
-    session: AsyncSession, *, current: User, project_id: UUID, task_id: UUID
+    session: AsyncSession, *, current: User, project_id: str, task_id: str
 ) -> None:
     project = await _get_project(session, project_id)
     member = await _get_user_member(session, project.id, current.id)
@@ -328,7 +329,7 @@ async def remove_task_from_project(
 
 
 async def list_user_members(
-    session: AsyncSession, *, project_id: UUID
+    session: AsyncSession, *, project_id: str
 ) -> list[ProjectUserMember]:
     result = await session.execute(
         select(ProjectUserMember)
@@ -339,7 +340,7 @@ async def list_user_members(
 
 
 async def list_team_members(
-    session: AsyncSession, *, project_id: UUID
+    session: AsyncSession, *, project_id: str
 ) -> list[ProjectTeamMember]:
     result = await session.execute(
         select(ProjectTeamMember)
@@ -349,7 +350,7 @@ async def list_team_members(
     return list(result.scalars().all())
 
 
-async def list_project_tasks(session: AsyncSession, *, project_id: UUID) -> list[UUID]:
+async def list_project_tasks(session: AsyncSession, *, project_id: str) -> list[str]:
     result = await session.execute(
         select(ProjectTask.task_id).where(ProjectTask.project_id == project_id)
     )

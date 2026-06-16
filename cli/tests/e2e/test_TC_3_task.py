@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 
-UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+KEY_RE = re.compile(r"[0-9a-f]{40}")
 
 
 def test_TC_3_1_1_minimal_task_create(clite):
@@ -14,7 +14,7 @@ def test_TC_3_1_1_minimal_task_create(clite):
     assert r.returncode == 0, r.stderr
     data = json.loads(r.stdout)
     assert "id" in data
-    assert UUID_RE.fullmatch(data["id"])
+    assert KEY_RE.fullmatch(data["id"])
     assert data["title"] == "TC-3.1.1"
     assert data["status"] == "open"
 

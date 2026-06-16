@@ -12,7 +12,7 @@ import re
 
 import pytest
 
-UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+KEY_RE = re.compile(r"[0-9a-f]{40}")
 
 
 def test_TC_7_1_1_project_create_returns_uuid(clite):
@@ -22,7 +22,7 @@ def test_TC_7_1_1_project_create_returns_uuid(clite):
     r = clite(["project", "create", "--name", "TC-7.1.1", "--output", "json"])
     assert r.returncode == 0, r.stderr
     data = json.loads(r.stdout)
-    assert UUID_RE.fullmatch(data["id"])
+    assert KEY_RE.fullmatch(data["id"])
     assert data["name"] == "TC-7.1.1"
 
 

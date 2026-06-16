@@ -6,7 +6,6 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from uuid import UUID
 
 from sqlalchemy import ColumnElement, and_, false, or_
 from sqlalchemy.sql.elements import ColumnClause
@@ -28,7 +27,7 @@ class FieldType(StrEnum):
     STRING = "string"
     INT = "int"
     DATETIME = "datetime"
-    UUID = "uuid"
+    SHA1_KEY = "sha1_key"  # PRD §5.2 — 4..40 hex (полный ключ или префикс)
     USER_EMAIL = "user_email"
     STRING_ARRAY = "string_array"
 
@@ -38,7 +37,7 @@ _OPS_BY_TYPE: dict[FieldType, set[Op]] = {
     FieldType.STRING: {"==", "!=", "=in=", "=out="},
     FieldType.INT: {"==", "!=", "=gt=", "=ge=", "=lt=", "=le=", "=in=", "=out="},
     FieldType.DATETIME: {"==", "!=", "=gt=", "=ge=", "=lt=", "=le="},
-    FieldType.UUID: {"==", "!=", "=in=", "=out="},
+    FieldType.SHA1_KEY: {"==", "!=", "=in=", "=out="},
     FieldType.USER_EMAIL: {"==", "!=", "=in=", "=out="},
     FieldType.STRING_ARRAY: {"=in=", "=out="},
 }
@@ -56,7 +55,7 @@ class RSQLContext:
     """Контекст резолва: `me` → user_email, email → user_id и т.п."""
 
     current_user_email: str
-    resolve_email_to_user_id: Callable[[str], UUID | None] | None = None
+    resolve_email_to_user_id: Callable[[str], str | None] | None = None
 
 
 def _coerce_value(value: object, field_type: FieldType, ctx: RSQLContext) -> object:
@@ -77,13 +76,13 @@ def _coerce_value(value: object, field_type: FieldType, ctx: RSQLContext) -> obj
             return datetime.fromisoformat(value)
         except ValueError as e:
             raise RSQLError(f"invalid datetime {value!r}") from e
-    if field_type is FieldType.UUID:
+    if field_type is FieldType.SHA1_KEY:
         if not isinstance(value, str):
-            raise RSQLError(f"expected UUID string, got {value!r}")
-        try:
-            return UUID(value)
-        except ValueError as e:
-            raise RSQLError(f"invalid UUID {value!r}") from e
+            raise RSQLError(f"expected SHA1 key string, got {value!r}")
+        v = value.lower()
+        if not 4 <= len(v) <= 40 or not all(c in "0123456789abcdef" for c in v):
+            raise RSQLError(f"invalid SHA1 key {value!r}")
+        return v
     if field_type is FieldType.USER_EMAIL:
         if value == "me":
             if ctx.resolve_email_to_user_id is None:

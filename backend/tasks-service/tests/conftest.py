@@ -74,7 +74,10 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def solo_user(session: AsyncSession) -> User:
-    user = User(email="solo@test")
+    from tasks_service.ids import user_id_for
+
+    email = "solo@test"
+    user = User(id=user_id_for(email), email=email)
     session.add(user)
     await session.commit()
     await session.refresh(user)

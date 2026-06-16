@@ -1,14 +1,13 @@
 """REST-эндпоинты команд (M2.7, PRD §6.4)."""
 
 from typing import NoReturn
-from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import EmailStr
 from sqlalchemy import select
 
 from tasks_service.deps import CurrentUserDep, SessionDep
-from tasks_service.models import User
+from tasks_service.models import Team, User
 from tasks_service.schemas import (
     TeamCreateRequest,
     TeamMemberRead,
@@ -16,6 +15,7 @@ from tasks_service.schemas import (
     TeamRead,
     TeamUpdateRequest,
 )
+from tasks_service.services.prefix_lookup import resolve_prefix
 from tasks_service.services.teams import (
     CannotGrantAboveSelf,
     PermissionDenied,
@@ -33,6 +33,12 @@ from tasks_service.user_resolver import ensure_user, resolve_email_to_user_id_vi
 router = APIRouter(prefix="/v1/teams", tags=["teams"])
 
 
+async def _resolve_team_key(session: SessionDep, key: str) -> str:
+    return await resolve_prefix(
+        session, id_column=Team.id, discriminator_column=Team.name, key=key
+    )
+
+
 def _handle_team_error(e: Exception) -> NoReturn:
     if isinstance(e, TeamNotFound):
         raise HTTPException(status_code=404, detail=str(e))
@@ -43,7 +49,7 @@ def _handle_team_error(e: Exception) -> NoReturn:
     raise HTTPException(status_code=500, detail=str(e))
 
 
-async def _team_to_read(session: SessionDep, team_id: UUID) -> TeamRead:
+async def _team_to_read(session: SessionDep, team_id: str) -> TeamRead:
     from tasks_service.models import Team
 
     team_row = (
@@ -89,7 +95,8 @@ async def list_teams(session: SessionDep, user: CurrentUserDep) -> list[TeamRead
 
 
 @router.get("/{team_id}", response_model=TeamRead)
-async def get(team_id: UUID, session: SessionDep, user: CurrentUserDep) -> TeamRead:
+async def get(team_id: str, session: SessionDep, user: CurrentUserDep) -> TeamRead:
+    team_id = await _resolve_team_key(session, team_id)
     try:
         await get_team(session, current=user, team_id=team_id)
     except TeamError as e:
@@ -99,11 +106,12 @@ async def get(team_id: UUID, session: SessionDep, user: CurrentUserDep) -> TeamR
 
 @router.patch("/{team_id}", response_model=TeamRead)
 async def patch_name(
-    team_id: UUID,
+    team_id: str,
     payload: TeamUpdateRequest,
     session: SessionDep,
     user: CurrentUserDep,
 ) -> TeamRead:
+    team_id = await _resolve_team_key(session, team_id)
     try:
         await update_name(session, current=user, team_id=team_id, new_name=payload.name)
     except TeamError as e:
@@ -113,13 +121,14 @@ async def patch_name(
 
 @router.put("/{team_id}/members/{email}", response_model=TeamRead)
 async def set_member(
-    team_id: UUID,
+    team_id: str,
     email: EmailStr,
     payload: TeamMemberSetRequest,
     session: SessionDep,
     user: CurrentUserDep,
 ) -> TeamRead:
     """Установить разрешения участника по email. Пустой массив = удалить."""
+    team_id = await _resolve_team_key(session, team_id)
     target_uid = await resolve_email_to_user_id_via_grpc(str(email))
     if target_uid is None:
         raise HTTPException(status_code=404, detail=f"user not found: {email}")
@@ -140,9 +149,10 @@ async def set_member(
 
 @router.delete("/{team_id}/members/me", response_model=TeamRead | None)
 async def leave(
-    team_id: UUID, session: SessionDep, user: CurrentUserDep
+    team_id: str, session: SessionDep, user: CurrentUserDep
 ) -> TeamRead | None:
     """Self-revoke (PRD §7.8.2). Всегда доступно текущему пользователю."""
+    team_id = await _resolve_team_key(session, team_id)
     try:
         await set_member_permissions(
             session, current=user, team_id=team_id, target_user_id=user.id, perms=[]
@@ -150,8 +160,6 @@ async def leave(
     except TeamError as e:
         _handle_team_error(e)
     # После leave команда может быть удалена (последний участник); вернём 204-like.
-    from tasks_service.models import Team
-
     team = (
         await session.execute(select(Team).where(Team.id == team_id))
     ).scalar_one_or_none()
@@ -162,8 +170,9 @@ async def leave(
 
 @router.get("/{team_id}/members", response_model=list[TeamMemberRead])
 async def list_team_members(
-    team_id: UUID, session: SessionDep, user: CurrentUserDep
+    team_id: str, session: SessionDep, user: CurrentUserDep
 ) -> list[TeamMemberRead]:
+    team_id = await _resolve_team_key(session, team_id)
     try:
         await get_team(session, current=user, team_id=team_id)
     except TeamError as e:

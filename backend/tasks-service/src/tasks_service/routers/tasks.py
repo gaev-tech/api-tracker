@@ -1,10 +1,10 @@
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 
 from tasks_service.cursor import CursorError
 from tasks_service.deps import CurrentUserDep, SessionDep
+from tasks_service.models import Task
 from tasks_service.rsql.parser import RSQLError
 from tasks_service.schemas import (
     BatchCreateResult,
@@ -21,6 +21,7 @@ from tasks_service.schemas import (
     TaskUpdate,
 )
 from tasks_service.services import history, tasks
+from tasks_service.services.prefix_lookup import resolve_prefix
 from tasks_service.services.tasks import TaskNotFound, TooManyMatches
 
 router = APIRouter(prefix="/v1", tags=["tasks"])
@@ -61,26 +62,32 @@ async def create_task(
 
 @router.get("/tasks/{task_id}", response_model=TaskRead)
 async def get_task(
-    task_id: UUID,
+    task_id: str,
     session: SessionDep,
     user: CurrentUserDep,
 ) -> TaskRead:
+    full_id = await resolve_prefix(
+        session, id_column=Task.id, discriminator_column=Task.title, key=task_id
+    )
     try:
-        return await tasks.get_task(session, task_id, current_user=user)
+        return await tasks.get_task(session, full_id, current_user=user)
     except TaskNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.patch("/tasks/{task_id}", response_model=TaskRead)
 async def update_task(
-    task_id: UUID,
+    task_id: str,
     payload: TaskUpdate,
     session: SessionDep,
     user: CurrentUserDep,
 ) -> TaskRead:
+    full_id = await resolve_prefix(
+        session, id_column=Task.id, discriminator_column=Task.title, key=task_id
+    )
     try:
         return await tasks.update_task(
-            session, current_user=user, task_id=task_id, patch=payload
+            session, current_user=user, task_id=full_id, patch=payload
         )
     except TaskNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
@@ -155,7 +162,7 @@ async def batch_create(
 async def list_history(
     session: SessionDep,
     user: CurrentUserDep,
-    task_id: Annotated[UUID | None, Query()] = None,
+    task_id: Annotated[str | None, Query()] = None,
     user_email: Annotated[str | None, Query(alias="user_id")] = None,
     cursor: Annotated[str | None, Query()] = None,
 ) -> HistoryPage:
@@ -168,6 +175,9 @@ async def list_history(
         )
 
     if task_id is not None:
+        task_id = await resolve_prefix(
+            session, id_column=Task.id, discriminator_column=Task.title, key=task_id
+        )
         try:
             items, next_cursor = await history.list_history_for_task(
                 session, task_id, cursor

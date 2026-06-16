@@ -112,7 +112,7 @@
 
 3.7.1 Одноразовая Alembic-миграция; для каждой записи в `auth.users`, `tasks.tasks`, `tasks.teams`, `tasks.projects`, `tasks.automations`, `tasks.project_secrets` вычисляется SHA1-ключ:
 
-3.7.1.1 Для пользователя: `SHA1(email || \n || created_at_ns)`.
+3.7.1.1 Для пользователя: `SHA1(email)` (без created_at — email уникален; одинаковый ключ для одного email в обеих логических БД auth/tasks; не зависит от того, в какой схеме вычисляется).
 
 3.7.1.2 Для задачи: `SHA1(title || \n || description_md || \n || created_at_ns)`.
 

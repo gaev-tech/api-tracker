@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
 
 import jwt
 
@@ -12,12 +11,15 @@ from auth_service.config import settings
 from auth_service.crypto import get_private_key, get_public_key
 
 
-def sign_access_token(user_id: UUID, email: str) -> tuple[str, datetime]:
-    """Подписать access-token; возвращает (token, expires_at)."""
+def sign_access_token(user_id: str, email: str) -> tuple[str, datetime]:
+    """Подписать access-token; возвращает (token, expires_at).
+
+    user_id — SHA1-hex (PRD §5.2.6).
+    """
     now = datetime.now(UTC)
     exp = now.timestamp() + settings.access_token_ttl_seconds
     claims: dict[str, Any] = {
-        "sub": str(user_id),
+        "sub": user_id,
         "email": email,
         "iat": int(now.timestamp()),
         "exp": int(exp),

@@ -18,7 +18,7 @@ service AuthService {
 }
 
 message User {
-  string id = 1;          // UUID, строковое представление
+  string id = 1;          // SHA1-hex (40 chars), PRD §5.2.6
   string email = 2;
   string created_at = 3;  // ISO-8601 UTC
 }

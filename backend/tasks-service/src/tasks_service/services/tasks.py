@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from uuid import UUID
 
 from sqlalchemy import and_, delete, or_, select, tuple_
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from tasks_service.cursor import CursorError, decode_cursor, encode_cursor
 from tasks_service.deps import resolve_email_to_user_id
+from tasks_service.ids import new_task_id
 from tasks_service.models import Task, TaskBlocker, User
 from tasks_service.rsql.fields import (
     FieldSpec,
@@ -48,7 +48,7 @@ class ValidationFailed(Exception):
 
 def _task_field_specs() -> list[FieldSpec]:
     return [
-        FieldSpec("id", Task.id, FieldType.UUID),
+        FieldSpec("id", Task.id, FieldType.SHA1_KEY),
         FieldSpec("title", Task.title, FieldType.STRING),
         FieldSpec("status", Task.status, FieldType.STRING),
         FieldSpec("labels", Task.labels, FieldType.STRING_ARRAY),
@@ -58,7 +58,7 @@ def _task_field_specs() -> list[FieldSpec]:
 
 
 async def _to_read(
-    session: AsyncSession, task: Task, assignee_email_cache: dict[UUID, str]
+    session: AsyncSession, task: Task, assignee_email_cache: dict[str, str]
 ) -> TaskRead:
     if task.assignee_id not in assignee_email_cache:
         result = await session.execute(
@@ -79,16 +79,16 @@ async def _to_read(
     )
 
 
-async def _resolve_email_sync(session: AsyncSession, email: str) -> UUID | None:
+async def _resolve_email_sync(session: AsyncSession, email: str) -> str | None:
     return await resolve_email_to_user_id(session, email)
 
 
 async def _build_rsql_filter(
     session: AsyncSession, filter_str: str, current_email: str
 ) -> object:
-    cache: dict[str, UUID | None] = {}
+    cache: dict[str, str | None] = {}
 
-    def resolve(email: str) -> UUID | None:
+    def resolve(email: str) -> str | None:
         if email in cache:
             return cache[email]
         # Sync wrapper — RSQL builder синхронный. Используем pre-cache (см. вызов).
@@ -97,11 +97,11 @@ async def _build_rsql_filter(
     # Заранее извлекаем все email из RSQL и резолвим их.
     # Простой подход: после первого парс-прохода пробежимся ещё раз.
     # Альтернатива: pre-resolve current email + me-литерал.
-    resolved: dict[str, UUID | None] = {
+    resolved: dict[str, str | None] = {
         current_email: await _resolve_email_sync(session, current_email)
     }
 
-    def sync_resolve(email: str) -> UUID | None:
+    def sync_resolve(email: str) -> str | None:
         if email not in resolved:
             raise RSQLError(
                 f"email {email!r} cannot be resolved synchronously in RSQL; "
@@ -160,7 +160,7 @@ async def list_tasks(
 
     has_next = len(visible_rows) > limit
     items = visible_rows[:limit]
-    cache: dict[UUID, str] = {}
+    cache: dict[str, str] = {}
     out = [await _to_read(session, t, cache) for t in items]
     next_cursor = (
         encode_cursor(items[-1].created_at, items[-1].id)
@@ -172,7 +172,7 @@ async def list_tasks(
 
 async def get_task(
     session: AsyncSession,
-    task_id: UUID,
+    task_id: str,
     *,
     current_user: User | None = None,
 ) -> TaskRead:
@@ -187,12 +187,12 @@ async def get_task(
         perms = await effective_task_perms(session, user=current_user, task_id=task.id)
         if not perms:
             raise TaskNotFound(str(task_id))
-    cache: dict[UUID, str] = {}
+    cache: dict[str, str] = {}
     return await _to_read(session, task, cache)
 
 
 async def _verify_blockers_exist(
-    session: AsyncSession, blocker_ids: Sequence[UUID]
+    session: AsyncSession, blocker_ids: Sequence[str]
 ) -> None:
     if not blocker_ids:
         return
@@ -212,6 +212,7 @@ async def create_task(
     await _verify_blockers_exist(session, payload.blocked_by)
 
     task = Task(
+        id=new_task_id(payload.title, payload.description_md),
         title=payload.title,
         description_md=payload.description_md,
         labels=payload.labels,
@@ -240,7 +241,7 @@ async def create_task(
 
     await add_creator_share(session, task_id=task.id, creator_id=current_user.id)
     await session.refresh(task, ["blockers"])
-    cache: dict[UUID, str] = {}
+    cache: dict[str, str] = {}
     return await _to_read(session, task, cache)
 
 
@@ -306,7 +307,7 @@ async def _apply_patch(
             payload={"diff": diff},
         )
     await session.refresh(task, ["blockers"])
-    cache: dict[UUID, str] = {}
+    cache: dict[str, str] = {}
     return await _to_read(session, task, cache)
 
 
@@ -314,7 +315,7 @@ async def update_task(
     session: AsyncSession,
     *,
     current_user: User,
-    task_id: UUID,
+    task_id: str,
     patch: TaskUpdate,
 ) -> TaskRead:
     stmt = select(Task).options(selectinload(Task.blockers)).where(Task.id == task_id)
@@ -327,7 +328,7 @@ async def update_task(
 
 async def _select_filtered_ids(
     session: AsyncSession, filter_str: str, current_email: str
-) -> list[UUID]:
+) -> list[str]:
     where = await _build_rsql_filter(session, filter_str, current_email)
     stmt = (
         select(Task.id)
@@ -423,8 +424,8 @@ async def batch_create(
     *,
     current_user: User,
     items: Sequence[TaskCreate],
-) -> list[UUID]:
-    ids: list[UUID] = []
+) -> list[str]:
+    ids: list[str] = []
     for payload in items:
         t = await create_task(session, current_user=current_user, payload=payload)
         ids.append(t.id)

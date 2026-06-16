@@ -1,4 +1,3 @@
-from uuid import uuid4
 
 import pytest
 
@@ -23,7 +22,7 @@ TASK_FIELDS = [
 
 
 def _ctx_for(email: str = "solo@local") -> RSQLContext:
-    fake_id = uuid4()
+    fake_id = "a" * 40  # SHA1-hex placeholder
     return RSQLContext(
         current_user_email=email,
         resolve_email_to_user_id=lambda e: fake_id if e == email else None,

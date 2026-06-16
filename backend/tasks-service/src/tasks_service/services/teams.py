@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from uuid import UUID
-
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,7 +30,7 @@ class CannotGrantAboveSelf(TeamError):
 
 
 async def _get_member(
-    session: AsyncSession, team_id: UUID, user_id: UUID
+    session: AsyncSession, team_id: str, user_id: str
 ) -> TeamMember | None:
     result = await session.execute(
         select(TeamMember).where(
@@ -42,7 +40,7 @@ async def _get_member(
     return result.scalar_one_or_none()
 
 
-async def _get_team(session: AsyncSession, team_id: UUID) -> Team:
+async def _get_team(session: AsyncSession, team_id: str) -> Team:
     result = await session.execute(select(Team).where(Team.id == team_id))
     team = result.scalar_one_or_none()
     if team is None:
@@ -60,9 +58,12 @@ def _require_perm(member: TeamMember | None, perm: TeamPermission) -> None:
 
 async def create_team(session: AsyncSession, *, creator: User, name: str) -> Team:
     """Создаёт команду; создатель — единственный участник со всеми правами."""
+    from tasks_service.ids import new_team_id
+
     if not name.strip():
         raise TeamError("team name cannot be empty")
-    team = Team(name=name.strip())
+    clean_name = name.strip()
+    team = Team(id=new_team_id(clean_name), name=clean_name)
     session.add(team)
     await session.flush()
     full_perms = [p.value for p in TeamPermission]
@@ -79,7 +80,7 @@ async def create_team(session: AsyncSession, *, creator: User, name: str) -> Tea
     return team
 
 
-async def get_team(session: AsyncSession, *, current: User, team_id: UUID) -> Team:
+async def get_team(session: AsyncSession, *, current: User, team_id: str) -> Team:
     """Доступно при наличии ≥1 разрешения (PRD §6.1.8 — read неявное)."""
     team = await _get_team(session, team_id)
     member = await _get_member(session, team.id, current.id)
@@ -89,7 +90,7 @@ async def get_team(session: AsyncSession, *, current: User, team_id: UUID) -> Te
 
 
 async def update_name(
-    session: AsyncSession, *, current: User, team_id: UUID, new_name: str
+    session: AsyncSession, *, current: User, team_id: str, new_name: str
 ) -> Team:
     team = await _get_team(session, team_id)
     member = await _get_member(session, team.id, current.id)
@@ -114,8 +115,8 @@ async def set_member_permissions(
     session: AsyncSession,
     *,
     current: User,
-    team_id: UUID,
-    target_user_id: UUID,
+    team_id: str,
+    target_user_id: str,
     perms: list[str],
 ) -> TeamMember | None:
     """Устанавливает разрешения участника. Пустой список = удаление участника.
@@ -194,7 +195,7 @@ def _check_within_self(target_perms: list[str], own_perms: list[str]) -> None:
         raise CannotGrantAboveSelf(f"cannot grant perms above own: {sorted(extras)}")
 
 
-async def list_members(session: AsyncSession, *, team_id: UUID) -> list[TeamMember]:
+async def list_members(session: AsyncSession, *, team_id: str) -> list[TeamMember]:
     result = await session.execute(
         select(TeamMember)
         .where(TeamMember.team_id == team_id)

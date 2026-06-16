@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from uuid import UUID
-
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,7 +51,7 @@ def _check_within_self(target_perms: list[str], own_perms: set[str]) -> None:
         raise CannotGrantAboveSelf(f"cannot grant perms above own: {sorted(extras)}")
 
 
-async def _get_task(session: AsyncSession, task_id: UUID) -> Task:
+async def _get_task(session: AsyncSession, task_id: str) -> Task:
     result = await session.execute(select(Task).where(Task.id == task_id))
     task = result.scalar_one_or_none()
     if task is None:
@@ -65,8 +63,8 @@ async def set_user_share(
     session: AsyncSession,
     *,
     current: User,
-    task_id: UUID,
-    target_user_id: UUID,
+    task_id: str,
+    target_user_id: str,
     perms: list[str],
 ) -> None:
     """PUT — установить разрешения пользователя на задачу. Пустой массив = удаление."""
@@ -153,8 +151,8 @@ async def set_team_share(
     session: AsyncSession,
     *,
     current: User,
-    task_id: UUID,
-    target_team_id: UUID,
+    task_id: str,
+    target_team_id: str,
     perms: list[str],
 ) -> None:
     """Шарить команде можно только если шарящий сам член этой команды (PRD §6.7.1)."""
@@ -253,7 +251,7 @@ async def _maybe_cascade_delete_task(session: AsyncSession, task: Task) -> None:
 
 
 async def list_user_shares(
-    session: AsyncSession, *, task_id: UUID
+    session: AsyncSession, *, task_id: str
 ) -> list[TaskUserShare]:
     result = await session.execute(
         select(TaskUserShare)
@@ -264,7 +262,7 @@ async def list_user_shares(
 
 
 async def list_team_shares(
-    session: AsyncSession, *, task_id: UUID
+    session: AsyncSession, *, task_id: str
 ) -> list[TaskTeamShare]:
     result = await session.execute(
         select(TaskTeamShare)
@@ -275,7 +273,7 @@ async def list_team_shares(
 
 
 async def add_creator_share(
-    session: AsyncSession, *, task_id: UUID, creator_id: UUID
+    session: AsyncSession, *, task_id: str, creator_id: str
 ) -> None:
     """Имплицитный user-share при создании задачи — creator получает все task-perms.
 

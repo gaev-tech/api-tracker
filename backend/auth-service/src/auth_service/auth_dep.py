@@ -43,13 +43,9 @@ async def get_authenticated_user(request: Request, session: SessionDep) -> User:
 
 
 async def _find_user(session: AsyncSession, user_id_str: str) -> User | None:
-    from uuid import UUID
-
-    try:
-        uid = UUID(user_id_str)
-    except ValueError:
+    if not user_id_str or len(user_id_str) != 40:
         return None
-    result = await session.execute(select(User).where(User.id == uid))
+    result = await session.execute(select(User).where(User.id == user_id_str))
     return result.scalar_one_or_none()
 
 

@@ -9,7 +9,6 @@ import asyncio
 import logging
 import os
 import sys
-from uuid import UUID
 
 import grpc
 
@@ -41,7 +40,7 @@ class AuthServiceServicer(auth_pb2_grpc.AuthServiceServicer):  # type: ignore[mi
             )
             raise AssertionError("unreachable")  # для mypy после abort
         return auth_pb2.User(
-            id=str(user.id), email=user.email, created_at=user.created_at.isoformat()
+            id=user.id, email=user.email, created_at=user.created_at.isoformat()
         )
 
     async def GetUsersByIds(
@@ -51,15 +50,13 @@ class AuthServiceServicer(auth_pb2_grpc.AuthServiceServicer):  # type: ignore[mi
         out: list[auth_pb2.User] = []
         async with sm() as session:
             for id_str in request.ids:
-                try:
-                    uid = UUID(id_str)
-                except ValueError:
+                if not id_str or len(id_str) != 40:
                     continue
-                user = await get_user_by_id(session, uid)
+                user = await get_user_by_id(session, id_str)
                 if user is not None:
                     out.append(
                         auth_pb2.User(
-                            id=str(user.id),
+                            id=user.id,
                             email=user.email,
                             created_at=user.created_at.isoformat(),
                         )

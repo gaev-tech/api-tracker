@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import sys
-from uuid import UUID
 
 import grpc
 from sqlalchemy import select
@@ -21,7 +20,7 @@ from tasks_service.grpc_client import get_auth_stub  # noqa: E402
 from tasks_service.models import User  # noqa: E402
 
 
-async def ensure_user(session: AsyncSession, *, user_id: UUID, email: str) -> User:
+async def ensure_user(session: AsyncSession, *, user_id: str, email: str) -> User:
     """Идемпотентный upsert в tasks.users; вызывается при JWT-валидации."""
     stmt = (
         pg_insert(User)
@@ -35,8 +34,8 @@ async def ensure_user(session: AsyncSession, *, user_id: UUID, email: str) -> Us
     return user
 
 
-async def resolve_email_to_user_id_via_grpc(email: str) -> UUID | None:
-    """gRPC GetUserByEmail — возвращает UUID или None если NOT_FOUND."""
+async def resolve_email_to_user_id_via_grpc(email: str) -> str | None:
+    """gRPC GetUserByEmail — возвращает SHA1-id или None если NOT_FOUND."""
     stub = get_auth_stub()
     try:
         response = await stub.GetUserByEmail(
@@ -46,10 +45,10 @@ async def resolve_email_to_user_id_via_grpc(email: str) -> UUID | None:
         if hasattr(e, "code") and e.code() == grpc.StatusCode.NOT_FOUND:
             return None
         raise
-    return UUID(response.id)
+    return str(response.id)
 
 
-async def resolve_and_cache_email(session: AsyncSession, email: str) -> UUID | None:
+async def resolve_and_cache_email(session: AsyncSession, email: str) -> str | None:
     """Резолв email→user_id с локальным кешем + gRPC fallback.
 
     Стратегия:

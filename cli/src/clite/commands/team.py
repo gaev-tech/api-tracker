@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 from typing import Annotated
-from uuid import UUID
 
 import typer
 
@@ -65,7 +64,7 @@ def list_teams(
 
 @app.command("get")
 def get_team(
-    team_id: Annotated[UUID, typer.Argument()],
+    team_id: Annotated[str, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
     fields: FieldsOpt = None,
 ) -> None:
@@ -80,7 +79,7 @@ def get_team(
 
 @app.command("update")
 def update_team(
-    team_id: Annotated[UUID, typer.Argument()],
+    team_id: Annotated[str, typer.Argument()],
     name: Annotated[str, typer.Option("--name", "-n")],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
@@ -96,7 +95,7 @@ def update_team(
 
 @app.command("leave")
 def leave(
-    team_id: Annotated[UUID, typer.Argument()],
+    team_id: Annotated[str, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     """Выйти из команды (self-revoke, PRD §7.8.2)."""
@@ -111,7 +110,7 @@ def leave(
 
 @member_app.command("set")
 def member_set(
-    team_id: Annotated[UUID, typer.Argument()],
+    team_id: Annotated[str, typer.Argument()],
     email: Annotated[str, typer.Option("--email", "-e")],
     perm: Annotated[
         list[str], typer.Option("--perm", "-p", help="Каждый --perm раз = один флаг")
@@ -135,7 +134,7 @@ def member_set(
 
 @member_app.command("remove")
 def member_remove(
-    team_id: Annotated[UUID, typer.Argument()],
+    team_id: Annotated[str, typer.Argument()],
     email: Annotated[str, typer.Option("--email", "-e")],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:

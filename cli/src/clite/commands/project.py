@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 from typing import Annotated
-from uuid import UUID
 
 import typer
 
@@ -68,7 +67,7 @@ def list_projects(
 
 @app.command("get")
 def get_project(
-    project_id: Annotated[UUID, typer.Argument()],
+    project_id: Annotated[str, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
     fields: FieldsOpt = None,
 ) -> None:
@@ -83,7 +82,7 @@ def get_project(
 
 @app.command("update")
 def update_project(
-    project_id: Annotated[UUID, typer.Argument()],
+    project_id: Annotated[str, typer.Argument()],
     name: Annotated[str, typer.Option("--name", "-n")],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
@@ -98,7 +97,7 @@ def update_project(
 
 @app.command("leave")
 def leave(
-    project_id: Annotated[UUID, typer.Argument()],
+    project_id: Annotated[str, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     """Self-revoke из проекта (PRD §7.8.3)."""
@@ -116,7 +115,7 @@ def leave(
 
 @member_app.command("set")
 def member_set(
-    project_id: Annotated[UUID, typer.Argument()],
+    project_id: Annotated[str, typer.Argument()],
     email: Annotated[str, typer.Option("--email", "-e")],
     perm: Annotated[
         list[str],
@@ -141,7 +140,7 @@ def member_set(
 
 @member_app.command("remove")
 def member_remove(
-    project_id: Annotated[UUID, typer.Argument()],
+    project_id: Annotated[str, typer.Argument()],
     email: Annotated[str, typer.Option("--email", "-e")],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
@@ -160,8 +159,8 @@ def member_remove(
 
 @member_app.command("team-set")
 def member_team_set(
-    project_id: Annotated[UUID, typer.Argument()],
-    team_id: Annotated[UUID, typer.Option("--team")],
+    project_id: Annotated[str, typer.Argument()],
+    team_id: Annotated[str, typer.Option("--team")],
     perm: Annotated[list[str], typer.Option("--perm", "-p")] = None,  # type: ignore[assignment]
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
@@ -182,8 +181,8 @@ def member_team_set(
 
 @member_app.command("team-remove")
 def member_team_remove(
-    project_id: Annotated[UUID, typer.Argument()],
-    team_id: Annotated[UUID, typer.Option("--team")],
+    project_id: Annotated[str, typer.Argument()],
+    team_id: Annotated[str, typer.Option("--team")],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
     with _client() as c:
@@ -204,8 +203,8 @@ def member_team_remove(
 
 @task_app.command("add")
 def task_add(
-    project_id: Annotated[UUID, typer.Argument()],
-    task_id: Annotated[UUID, typer.Option("--task")],
+    project_id: Annotated[str, typer.Argument()],
+    task_id: Annotated[str, typer.Option("--task")],
 ) -> None:
     """Добавить задачу в проект."""
     with _client() as c:
@@ -219,8 +218,8 @@ def task_add(
 
 @task_app.command("remove")
 def task_remove(
-    project_id: Annotated[UUID, typer.Argument()],
-    task_id: Annotated[UUID, typer.Option("--task")],
+    project_id: Annotated[str, typer.Argument()],
+    task_id: Annotated[str, typer.Option("--task")],
 ) -> None:
     """Убрать задачу из проекта."""
     with _client() as c:
