@@ -30,15 +30,13 @@ def clear_email_log() -> None:
 
 
 async def _bootstrap_session(client: AsyncClient, email: str) -> dict[str, str]:
-    """Создаёт пользователя через magic-link и возвращает access+refresh."""
+    """Создаёт пользователя через magic-link click-flow и возвращает access+refresh."""
     with patch("auth_service.routers.magic.send_email", new=_fake_send):
-        await client.post(
-            "/auth/magic/start", json={"email": email, "intent": "browser"}
-        )
+        start = await client.post("/auth/magic/start", json={"email": email})
+    session_id = start.json()["login_session_id"]
     token = _extract_token(_SENT_EMAILS[-1][2])
-    r = await client.post(
-        "/auth/magic/verify", json={"token": token, "intent": "browser"}
-    )
+    await client.get(f"/auth/magic/confirm?token={token}")
+    r = await client.get(f"/auth/magic/poll/{session_id}")
     return r.json()
 
 

@@ -1,25 +1,20 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from uuid import UUID
 
-from auth_service.models import MagicTokenIntent
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class MagicStartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr
-    intent: MagicTokenIntent = MagicTokenIntent.BROWSER
 
 
 class MagicStartResponse(BaseModel):
-    sent: bool
+    """ARCH §4.2.1 — start magic-link flow, return long-poll session id."""
+
+    login_session_id: UUID
     email: str
-
-
-class MagicVerifyRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    token: str
-    intent: MagicTokenIntent = MagicTokenIntent.BROWSER
+    expires_in: int
 
 
 class SessionTokens(BaseModel):
@@ -29,7 +24,15 @@ class SessionTokens(BaseModel):
     expires_in: int
 
 
-class MagicVerifyResponse(SessionTokens):
+class MagicPollPending(BaseModel):
+    """ARCH §4.2.4.1 — пользователь ещё не кликнул по ссылке."""
+
+    status: str = "pending"
+
+
+class MagicPollDelivered(SessionTokens):
+    """ARCH §4.2.4.2 — токены отдаются однократно при первом 200."""
+
     user_email: str
 
 

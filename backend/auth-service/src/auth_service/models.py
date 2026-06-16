@@ -16,11 +16,6 @@ class SessionKind(StrEnum):
     CLI = "cli"
 
 
-class MagicTokenIntent(StrEnum):
-    BROWSER = "browser"
-    CLI = "cli"
-
-
 def _utcnow() -> datetime:
     return datetime.now(UTC)
 
@@ -40,17 +35,32 @@ class User(Base):
 
 
 class MagicToken(Base):
-    """architecture.md §3.6.2 — magic_tokens(token_hash, email, intent, expires_at)."""
+    """architecture.md §3.6.2 — magic-link click flow.
+
+    Колонки:
+        token_hash         — hash(plaintext-token из URL)
+        email              — для кого выписан
+        login_session_id   — внешний идентификатор сессии входа, по нему
+                             CLI делает long-poll (ARCH §4.2.4)
+        expires_at         — TTL 15 мин (ARCH §4.2.1)
+        confirmed_at       — момент клика по ссылке (ARCH §4.2.3)
+        delivered_at       — момент первой 200-выдачи на poll (ARCH §4.2.4.2)
+    """
 
     __tablename__ = "magic_tokens"
 
     token_hash: Mapped[str] = mapped_column(String(128), primary_key=True)
     email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
-    intent: Mapped[MagicTokenIntent] = mapped_column(String(20), nullable=False)
+    login_session_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), nullable=False, unique=True, default=uuid4
+    )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    used_at: Mapped[datetime | None] = mapped_column(
+    confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    delivered_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(

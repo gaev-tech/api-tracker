@@ -1,27 +1,44 @@
-"""Magic-link REST endpoints (architecture.md §4.2)."""
+"""Magic-link click-flow REST endpoints (architecture.md §4.2)."""
 
-from fastapi import APIRouter, HTTPException, Request, status
+from uuid import UUID
+
+from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi.responses import HTMLResponse
 
 from auth_service.config import settings
 from auth_service.deps import SessionDep
 from auth_service.email_sender import magic_link_email_body, send_email
-from auth_service.models import SessionKind
 from auth_service.schemas import (
+    MagicPollDelivered,
+    MagicPollPending,
     MagicStartRequest,
     MagicStartResponse,
-    MagicVerifyRequest,
-    MagicVerifyResponse,
 )
 from auth_service.services.magic import (
     MagicTokenError,
     build_magic_link,
+    confirm_magic_token,
     issue_magic_token,
-    verify_magic_token,
+    poll_login_session,
 )
-from auth_service.services.sessions import create_session
-from auth_service.services.users import get_or_create_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+_CONFIRM_OK_HTML = """<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>apitracker.ru</title></head>
+<body style="font-family:system-ui,sans-serif;max-width:480px;margin:4rem auto;
+text-align:center"><h1>✓ Сессия подтверждена</h1>
+<p>Вернитесь в терминал — CLI завершит вход автоматически.</p>
+</body></html>"""
+
+
+_CONFIRM_EXPIRED_HTML = """<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>apitracker.ru</title></head>
+<body style="font-family:system-ui,sans-serif;max-width:480px;margin:4rem auto;
+text-align:center"><h1>Ссылка истекла</h1>
+<p>Запустите <code>clite login</code> повторно.</p>
+</body></html>"""
 
 
 @router.post(
@@ -32,41 +49,58 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def magic_start(
     payload: MagicStartRequest, session: SessionDep
 ) -> MagicStartResponse:
-    """Создаёт magic-token и отправляет письмо на email пользователя."""
-    # ARCH §4.2.1.1: fail loudly when SMTP не сконфигурирован, без записи в БД.
+    """ARCH §4.2.1 — выпустить magic-link, отправить письмо, вернуть session_id."""
+    # ARCH §4.2.1.1: fail-fast при пустом SMTP_HOST, до записи токена в БД.
     if not settings.smtp_host:
         raise HTTPException(status_code=500, detail="email_delivery_not_configured")
     email = str(payload.email).lower()
-    token = await issue_magic_token(session, email=email, intent=payload.intent)
-    link = build_magic_link(token, payload.intent)
+    token, login_session_id = await issue_magic_token(session, email=email)
+    link = build_magic_link(token)
     await send_email(
         to=email,
         subject="apitracker.ru — вход по ссылке",
         body=magic_link_email_body(link),
     )
-    return MagicStartResponse(sent=True, email=email)
+    return MagicStartResponse(
+        login_session_id=login_session_id,
+        email=email,
+        expires_in=settings.magic_token_ttl_seconds,
+    )
 
 
-@router.post("/magic/verify", response_model=MagicVerifyResponse)
-async def magic_verify(
-    payload: MagicVerifyRequest, session: SessionDep, request: Request
-) -> MagicVerifyResponse:
-    """Верифицирует magic-token, создаёт пользователя если нет, выдаёт сессию."""
+@router.get("/magic/confirm")
+async def magic_confirm(token: str, session: SessionDep) -> HTMLResponse:
+    """ARCH §4.2.3 — клик по ссылке из email; отдаёт HTML 200 либо 410."""
     try:
-        email = await verify_magic_token(
-            session, token=payload.token, intent=payload.intent
+        await confirm_magic_token(session, token=token)
+    except MagicTokenError:
+        return HTMLResponse(content=_CONFIRM_EXPIRED_HTML, status_code=410)
+    return HTMLResponse(content=_CONFIRM_OK_HTML, status_code=200)
+
+
+@router.get("/magic/poll/{login_session_id}")
+async def magic_poll(
+    login_session_id: UUID, session: SessionDep, request: Request, response: Response
+) -> MagicPollPending | MagicPollDelivered:
+    """ARCH §4.2.4 — long-poll, CLI вызывает в цикле."""
+    user_agent = request.headers.get("user-agent", "")[:500]
+    try:
+        result = await poll_login_session(
+            session, login_session_id=login_session_id, user_agent=user_agent
         )
     except MagicTokenError as e:
-        raise HTTPException(status_code=400, detail=f"invalid magic token: {e}") from e
-    user = await get_or_create_user(session, email=email)
-    kind = SessionKind.BROWSER if payload.intent.value == "browser" else SessionKind.CLI
-    user_agent = request.headers.get("user-agent", "")[:500]
-    access, refresh, ttl = await create_session(
-        session, user=user, kind=kind, user_agent=user_agent
-    )
-    return MagicVerifyResponse(
+        msg = str(e)
+        if msg == "not_found":
+            raise HTTPException(status_code=404, detail="not_found") from e
+        # expired или already_delivered → 410
+        raise HTTPException(status_code=410, detail=msg) from e
+    if result is None:
+        response.status_code = status.HTTP_202_ACCEPTED
+        return MagicPollPending()
+    access, refresh, ttl, email = result
+    return MagicPollDelivered(
         access_token=access,
         refresh_token=refresh,
         expires_in=ttl,
-        user_email=user.email,
+        user_email=email,
     )

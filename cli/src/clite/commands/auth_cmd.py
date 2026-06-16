@@ -1,4 +1,4 @@
-"""clite login / logout / whoami (terminal-only auth flow)."""
+"""clite login / logout / whoami (magic-link click flow, ARCH §4.2)."""
 
 from __future__ import annotations
 
@@ -26,51 +26,45 @@ def _auth_base() -> str:
     return f"{cfg.base_url}/api/auth"
 
 
+# Backoff между poll-итерациями (ARCH §4.3.1.4).
+_POLL_INTERVALS_SECONDS: tuple[float, ...] = (1, 1, 2, 2, 5)
+_POLL_STEADY_SECONDS: float = 5.0
+
+
+def _poll_iteration_delay(iteration: int) -> float:
+    if iteration < len(_POLL_INTERVALS_SECONDS):
+        return _POLL_INTERVALS_SECONDS[iteration]
+    return _POLL_STEADY_SECONDS
+
+
 @app.command("login")
 def login(
     email: Annotated[
         str | None,
         typer.Option("--email", "-e", help="Если не задан — спросит интерактивно"),
     ] = None,
-    code: Annotated[
-        str | None,
+    no_wait: Annotated[
+        bool,
         typer.Option(
-            "--code",
-            "-c",
-            help="Magic-code (для скриптов и e2e); пропускает интерактивный prompt",
+            "--no-wait",
+            help="Не ждать клик: распечатать login_session_id и выйти "
+            "(для скриптов/e2e, TC §5.1.3)",
         ),
-    ] = None,
+    ] = False,
 ) -> None:
-    """Magic-code login через email. Открытая регистрация."""
+    """Magic-link login. Пользователь кликает по ссылке из почты — CLI ждёт.
+
+    ARCH §4.2-§4.3, PRD §10.5.
+    """
     if email is None:
         email = typer.prompt("Email")
     email = email.strip().lower()
 
-    if code is None:
-        print(f"Отправляю magic-code на {email}...", file=sys.stderr)
-        try:
-            r = httpx.post(
-                f"{_auth_base()}/magic/start",
-                json={"email": email, "intent": "cli"},
-                timeout=30,
-            )
-        except httpx.HTTPError as e:
-            print(f"connection failed: {e}", file=sys.stderr)
-            raise typer.Exit(1) from e
-
-        if r.status_code >= 400:
-            print(f"magic/start failed: {r.status_code} {r.text}", file=sys.stderr)
-            raise typer.Exit(1)
-
-        print(f"✉ Код отправлен на {email}.", file=sys.stderr)
-        code = typer.prompt("Code").strip()
-    else:
-        code = code.strip()
-
+    print(f"Запрашиваю magic-link для {email}…", file=sys.stderr)
     try:
         r = httpx.post(
-            f"{_auth_base()}/magic/verify",
-            json={"token": code, "intent": "cli"},
+            f"{_auth_base()}/magic/start",
+            json={"email": email},
             timeout=30,
         )
     except httpx.HTTPError as e:
@@ -78,22 +72,86 @@ def login(
         raise typer.Exit(1) from e
 
     if r.status_code >= 400:
-        try:
-            detail = r.json().get("detail", r.text)
-        except Exception:
-            detail = r.text
-        print(f"login failed: {detail}", file=sys.stderr)
+        detail = _extract_detail(r)
+        if detail == "email_delivery_not_configured":
+            print(
+                "email delivery not configured on server (ARCH §4.2.1.1)",
+                file=sys.stderr,
+            )
+        else:
+            print(f"magic/start failed: {detail}", file=sys.stderr)
         raise typer.Exit(1)
 
     body = r.json()
-    creds = Credentials(
-        access_token=body["access_token"],
-        refresh_token=body["refresh_token"],
-        user_email=body["user_email"],
-        expires_at=int(time.time()) + int(body["expires_in"]),
+    login_session_id = body["login_session_id"]
+    expires_in = int(body["expires_in"])
+
+    if no_wait:
+        print(login_session_id)
+        return
+
+    print(
+        f"✉ Link sent to {email}. Click it from your inbox. Waiting…",
+        file=sys.stderr,
+    )
+
+    creds = _poll_until_confirmed(
+        login_session_id=login_session_id, expires_in=expires_in
     )
     save_credentials(creds)
-    print(f"✓ Logged in as {creds.user_email}", file=sys.stderr)
+    print("success, press enter to continue")
+    try:
+        input()
+    except (EOFError, KeyboardInterrupt):
+        pass
+
+
+def _poll_until_confirmed(*, login_session_id: str, expires_in: int) -> Credentials:
+    url = f"{_auth_base()}/magic/poll/{login_session_id}"
+    deadline = time.monotonic() + expires_in
+    iteration = 0
+    while True:
+        delay = _poll_iteration_delay(iteration)
+        # Не уйти за deadline впустую — приблизим delay к остатку.
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            print("magic link expired, run clite login again", file=sys.stderr)
+            raise typer.Exit(1)
+        time.sleep(min(delay, remaining))
+        iteration += 1
+        try:
+            resp = httpx.get(url, timeout=30)
+        except httpx.HTTPError as e:
+            print(f"connection failed: {e}", file=sys.stderr)
+            raise typer.Exit(1) from e
+        if resp.status_code == 202:
+            continue
+        if resp.status_code == 200:
+            body = resp.json()
+            return Credentials(
+                access_token=body["access_token"],
+                refresh_token=body["refresh_token"],
+                user_email=body["user_email"],
+                expires_at=int(time.time()) + int(body["expires_in"]),
+            )
+        if resp.status_code == 410:
+            print("magic link expired, run clite login again", file=sys.stderr)
+            raise typer.Exit(1)
+        print(
+            f"login failed: {resp.status_code} {_extract_detail(resp)}",
+            file=sys.stderr,
+        )
+        raise typer.Exit(1)
+
+
+def _extract_detail(r: httpx.Response) -> str:
+    try:
+        body = r.json()
+        if isinstance(body, dict) and "detail" in body:
+            return str(body["detail"])
+    except ValueError:
+        pass
+    return r.text
 
 
 @app.command("logout")
@@ -118,7 +176,7 @@ def whoami() -> None:
     exp = claims.get("exp")
     if isinstance(exp, int):
         remaining = exp - int(time.time())
-        status = "valid" if remaining > 0 else "expired"
-        print(f"{email}  (access token {status}, {max(remaining, 0)}s remaining)")
+        status_str = "valid" if remaining > 0 else "expired"
+        print(f"{email}  (access token {status_str}, {max(remaining, 0)}s remaining)")
     else:
         print(email)
