@@ -46,8 +46,8 @@ def is_valid_key_or_prefix(value: str) -> bool:
 async def resolve_prefix(
     session: AsyncSession,
     *,
-    id_column: Any,  # noqa: ANN401 — SQLAlchemy InstrumentedAttribute
-    discriminator_column: Any,  # noqa: ANN401 — SQLAlchemy InstrumentedAttribute
+    id_column: Any,
+    discriminator_column: Any,
     key: str,
 ) -> str:
     """Разрешить префикс в полный id.
