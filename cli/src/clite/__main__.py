@@ -1,15 +1,18 @@
-"""clite — entrypoint."""
+"""clite — entrypoint. Verb-first command structure (v2.0.0)."""
 
 from importlib.metadata import version as _pkg_version
 
 import typer
 
-from clite.commands import auth_cmd
-from clite.commands import history as history_cmd
-from clite.commands import project as project_cmd
-from clite.commands import share as share_cmd
-from clite.commands import task as task_cmd
-from clite.commands import team as team_cmd
+from clite.commands import (
+    add_cmd,
+    auth_cmd,
+    create_cmd,
+    get_cmd,
+    leave_cmd,
+    rename_cmd,
+    update_cmd,
+)
 
 VERSION = _pkg_version("clite")
 
@@ -19,12 +22,16 @@ app = typer.Typer(
     help="api-tracker CLI",
     rich_markup_mode="rich",
 )
-app.add_typer(task_cmd.app, name="task")
-app.add_typer(history_cmd.app, name="history")
-app.add_typer(team_cmd.app, name="team")
-app.add_typer(project_cmd.app, name="project")
-app.add_typer(share_cmd.app, name="share")
-app.add_typer(auth_cmd.app, name="account")
+
+app.add_typer(get_cmd.app, name="get")
+app.add_typer(create_cmd.app, name="create")
+app.add_typer(update_cmd.app, name="update")
+app.add_typer(rename_cmd.app, name="rename")
+app.add_typer(leave_cmd.app, name="leave")
+app.add_typer(add_cmd.app, name="add")
+
+# login / logout / me — на верхнем уровне.
+app.registered_commands.extend(auth_cmd.app.registered_commands)
 
 
 @app.command("version")

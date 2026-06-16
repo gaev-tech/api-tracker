@@ -292,7 +292,9 @@ def mk_task(clite, nginx_stub):
 
     def _make(title: str, **extra: object) -> dict:
         item = {"title": title, **extra}
-        r = clite(["task", "create", "bulk", _json.dumps([item]), "--output", "json"])
+        r = clite(
+            ["create", "tasks", "--bulk", _json.dumps([item]), "--output", "json"]
+        )
         assert r.returncode == 0, r.stderr
         result = _json.loads(r.stdout)["results"][0]
         assert result["status"] == "ok", result

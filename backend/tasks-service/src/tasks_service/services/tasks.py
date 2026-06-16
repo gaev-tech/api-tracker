@@ -296,6 +296,35 @@ async def _apply_patch(
         )
         diff["remove_blockers"] = [str(b) for b in patch.remove_blockers]
 
+    if patch.projects is not None:
+        from tasks_service.models import ProjectTask
+
+        existing_rows = await session.execute(
+            select(ProjectTask.project_id).where(ProjectTask.task_id == task.id)
+        )
+        existing = set(existing_rows.scalars().all())
+        new_set = set(patch.projects)
+        if existing != new_set:
+            await session.execute(
+                delete(ProjectTask).where(ProjectTask.task_id == task.id)
+            )
+            for pid in new_set:
+                session.add(ProjectTask(project_id=pid, task_id=task.id))
+            diff["projects"] = {
+                "old": sorted(existing),
+                "new": sorted(new_set),
+            }
+
+    if patch.assignee is not None:
+        from tasks_service.deps import resolve_email_to_user_id
+
+        new_uid = await resolve_email_to_user_id(session, patch.assignee)
+        if new_uid is None:
+            raise ValidationFailed(f"assignee not found: {patch.assignee}")
+        if new_uid != task.assignee_id:
+            diff["assignee"] = {"old": task.assignee_id, "new": new_uid}
+            task.assignee_id = new_uid
+
     if diff:
         await session.flush()
         await record_audit(

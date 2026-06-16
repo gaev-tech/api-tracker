@@ -49,6 +49,8 @@ class TaskUpdate(BaseModel):
     remove_labels: list[str] | None = None
     add_blockers: list[EntityKey] | None = None
     remove_blockers: list[EntityKey] | None = None
+    projects: list[EntityKey] | None = None  # full replace; None = не трогать
+    assignee: str | None = None  # email; None = не трогать
 
 
 class TaskRead(BaseModel):

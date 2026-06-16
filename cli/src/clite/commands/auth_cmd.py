@@ -18,7 +18,7 @@ from clite.auth import (
 )
 from clite.config import load_config
 
-app = typer.Typer(no_args_is_help=True, help="Аккаунт (login / logout / me)")
+app = typer.Typer(no_args_is_help=False, help="Аутентификация (login / logout / me)")
 
 
 def _auth_base() -> str:
@@ -168,7 +168,7 @@ def me() -> None:
     """Показать текущего пользователя (по локальным credentials)."""
     creds = load_credentials()
     if creds is None:
-        print("Не залогинены. Используйте `clite account login`.", file=sys.stderr)
+        print("Не залогинены. Используйте `clite login`.", file=sys.stderr)
         raise typer.Exit(3)
 
     claims = decode_jwt_claims(creds.access_token)

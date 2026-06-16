@@ -1,9 +1,4 @@
-"""TC 7.x — clite project. См. specs/cli-test-cases.md §7.
-
-В AUTH_MODE=disabled позитивные single-user кейсы проверяются полностью;
-permission-denied и member-set чужому email требуют auth-svc через gRPC и
-покрываются отдельной сессией с AUTH_MODE=jwt.
-"""
+"""TC 7.x — clite create/get/rename/leave project (verb-first, v2.0.0)."""
 
 from __future__ import annotations
 
@@ -15,79 +10,98 @@ import pytest
 KEY_RE = re.compile(r"[0-9a-f]{40}")
 
 
-def test_TC_7_1_1_project_create_returns_uuid(clite):
-    """7.1.1 — `project create --name P1` → exit 0, UUID; создатель — единственный
-    участник со всеми правами (PRD §6.5).
-    """
-    r = clite(["project", "create", "--name", "TC-7.1.1", "--output", "json"])
+def test_TC_7_1_1_project_create_returns_key(clite):
+    """7.1.1 — `create project --name P` → exit 0, SHA1-ключ."""
+    r = clite(["create", "project", "--name", "TC-7.1.1", "--output", "json"])
     assert r.returncode == 0, r.stderr
     data = json.loads(r.stdout)
     assert KEY_RE.fullmatch(data["id"])
     assert data["name"] == "TC-7.1.1"
 
 
-def test_TC_7_3_1_project_task_add(clite, mk_task):
-    """7.3.1 — `project task add` при manage_projects → exit 0; задача в task_ids
-    проекта.
-    """
-    p = clite(["project", "create", "--name", "TC-7.3.1-proj", "--output", "json"])
+def test_TC_7_3_1_attach_task_to_project_via_update(clite, mk_task):
+    """7.3.1 — привязка задачи к проекту через `update tasks --set projects=K`."""
+    p = clite(["create", "project", "--name", "TC-7.3.1-proj", "--output", "json"])
     project_id = json.loads(p.stdout)["id"]
-    task_id = mk_task("TC-7.3.1-task")["id"]
+    t = mk_task("TC-7.3.1-task")
+    task_id = t["id"]
 
-    add = clite(["project", "task", "add", project_id, "--task", task_id])
-    assert add.returncode == 0, add.stderr
+    upd = clite(
+        [
+            "update",
+            "tasks",
+            "--bulk",
+            "--filter",
+            f"id=={task_id[:10]}",
+            "--set",
+            f"projects={project_id}",
+            "--output",
+            "json",
+        ]
+    )
+    assert upd.returncode == 0, upd.stderr
+    assert json.loads(upd.stdout)["succeeded"] == 1
 
     got = clite(
-        ["project", "get", project_id, "--fields", "id,task_ids", "--output", "json"]
+        ["get", "project", project_id, "--fields", "id,task_ids", "--output", "json"]
     )
     assert got.returncode == 0, got.stderr
-    data = json.loads(got.stdout)
-    assert task_id in data.get("task_ids", [])
+    assert task_id in json.loads(got.stdout).get("task_ids", [])
 
 
-def test_TC_7_3_2_project_task_remove(clite, mk_task):
-    """7.3.2 — `project task remove` → exit 0; задача исчезает из task_ids."""
-    p = clite(["project", "create", "--name", "TC-7.3.2-proj", "--output", "json"])
+def test_TC_7_3_2_detach_task_via_update_empty_projects(clite, mk_task):
+    """7.3.2 — отвязка через `update tasks --set projects=` (пустой список)."""
+    p = clite(["create", "project", "--name", "TC-7.3.2-proj", "--output", "json"])
     project_id = json.loads(p.stdout)["id"]
-    task_id = mk_task("TC-7.3.2-task")["id"]
+    t = mk_task("TC-7.3.2-task")
+    task_id = t["id"]
 
-    clite(["project", "task", "add", project_id, "--task", task_id])
-    rm = clite(["project", "task", "remove", project_id, "--task", task_id])
+    clite(
+        [
+            "update",
+            "tasks",
+            "--bulk",
+            "--filter",
+            f"id=={task_id[:10]}",
+            "--set",
+            f"projects={project_id}",
+        ]
+    )
+    # Теперь отвязать
+    rm = clite(
+        [
+            "update",
+            "tasks",
+            "--bulk",
+            "--filter",
+            f"id=={task_id[:10]}",
+            "--set",
+            "projects=",
+            "--output",
+            "json",
+        ]
+    )
     assert rm.returncode == 0, rm.stderr
 
     got = clite(
-        ["project", "get", project_id, "--fields", "id,task_ids", "--output", "json"]
+        ["get", "project", project_id, "--fields", "id,task_ids", "--output", "json"]
     )
-    data = json.loads(got.stdout)
-    assert task_id not in data.get("task_ids", [])
+    assert task_id not in json.loads(got.stdout).get("task_ids", [])
 
 
 def test_TC_7_5_1_project_leave_self_revoke(clite):
-    """7.5.1 — `project leave` единственного участника → exit 0; повторный `project get`
-    возвращает 404 (cascade-delete, PRD §6.1.6 распространяется на проекты).
-    """
-    p = clite(["project", "create", "--name", "TC-7.5.1", "--output", "json"])
+    """7.5.1 — `leave project` единственного участника → exit 0."""
+    p = clite(["create", "project", "--name", "TC-7.5.1", "--output", "json"])
     project_id = json.loads(p.stdout)["id"]
-
-    leave = clite(["project", "leave", project_id, "--output", "json"])
-    assert leave.returncode == 0, leave.stderr
-
-
-@pytest.mark.skip(reason="требует AUTH_MODE=jwt + auth-svc: gRPC резолв email→user_id")
-def test_TC_7_2_1_project_member_set_positive() -> None:
-    """7.2.1 — добавление с непустыми правами → exit 0."""
+    lv = clite(["leave", "project", project_id, "--output", "json"])
+    assert lv.returncode == 0, lv.stderr
 
 
-@pytest.mark.skip(reason="требует второго пользователя без manage_member_permissions")
-def test_TC_7_2_2_project_member_set_no_permission() -> None:
+@pytest.mark.skip(reason="требует AUTH_MODE=jwt + auth-svc")
+def test_TC_7_2_1_add_member_to_project() -> None:
+    """7.2.1 — `add member <project> --email E --perm P`."""
+
+
+@pytest.mark.skip(reason="требует второго пользователя")
+def test_TC_7_2_2_add_member_without_permission() -> None:
     """7.2.2 — без manage_member_permissions → exit 4."""
-
-
-@pytest.mark.skip(reason="требует второго пользователя с меньшими правами")
-def test_TC_7_2_3_project_grant_above_self() -> None:
-    """7.2.3 — `--perms` выше своих → exit 4."""
-
-
-@pytest.mark.skip(reason="требует второго пользователя без manage_projects")
-def test_TC_7_4_1_project_task_add_without_permission() -> None:
-    """7.4.1 — без manage_projects → exit 4."""
