@@ -1,4 +1,8 @@
-"""Интеграционные тесты REST-эндпоинтов tasks-svc (M1)."""
+"""Интеграционные тесты REST-эндпоинтов tasks-svc.
+
+Single-create (POST /v1/tasks) и single-update (PATCH /v1/tasks/{id})
+удалены в M2.28 — все мутации через bulk/batch (PRD §7.2, §7.3, §7.6).
+"""
 
 import pytest
 from httpx import AsyncClient
@@ -7,13 +11,18 @@ pytestmark = pytest.mark.asyncio
 
 
 async def _create(client: AsyncClient, title: str = "T", **kwargs: object) -> dict:
-    payload = {"title": title, **kwargs}
-    r = await client.post("/v1/tasks", json=payload)
-    assert r.status_code == 201, r.text
-    return r.json()
+    """Создаёт одну задачу через bulk-create и возвращает её полные данные."""
+    payload = {"items": [{"title": title, **kwargs}]}
+    r = await client.post("/v1/tasks/bulk-create", json=payload)
+    assert r.status_code == 200, r.text
+    result = r.json()["results"][0]
+    assert result["status"] == "ok", result
+    g = await client.get(f"/v1/tasks/{result['task_id']}")
+    assert g.status_code == 200, g.text
+    return g.json()
 
 
-# === POST /v1/tasks ===
+# === POST /v1/tasks/bulk-create ===
 
 
 async def test_create_minimal(client: AsyncClient) -> None:
@@ -25,7 +34,8 @@ async def test_create_minimal(client: AsyncClient) -> None:
 
 
 async def test_create_missing_title(client: AsyncClient) -> None:
-    r = await client.post("/v1/tasks", json={})
+    """bulk-create с пустым title → validation_failed для этого элемента."""
+    r = await client.post("/v1/tasks/bulk-create", json={"items": [{}]})
     assert r.status_code == 422
 
 
@@ -36,7 +46,11 @@ async def test_create_with_labels_and_status(client: AsyncClient) -> None:
 
 
 async def test_create_duplicate_label(client: AsyncClient) -> None:
-    r = await client.post("/v1/tasks", json={"title": "x", "labels": ["a", "a"]})
+    r = await client.post(
+        "/v1/tasks/bulk-create",
+        json={"items": [{"title": "x", "labels": ["a", "a"]}]},
+    )
+    # Pydantic-валидация массива срабатывает на уровне айтема → 422.
     assert r.status_code == 422
 
 
@@ -76,6 +90,17 @@ async def test_list_limit_too_large(client: AsyncClient) -> None:
     assert r.status_code == 422
 
 
+async def test_list_filter_by_id_prefix(client: AsyncClient) -> None:
+    """RSQL id== с префиксом <40 символов → LIKE prefix-match."""
+    created = await _create(client, "prefix-target")
+    full_id = created["id"]
+    prefix = full_id[:8]
+    r = await client.get("/v1/tasks", params={"filter": f"id=={prefix}"})
+    assert r.status_code == 200
+    ids = {t["id"] for t in r.json()["items"]}
+    assert full_id in ids
+
+
 # === GET /v1/tasks/{id} ===
 
 
@@ -87,27 +112,7 @@ async def test_get_existing(client: AsyncClient) -> None:
 
 
 async def test_get_missing(client: AsyncClient) -> None:
-    r = await client.get("/v1/tasks/00000000-0000-0000-0000-000000000000")
-    assert r.status_code == 404
-
-
-# === PATCH /v1/tasks/{id} ===
-
-
-async def test_patch_title_and_status(client: AsyncClient) -> None:
-    created = await _create(client, "old")
-    r = await client.patch(
-        f"/v1/tasks/{created['id']}", json={"title": "new", "status": "done"}
-    )
-    assert r.status_code == 200
-    body = r.json()
-    assert body["title"] == "new" and body["status"] == "done"
-
-
-async def test_patch_missing(client: AsyncClient) -> None:
-    r = await client.patch(
-        "/v1/tasks/00000000-0000-0000-0000-000000000000", json={"title": "x"}
-    )
+    r = await client.get("/v1/tasks/" + "0" * 40)
     assert r.status_code == 404
 
 
@@ -126,6 +131,21 @@ async def test_bulk_update_partial(client: AsyncClient) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["total"] == 2 and body["succeeded"] == 2
+
+
+async def test_bulk_update_one_by_id_prefix(client: AsyncClient) -> None:
+    """bulk-update с фильтром по id-префиксу — заменяет одиночный PATCH."""
+    created = await _create(client, "single-target")
+    prefix = created["id"][:10]
+    r = await client.post(
+        "/v1/tasks/bulk-update",
+        params={"filter": f"id=={prefix}"},
+        json={"patch": {"status": "done"}},
+    )
+    assert r.status_code == 200
+    assert r.json()["succeeded"] == 1
+    g = await client.get(f"/v1/tasks/{created['id']}")
+    assert g.json()["status"] == "done"
 
 
 async def test_bulk_update_invalid_filter(client: AsyncClient) -> None:
@@ -201,8 +221,13 @@ async def test_batch_create_invalid(client: AsyncClient) -> None:
 
 
 async def test_history_task(client: AsyncClient) -> None:
+    """history генерируется при bulk-update — single PATCH удалён."""
     created = await _create(client, "h")
-    await client.patch(f"/v1/tasks/{created['id']}", json={"status": "done"})
+    await client.post(
+        "/v1/tasks/bulk-update",
+        params={"filter": f"id=={created['id'][:10]}"},
+        json={"patch": {"status": "done"}},
+    )
     r = await client.get("/v1/history", params={"task_id": created["id"]})
     assert r.status_code == 200
     body = r.json()

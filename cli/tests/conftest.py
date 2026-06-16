@@ -277,3 +277,37 @@ def clite_offline(clite_env_offline: dict[str, str]):
         return run_clite(args, clite_env_offline, stdin)
 
     return _run
+
+
+@pytest.fixture
+def mk_task(clite):
+    """Создать одну задачу через bulk-create и вернуть её dict (M2.28).
+
+    Замена legacy single-create — single-create endpoint удалён, единственный
+    путь создания: bulk/batch с массивом.
+    """
+    import json as _json
+
+    def _make(title: str, **extra: object) -> dict:
+        item = {"title": title, **extra}
+        r = clite(["task", "create", "bulk", _json.dumps([item]), "--output", "json"])
+        assert r.returncode == 0, r.stderr
+        result = _json.loads(r.stdout)["results"][0]
+        assert result["status"] == "ok", result
+        task_id = result["task_id"]
+        g = clite(
+            [
+                "task",
+                "--filter",
+                f"id=={task_id[:10]}",
+                "--fields",
+                "id,title,status,description_md,labels",
+                "--output",
+                "json",
+            ]
+        )
+        assert g.returncode == 0, g.stderr
+        items = _json.loads(g.stdout)["items"]
+        return next(it for it in items if it["id"] == task_id)
+
+    return _make

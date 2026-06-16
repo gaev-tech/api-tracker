@@ -64,9 +64,11 @@
 
 ## 3. clite task
 
-### 3.1 task create — позитивные
+M2.28: single-create (`task create [opts]`) и single-update (`task update <id>`) удалены — все мутации через bulk/batch. Single-task get/list объединены в callback `clite task [--filter ...]`. Просмотр одной задачи: `clite task --filter 'id==<prefix>'`.
 
-3.1.1 Минимальный: `--title "T1"` без других полей. exit 0. stdout содержит SHA1-ключ. БД: задача создана со статусом `open`, assignee = SOLO_USER (M1) или текущий пользователь (M2+).
+### 3.1 task create bulk — позитивные
+
+3.1.1 Минимальный: `task create bulk '[{"title":"T1"}]'` → exit 0; в результате task_id (SHA1). БД: задача создана со статусом `open`, assignee = SOLO_USER (M1) или текущий пользователь (M2+).
 
 3.1.2 С описанием: `--title "T2" --description "## Hello"`. exit 0. БД: `description_md = "## Hello"`.
 
@@ -134,39 +136,25 @@
 
 3.4.5 `--cursor "garbage"` → exit 2, stderr `invalid cursor`.
 
-### 3.5 task get — позитивные
+### 3.5 task get (через --filter) — позитивные
 
-3.5.1 `clite task get <existing SHA1>` (полный 40-символьный ключ) → exit 0, вывод с полями задачи.
+3.5.1 `clite task --filter 'id==<existing-SHA1>'` → exit 0; items содержит ровно одну задачу.
 
-3.5.2 `clite task get <unique prefix>` (4+ hex-символов, единственное совпадение) → exit 0, вывод задачи (PRD §5.2.7.2).
+3.5.2 `clite task --filter 'id==<prefix>'` (4+ hex-символов) → exit 0; items содержит все задачи с этим префиксом (LIKE-match, PRD §5.2.7).
 
-3.5.3 `clite task get <existing SHA1> --fields id,title` → exit 0, в выводе только `id` и `title`.
+3.5.3 `clite task --filter 'id==<sha>' --fields id,title` → в выводе только `id` и `title`.
 
-### 3.6 task get — негативные
+### 3.6 task get (через --filter) — негативные
 
-3.6.1 Несуществующий ключ → exit 1, stderr `task not found`.
+3.6.1 Несуществующий ключ → exit 0, `items: []` (list-семантика).
 
-3.6.2 (M2+) Задача существует, но у меня нет прав → exit 4 (или 1 task_not_found — окончательное решение фиксируется в M2).
+3.6.2 (M2+) Задача существует, но у меня нет прав → отсутствует в `items` (видимость).
 
-3.6.3 Префикс соответствует нескольким задачам → exit 1, stderr `ambiguous prefix '<p>', candidates:\n  <sha1>  "<title>"\n  <sha1>  "<title>"` (PRD §5.2.7.3, TC §1.4.4).
+### 3.7 task update single → bulk by id-prefix
 
-3.6.4 Префикс короче 4 символов → exit 2, stderr `prefix too short (min 4 chars)` (TC §1.4.2).
+3.7.1 Single-task update удалён в M2.28; изменить одну задачу — `task update bulk --filter 'id==<sha-prefix>' --set status=done`.
 
-### 3.7 task update — позитивные
-
-3.7.1 `--title "new"` → exit 0. БД: title обновлён, audit_event с диффом.
-
-3.7.2 `--status done`, `--assignee email@x.com` → exit 0.
-
-3.7.3 `--add-label x --remove-label y` → exit 0.
-
-3.7.4 `--add-blocker <key>` → exit 0.
-
-### 3.8 task update — негативные
-
-3.8.1 (M2+) Нет права `edit_title` → exit 4.
-
-3.8.2 `--status invalid` → exit 2.
+3.7.2 Все варианты single-update переписаны на bulk с фильтром id.
 
 ### 3.9 task update bulk — позитивные
 
@@ -210,27 +198,29 @@
 
 ## 4. clite history
 
-### 4.1 history task — позитивные
+### 4.1 history --task — позитивные
 
-4.1.1 `clite history task <key>` → exit 0, до 50 событий, отсортированы по `created_at desc`.
+4.1.1 `clite history --task <key>` → exit 0, до 50 событий, отсортированы по `created_at desc`.
 
-4.1.2 С курсором → следующая страница.
+4.1.2 С `--cursor` → следующая страница.
 
-### 4.2 history task — негативные
+### 4.2 history --task — негативные
 
 4.2.1 Несуществующий ключ → exit 1.
 
 4.2.2 (M2+) Нет прав чтения задачи → exit 4.
 
-### 4.3 history user (M2+) — позитивные
+### 4.3 history --user (M2+) — позитивные
 
-4.3.1 `clite history user me` → собственные события.
+4.3.1 `clite history --user me` → собственные события.
 
-4.3.2 `clite history user other@x.com` → события другого пользователя, только те, что касаются доступных мне задач (ARCH §10.2.2).
+4.3.2 `clite history --user other@x.com` → события другого пользователя, только те, что касаются доступных мне задач (ARCH §10.2.2).
 
-### 4.4 history user (M2+) — негативные
+### 4.4 history --user (M2+) — негативные
 
 4.4.1 Email несуществующего пользователя → exit 1.
+
+4.4.2 Ни `--task`, ни `--user` (или оба) → exit 2, stderr `provide exactly one of --task or --user`.
 
 ## 5. clite login / logout / whoami (M2+)
 

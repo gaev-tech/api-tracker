@@ -13,12 +13,11 @@ import json
 import pytest
 
 
-def test_TC_8_share_list_anchor_for_new_task(clite):
+def test_TC_8_share_list_anchor_for_new_task(clite, mk_task):
     """Smoke — у только что созданной задачи в user_shares лежит anchor-share
     создателя (PRD §6.6), team_shares пуст.
     """
-    t = clite(["task", "create", "--title", "TC-8-share-target", "--output", "json"])
-    task_id = json.loads(t.stdout)["id"]
+    task_id = mk_task("TC-8-share-target")["id"]
 
     r = clite(["share", "list", task_id, "--output", "json"])
     assert r.returncode == 0, r.stderr

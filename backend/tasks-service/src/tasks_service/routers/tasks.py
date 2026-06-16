@@ -15,10 +15,8 @@ from tasks_service.schemas import (
     BulkResult,
     HistoryEvent,
     HistoryPage,
-    TaskCreate,
     TaskListPage,
     TaskRead,
-    TaskUpdate,
 )
 from tasks_service.services import history, tasks
 from tasks_service.services.prefix_lookup import resolve_prefix
@@ -48,18 +46,6 @@ async def list_tasks(
     return TaskListPage(items=items, next_cursor=next_cursor)
 
 
-@router.post("/tasks", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
-async def create_task(
-    payload: TaskCreate,
-    session: SessionDep,
-    user: CurrentUserDep,
-) -> TaskRead:
-    try:
-        return await tasks.create_task(session, current_user=user, payload=payload)
-    except TaskNotFound as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-
-
 @router.get("/tasks/{task_id}", response_model=TaskRead)
 async def get_task(
     task_id: str,
@@ -75,22 +61,8 @@ async def get_task(
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-@router.patch("/tasks/{task_id}", response_model=TaskRead)
-async def update_task(
-    task_id: str,
-    payload: TaskUpdate,
-    session: SessionDep,
-    user: CurrentUserDep,
-) -> TaskRead:
-    full_id = await resolve_prefix(
-        session, id_column=Task.id, discriminator_column=Task.title, key=task_id
-    )
-    try:
-        return await tasks.update_task(
-            session, current_user=user, task_id=full_id, patch=payload
-        )
-    except TaskNotFound as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+# Single-task POST /v1/tasks и PATCH /v1/tasks/{id} удалены: все мутации
+# проходят через bulk/batch (PRD §7.2, §7.3).
 
 
 @router.post("/tasks/bulk-update", response_model=BulkResult)

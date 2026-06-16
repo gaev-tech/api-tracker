@@ -129,6 +129,15 @@ def _build_comparison(
         return col.not_in(coerced)  # type: ignore[union-attr]
 
     coerced_value = _coerce_value(comp.value, spec.field_type, ctx)
+    # SHA1_KEY с префиксом (<40 символов) — LIKE prefix-match (PRD §5.2.7).
+    if (
+        spec.field_type is FieldType.SHA1_KEY
+        and comp.op in ("==", "!=")
+        and isinstance(coerced_value, str)
+        and len(coerced_value) < 40
+    ):
+        like_expr = col.like(f"{coerced_value}%")  # type: ignore[union-attr]
+        return like_expr if comp.op == "==" else ~like_expr
     if comp.op == "==":
         return col == coerced_value  # type: ignore[return-value]
     if comp.op == "!=":

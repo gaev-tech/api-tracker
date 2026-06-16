@@ -26,14 +26,13 @@ def test_TC_7_1_1_project_create_returns_uuid(clite):
     assert data["name"] == "TC-7.1.1"
 
 
-def test_TC_7_3_1_project_task_add(clite):
+def test_TC_7_3_1_project_task_add(clite, mk_task):
     """7.3.1 — `project task add` при manage_projects → exit 0; задача в task_ids
     проекта.
     """
     p = clite(["project", "create", "--name", "TC-7.3.1-proj", "--output", "json"])
     project_id = json.loads(p.stdout)["id"]
-    t = clite(["task", "create", "--title", "TC-7.3.1-task", "--output", "json"])
-    task_id = json.loads(t.stdout)["id"]
+    task_id = mk_task("TC-7.3.1-task")["id"]
 
     add = clite(["project", "task", "add", project_id, "--task", task_id])
     assert add.returncode == 0, add.stderr
@@ -46,12 +45,11 @@ def test_TC_7_3_1_project_task_add(clite):
     assert task_id in data.get("task_ids", [])
 
 
-def test_TC_7_3_2_project_task_remove(clite):
+def test_TC_7_3_2_project_task_remove(clite, mk_task):
     """7.3.2 — `project task remove` → exit 0; задача исчезает из task_ids."""
     p = clite(["project", "create", "--name", "TC-7.3.2-proj", "--output", "json"])
     project_id = json.loads(p.stdout)["id"]
-    t = clite(["task", "create", "--title", "TC-7.3.2-task", "--output", "json"])
-    task_id = json.loads(t.stdout)["id"]
+    task_id = mk_task("TC-7.3.2-task")["id"]
 
     clite(["project", "task", "add", project_id, "--task", task_id])
     rm = clite(["project", "task", "remove", project_id, "--task", task_id])

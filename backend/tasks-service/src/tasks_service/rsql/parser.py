@@ -159,8 +159,15 @@ class _Parser:
         ch = self.source[self.pos]
         if ch in ("'", '"'):
             return self._string(ch)
-        if ch == "-" or ch.isdigit():
+        if ch == "-":
             return self._number()
+        if ch.isalnum() or ch == "_":
+            # Bareword: может быть числом (status==42), либо строкой-словом
+            # (status==done, id==73d928e247 — SHA1 hex prefix, PRD §5.2.7).
+            text = self._ident()
+            if text.isdigit():
+                return int(text)
+            return text
         return self._ident()
 
     def _string(self, quote: str) -> str:

@@ -64,17 +64,15 @@
 
 3.2.3.1 `GET /api/v1/tasks?filter=&cursor=&limit=` (внутри tasks-svc — `/v1/tasks`, nginx стрипает `/api`).
 
-3.2.3.2 `POST /api/v1/tasks` (single create).
+3.2.3.2 `POST /api/v1/tasks/bulk-update?filter=`.
 
-3.2.3.3 `PATCH /api/v1/tasks/{id}`.
+3.2.3.3 `POST /api/v1/tasks/batch-update?filter=`.
 
-3.2.3.4 `POST /api/v1/tasks/bulk-update?filter=`.
+3.2.3.4 `POST /api/v1/tasks/bulk-create`.
 
-3.2.3.5 `POST /api/v1/tasks/batch-update?filter=`.
+3.2.3.5 `POST /api/v1/tasks/batch-create`.
 
-3.2.3.6 `POST /api/v1/tasks/bulk-create`.
-
-3.2.3.7 `POST /api/v1/tasks/batch-create`.
+(Single-task `POST /tasks` и `PATCH /tasks/{id}` удалены в M2.28 — все мутации проходят через bulk/batch.)
 
 3.2.3.8 `GET /api/v1/history?task_id=&cursor=`.
 
@@ -82,21 +80,19 @@
 
 3.2.5 CLI команды:
 
-3.2.5.1 `clite task create`.
+3.2.5.1 `clite task list`.
 
-3.2.5.2 `clite task list`.
+3.2.5.2 `clite task get <key>`.
 
-3.2.5.3 `clite task get`.
+3.2.5.3 `clite task create bulk <json-array | --file <path>>`.
 
-3.2.5.4 `clite task update`.
+3.2.5.4 `clite task create batch <json-array | --file <path>>`.
 
-3.2.5.5 `clite task update bulk`.
+3.2.5.5 `clite task update bulk --filter <rsql> --set f=v`.
 
-3.2.5.6 `clite task update batch`.
+3.2.5.6 `clite task update batch --filter <rsql> --set f=v`.
 
-3.2.5.7 `clite task create bulk`.
-
-3.2.5.8 `clite task create batch`.
+(Single-task `clite task create` и `clite task update <id>` удалены в M2.28.)
 
 3.2.5.9 `clite history task`.
 
@@ -223,6 +219,16 @@
 4.2.9.4 CLI `clite login` переписывается под poll-цикл (ARCH §4.3.1); paste-code код удаляется.
 
 4.2.9.5 Тест-кейсы 5.1, 5.2 обновляются (TC §5.1, §5.2).
+
+#### 4.2.11 Drop single-task mutations
+
+4.2.11.1 Удаляются эндпоинты `POST /v1/tasks` (single-create) и `PATCH /v1/tasks/{id}` (single-update). Все мутации задач проходят через bulk/batch с RSQL-фильтром (для update) либо с массивом объектов (для create).
+
+4.2.11.2 CLI: удаляются `clite task create [opts]` (single) и `clite task update <id> [opts]` (single). Остаются `clite task create bulk/batch` и `clite task update bulk/batch`.
+
+4.2.11.3 `clite task create bulk/batch` принимает inline JSON-массив как позиционный аргумент, либо `--file <path>` для чтения из файла (CSV — PostMVP, PRD §7.7).
+
+4.2.11.4 Существующая логика `services.tasks.create_task` / `update_task` остаётся как internal API для bulk/batch итерации; внешних эндпоинтов на них больше нет.
 
 #### 4.2.10 Fix: SMTP silent failure
 

@@ -1,4 +1,8 @@
-"""clite task — CRUD + bulk/batch как вложенные подкоманды create/update."""
+"""clite task — list, get, create bulk/batch, update bulk/batch.
+
+Single-task create и single-task update удалены: все мутации идут через
+bulk/batch (PRD §7.2, §7.3, §7.6).
+"""
 
 from __future__ import annotations
 
@@ -18,22 +22,21 @@ FieldsOpt = Annotated[
     typer.Option("--fields", help="Только эти поля через запятую (PRD §7.9)"),
 ]
 
-# Дефолтный набор полей для get/list (PRD §7.9.3.1).
 _DEFAULT_TASK_FIELDS = ["id", "title", "description_md"]
 
-app = typer.Typer(no_args_is_help=True, help="Управление задачами")
+app = typer.Typer(
+    invoke_without_command=True,
+    help="Список задач с RSQL-фильтром (по умолчанию — все). "
+    "Подкоманды create/update для массовых мутаций.",
+)
 
-# `clite task create [opts]`  — одиночное создание (callback)
-# `clite task create bulk` / `task create batch` — массовое (подкоманды)
 create_app = typer.Typer(
-    invoke_without_command=True, help="Создание задачи / массовое создание"
+    no_args_is_help=True, help="Массовое создание задач (bulk / batch)"
 )
 app.add_typer(create_app, name="create")
 
-# `clite task update <id> [opts]` — одиночное обновление (callback)
-# `clite task update bulk` / `task update batch` — массовое по фильтру
 update_app = typer.Typer(
-    invoke_without_command=True, help="Обновление задачи / массовое обновление"
+    no_args_is_help=True, help="Массовое обновление задач (bulk / batch)"
 )
 app.add_typer(update_app, name="update")
 
@@ -52,7 +55,7 @@ def _handle_api_error(e: APIError) -> None:
 
 
 def _parse_set_pairs(set_pairs: list[str]) -> dict[str, object]:
-    """`--set field=value` пары → dict для patch."""
+    """`--set field=value` → dict для patch."""
     patch: dict[str, object] = {}
     for pair in set_pairs:
         if "=" not in pair:
@@ -66,12 +69,27 @@ def _parse_set_pairs(set_pairs: list[str]) -> dict[str, object]:
     return patch
 
 
-def _load_items_from(from_file: Path) -> list[object]:
-    if not from_file.exists():
-        print(f"file not found: {from_file}", file=sys.stderr)
+def _load_items(data: str | None, file: Path | None) -> list[object]:
+    """Загрузить JSON-массив либо из inline-аргумента, либо из --file."""
+    if data and file is not None:
+        print("provide either inline JSON or --file, not both", file=sys.stderr)
         raise typer.Exit(2)
+    if not data and file is None:
+        print(
+            "provide inline JSON array or --file <path>",
+            file=sys.stderr,
+        )
+        raise typer.Exit(2)
+    if file is not None:
+        if not file.exists():
+            print(f"file not found: {file}", file=sys.stderr)
+            raise typer.Exit(2)
+        raw = file.read_text()
+    else:
+        assert data is not None
+        raw = data
     try:
-        items = json.loads(from_file.read_text())
+        items = json.loads(raw)
     except json.JSONDecodeError as e:
         print(f"invalid JSON: {e}", file=sys.stderr)
         raise typer.Exit(2) from e
@@ -81,107 +99,25 @@ def _load_items_from(from_file: Path) -> list[object]:
     return items
 
 
-# === task create [opts] | task create bulk | task create batch ===
+# === task (callback) — список задач с RSQL-фильтром ===
 
 
-@create_app.callback()
-def create(
-    ctx: typer.Context,
-    title: Annotated[
-        str | None, typer.Option("--title", help="Название задачи")
-    ] = None,
-    description: Annotated[str, typer.Option("--description", "-d")] = "",
-    label: Annotated[
-        list[str], typer.Option("--label", help="Метка (повторно)")
-    ] = None,  # type: ignore[assignment]
-    status: Annotated[
-        str, typer.Option("--status", help="open|done|archived")
-    ] = "open",
-    blocked_by: Annotated[
-        list[str], typer.Option("--blocked-by", help="SHA1 ключ блокирующих задач")
-    ] = None,  # type: ignore[assignment]
-    stdin_json: Annotated[
-        bool, typer.Option("--stdin", "-", help="Читать JSON из stdin")
-    ] = False,
-    output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
-) -> None:
-    """Создать одну задачу. Подкоманды: `bulk`, `batch` для массового создания."""
-    if ctx.invoked_subcommand is not None:
-        return
-    if stdin_json:
-        try:
-            payload = json.loads(sys.stdin.read())
-        except json.JSONDecodeError as e:
-            print(f"invalid JSON: {e}", file=sys.stderr)
-            raise typer.Exit(2) from e
-    else:
-        if not title:
-            print("title required (--title)", file=sys.stderr)
-            raise typer.Exit(2)
-        payload = {
-            "title": title,
-            "description_md": description,
-            "labels": list(label or []),
-            "status": status,
-            "blocked_by": list(blocked_by or []),
-        }
-    with _client() as c:
-        try:
-            result = c.post("/v1/tasks", json=payload)
-        except APIError as e:
-            _handle_api_error(e)
-            return
-    emit(result, output)
-
-
-@create_app.command("bulk")
-def create_bulk(
-    from_file: Annotated[
-        Path, typer.Option("--from", help="JSON-файл со списком задач")
-    ],
-    output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
-) -> None:
-    """Массовое создание из JSON-массива (partial success)."""
-    items = _load_items_from(from_file)
-    with _client() as c:
-        try:
-            result = c.post("/v1/tasks/bulk-create", json={"items": items})
-        except APIError as e:
-            _handle_api_error(e)
-            return
-    emit(result, output)
-
-
-@create_app.command("batch")
-def create_batch(
-    from_file: Annotated[
-        Path, typer.Option("--from", help="JSON-файл со списком задач")
-    ],
-    output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
-) -> None:
-    """Атомарное массовое создание (всё-или-ничего)."""
-    items = _load_items_from(from_file)
-    with _client() as c:
-        try:
-            result = c.post("/v1/tasks/batch-create", json={"items": items})
-        except APIError as e:
-            _handle_api_error(e)
-            return
-    emit(result, output)
-
-
-# === task list / task get ===
-
-
-@app.command("list")
+@app.callback(invoke_without_command=True)
 def list_tasks(
+    ctx: typer.Context,
     filter: Annotated[str | None, typer.Option("--filter", "-f", help="RSQL")] = None,
     cursor: Annotated[str | None, typer.Option("--cursor")] = None,
     limit: Annotated[int, typer.Option("--limit", min=1, max=200)] = 50,
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
     fields: FieldsOpt = None,
 ) -> None:
-    """Список задач с RSQL-фильтром и курсорной пагинацией."""
+    """Без подкоманды — вывод задач по RSQL-фильтру.
+
+    Для одной задачи: `clite task --filter 'id==<sha1-prefix>'`.
+    Курсорная пагинация PRD §7.1.2.
+    """
+    if ctx.invoked_subcommand is not None:
+        return
     params: dict[str, object] = {"limit": limit}
     if filter:
         params["filter"] = filter
@@ -196,74 +132,56 @@ def list_tasks(
     emit(result, output, fields=parse_fields(fields) or _DEFAULT_TASK_FIELDS)
 
 
-@app.command("get")
-def get_task(
-    task_id: Annotated[str, typer.Argument()],
-    output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
-    fields: FieldsOpt = None,
-) -> None:
-    """Получить задачу по SHA1 ключу (или его уникальному префиксу, ≥4 символов)."""
-    with _client() as c:
-        try:
-            result = c.get(f"/v1/tasks/{task_id}")
-        except APIError as e:
-            _handle_api_error(e)
-            return
-    emit(result, output, fields=parse_fields(fields) or _DEFAULT_TASK_FIELDS)
+# === task create bulk | task create batch ===
 
 
-# === task update <id> [opts] | task update bulk | task update batch ===
-
-
-@update_app.callback()
-def update(
-    ctx: typer.Context,
-    task_id: Annotated[
+@create_app.command("bulk")
+def create_bulk(
+    data: Annotated[
         str | None,
-        typer.Argument(
-            help="SHA1 ключ задачи (или префикс). Пропустить для bulk/batch."
-        ),
+        typer.Argument(help="Inline JSON-массив задач (или используйте --file)"),
     ] = None,
-    title: Annotated[str | None, typer.Option("--title")] = None,
-    description: Annotated[str | None, typer.Option("--description", "-d")] = None,
-    status: Annotated[str | None, typer.Option("--status")] = None,
-    add_label: Annotated[list[str], typer.Option("--add-label")] = None,  # type: ignore[assignment]
-    remove_label: Annotated[list[str], typer.Option("--remove-label")] = None,  # type: ignore[assignment]
-    add_blocker: Annotated[list[str], typer.Option("--add-blocker")] = None,  # type: ignore[assignment]
-    remove_blocker: Annotated[list[str], typer.Option("--remove-blocker")] = None,  # type: ignore[assignment]
+    file: Annotated[
+        Path | None,
+        typer.Option("--file", "-f", help="Путь к JSON-файлу с массивом задач"),
+    ] = None,
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
-    """Обновить одну задачу. Подкоманды: `bulk`, `batch` по RSQL-фильтру."""
-    if ctx.invoked_subcommand is not None:
-        return
-    if not task_id:
-        print("task_id required", file=sys.stderr)
-        raise typer.Exit(2)
-    patch: dict[str, object] = {}
-    if title is not None:
-        patch["title"] = title
-    if description is not None:
-        patch["description_md"] = description
-    if status is not None:
-        patch["status"] = status
-    if add_label:
-        patch["add_labels"] = add_label
-    if remove_label:
-        patch["remove_labels"] = remove_label
-    if add_blocker:
-        patch["add_blockers"] = add_blocker
-    if remove_blocker:
-        patch["remove_blockers"] = remove_blocker
-    if not patch:
-        print("no fields to update", file=sys.stderr)
-        raise typer.Exit(2)
+    """Массовое создание из JSON-массива (partial success, PRD §7.2.1)."""
+    items = _load_items(data, file)
     with _client() as c:
         try:
-            result = c.patch(f"/v1/tasks/{task_id}", json=patch)
+            result = c.post("/v1/tasks/bulk-create", json={"items": items})
         except APIError as e:
             _handle_api_error(e)
             return
     emit(result, output)
+
+
+@create_app.command("batch")
+def create_batch(
+    data: Annotated[
+        str | None,
+        typer.Argument(help="Inline JSON-массив задач (или используйте --file)"),
+    ] = None,
+    file: Annotated[
+        Path | None,
+        typer.Option("--file", "-f", help="Путь к JSON-файлу с массивом задач"),
+    ] = None,
+    output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+) -> None:
+    """Атомарное массовое создание (всё-или-ничего, PRD §7.3.1)."""
+    items = _load_items(data, file)
+    with _client() as c:
+        try:
+            result = c.post("/v1/tasks/batch-create", json={"items": items})
+        except APIError as e:
+            _handle_api_error(e)
+            return
+    emit(result, output)
+
+
+# === task update bulk | task update batch ===
 
 
 @update_app.command("bulk")
@@ -274,7 +192,7 @@ def update_bulk(
     ] = None,  # type: ignore[assignment]
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
-    """Bulk-обновление по фильтру (partial success)."""
+    """Bulk-обновление по фильтру (partial success, PRD §7.2.1)."""
     if not set_pairs:
         print("at least one --set field=value required", file=sys.stderr)
         raise typer.Exit(2)
@@ -300,7 +218,7 @@ def update_batch(
     ] = None,  # type: ignore[assignment]
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
 ) -> None:
-    """Атомарное обновление по фильтру (всё-или-ничего)."""
+    """Атомарное обновление по фильтру (всё-или-ничего, PRD §7.3.1)."""
     if not set_pairs:
         print("at least one --set field=value required", file=sys.stderr)
         raise typer.Exit(2)
