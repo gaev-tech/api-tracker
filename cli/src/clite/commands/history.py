@@ -8,7 +8,12 @@ import typer
 
 from clite.client import APIError, Client
 from clite.config import load_config
-from clite.output import OutputFormat, emit
+from clite.output import OutputFormat, emit, parse_fields
+
+FieldsOpt = Annotated[
+    str | None,
+    typer.Option("--fields", help="Только эти поля через запятую (PRD §7.9)"),
+]
 
 app = typer.Typer(no_args_is_help=True, help="История изменений")
 
@@ -27,6 +32,7 @@ def task_history(
     task_id: Annotated[UUID, typer.Argument()],
     cursor: Annotated[str | None, typer.Option("--cursor")] = None,
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+    fields: FieldsOpt = None,
 ) -> None:
     """История событий по задаче."""
     params: dict[str, object] = {"task_id": str(task_id)}
@@ -38,7 +44,7 @@ def task_history(
         except APIError as e:
             _handle(e)
             return
-    emit(result, output)
+    emit(result, output, fields=parse_fields(fields))
 
 
 @app.command("user")
@@ -49,6 +55,7 @@ def user_history(
     ],
     cursor: Annotated[str | None, typer.Option("--cursor")] = None,
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+    fields: FieldsOpt = None,
 ) -> None:
     """История действий пользователя с проверкой видимости (ARCH §10.2.2)."""
     params: dict[str, object] = {"user_id": email}
@@ -60,4 +67,4 @@ def user_history(
         except APIError as e:
             _handle(e)
             return
-    emit(result, output)
+    emit(result, output, fields=parse_fields(fields))

@@ -14,7 +14,42 @@ def _default_format() -> Literal["table", "json"]:
     return "table" if sys.stdout.isatty() else "json"
 
 
-def emit(data: object, fmt: OutputFormat) -> None:
+def parse_fields(value: str | None) -> list[str] | None:
+    """Разобрать значение --fields ("a,b,c") в список имён полей.
+
+    Пустая строка / None → None (рендерить дефолтный набор), PRD §7.9.
+    """
+    if not value:
+        return None
+    return [s.strip() for s in value.split(",") if s.strip()]
+
+
+def _filter_dict(d: dict[str, object], fields: list[str]) -> dict[str, object]:
+    return {k: d[k] for k in fields if k in d}
+
+
+def _apply_fields(data: object, fields: list[str] | None) -> object:
+    """Если задан fields — оставить только эти ключи (PRD §7.9.2).
+    Сервер всегда возвращает полный объект, фильтрация только на рендере."""
+    if not fields:
+        return data
+    if isinstance(data, list):
+        return [_filter_dict(x, fields) if isinstance(x, dict) else x for x in data]
+    if isinstance(data, dict):
+        if "items" in data and isinstance(data["items"], list):
+            return {
+                **{k: v for k, v in data.items() if k != "items"},
+                "items": [
+                    _filter_dict(x, fields) if isinstance(x, dict) else x
+                    for x in data["items"]
+                ],
+            }
+        return _filter_dict(data, fields)
+    return data
+
+
+def emit(data: object, fmt: OutputFormat, fields: list[str] | None = None) -> None:
+    data = _apply_fields(data, fields)
     if fmt == "auto":
         fmt = _default_format()
     if fmt == "json":

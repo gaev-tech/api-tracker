@@ -87,3 +87,36 @@ def test_TC_3_3_2_list_filter_by_status(clite):
     data = json.loads(r.stdout)
     statuses = {t["status"] for t in data["items"]}
     assert statuses == {"open"} or statuses == set()
+
+
+def test_TC_3_3_8_list_fields(clite):
+    """3.3.8 — `--fields id,title,status` → json только с этими тремя колонками."""
+    clite(["task", "create", "--title", "TC-3.3.8"])
+    r = clite(
+        [
+            "task",
+            "list",
+            "--filter",
+            'title=="TC-3.3.8"',
+            "--fields",
+            "id,title,status",
+            "--output",
+            "json",
+        ]
+    )
+    assert r.returncode == 0, r.stderr
+    data = json.loads(r.stdout)
+    assert data["items"], "должна найтись задача TC-3.3.8"
+    for item in data["items"]:
+        assert set(item.keys()) == {"id", "title", "status"}
+
+
+def test_TC_3_5_3_get_fields(clite):
+    """3.5.3 — `task get <id> --fields id,title` → в выводе только id и title."""
+    created = clite(["task", "create", "--title", "TC-3.5.3", "--output", "json"])
+    task_id = json.loads(created.stdout)["id"]
+    r = clite(["task", "get", task_id, "--fields", "id,title", "--output", "json"])
+    assert r.returncode == 0, r.stderr
+    data = json.loads(r.stdout)
+    assert set(data.keys()) == {"id", "title"}
+    assert data["id"] == task_id and data["title"] == "TC-3.5.3"

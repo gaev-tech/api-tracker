@@ -10,7 +10,12 @@ import typer
 
 from clite.client import APIError, Client
 from clite.config import load_config
-from clite.output import OutputFormat, emit
+from clite.output import OutputFormat, emit, parse_fields
+
+FieldsOpt = Annotated[
+    str | None,
+    typer.Option("--fields", help="Только эти поля через запятую (PRD §7.9)"),
+]
 
 app = typer.Typer(no_args_is_help=True, help="Управление проектами")
 member_app = typer.Typer(no_args_is_help=True, help="Управление участниками проекта")
@@ -49,6 +54,7 @@ def create(
 @app.command("list")
 def list_projects(
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+    fields: FieldsOpt = None,
 ) -> None:
     """Список проектов текущего пользователя."""
     with _client() as c:
@@ -57,13 +63,14 @@ def list_projects(
         except APIError as e:
             _handle(e)
             return
-    emit(r, output)
+    emit(r, output, fields=parse_fields(fields))
 
 
 @app.command("get")
 def get_project(
     project_id: Annotated[UUID, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+    fields: FieldsOpt = None,
 ) -> None:
     with _client() as c:
         try:
@@ -71,7 +78,7 @@ def get_project(
         except APIError as e:
             _handle(e)
             return
-    emit(r, output)
+    emit(r, output, fields=parse_fields(fields))
 
 
 @app.command("update")

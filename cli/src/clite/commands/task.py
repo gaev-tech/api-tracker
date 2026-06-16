@@ -12,7 +12,12 @@ import typer
 
 from clite.client import APIError, Client
 from clite.config import load_config
-from clite.output import OutputFormat, emit
+from clite.output import OutputFormat, emit, parse_fields
+
+FieldsOpt = Annotated[
+    str | None,
+    typer.Option("--fields", help="Только эти поля через запятую (PRD §7.9)"),
+]
 
 app = typer.Typer(no_args_is_help=True, help="Управление задачами")
 
@@ -101,6 +106,7 @@ def list_tasks(
     cursor: Annotated[str | None, typer.Option("--cursor")] = None,
     limit: Annotated[int, typer.Option("--limit", min=1, max=200)] = 50,
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+    fields: FieldsOpt = None,
 ) -> None:
     """Список задач с RSQL-фильтром и курсорной пагинацией."""
     params: dict[str, object] = {"limit": limit}
@@ -114,13 +120,14 @@ def list_tasks(
         except APIError as e:
             _handle_api_error(e)
             return
-    emit(result, output)
+    emit(result, output, fields=parse_fields(fields))
 
 
 @app.command("get")
 def get_task(
     task_id: Annotated[UUID, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+    fields: FieldsOpt = None,
 ) -> None:
     """Получить задачу по UUID."""
     with _client() as c:
@@ -129,7 +136,7 @@ def get_task(
         except APIError as e:
             _handle_api_error(e)
             return
-    emit(result, output)
+    emit(result, output, fields=parse_fields(fields))
 
 
 @app.command("update")

@@ -10,7 +10,12 @@ import typer
 
 from clite.client import APIError, Client
 from clite.config import load_config
-from clite.output import OutputFormat, emit
+from clite.output import OutputFormat, emit, parse_fields
+
+FieldsOpt = Annotated[
+    str | None,
+    typer.Option("--fields", help="Только эти поля через запятую (PRD §7.9)"),
+]
 
 app = typer.Typer(no_args_is_help=True, help="Шаринг задачи пользователям и командам")
 user_app = typer.Typer(no_args_is_help=True, help="Шаринг с пользователями")
@@ -36,6 +41,7 @@ def _handle(e: APIError) -> None:
 def list_shares(
     task_id: Annotated[UUID, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+    fields: FieldsOpt = None,
 ) -> None:
     with _client() as c:
         try:
@@ -43,7 +49,7 @@ def list_shares(
         except APIError as e:
             _handle(e)
             return
-    emit(r, output)
+    emit(r, output, fields=parse_fields(fields))
 
 
 @user_app.command("set")

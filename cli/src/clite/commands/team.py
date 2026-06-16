@@ -10,7 +10,12 @@ import typer
 
 from clite.client import APIError, Client
 from clite.config import load_config
-from clite.output import OutputFormat, emit
+from clite.output import OutputFormat, emit, parse_fields
+
+FieldsOpt = Annotated[
+    str | None,
+    typer.Option("--fields", help="Только эти поля через запятую (PRD §7.9)"),
+]
 
 app = typer.Typer(no_args_is_help=True, help="Управление командами")
 member_app = typer.Typer(no_args_is_help=True, help="Управление участниками команды")
@@ -47,6 +52,7 @@ def create(
 @app.command("list")
 def list_teams(
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+    fields: FieldsOpt = None,
 ) -> None:
     with _client() as c:
         try:
@@ -54,13 +60,14 @@ def list_teams(
         except APIError as e:
             _handle_api_error(e)
             return
-    emit(result, output)
+    emit(result, output, fields=parse_fields(fields))
 
 
 @app.command("get")
 def get_team(
     team_id: Annotated[UUID, typer.Argument()],
     output: Annotated[OutputFormat, typer.Option("--output", "-o")] = "auto",
+    fields: FieldsOpt = None,
 ) -> None:
     with _client() as c:
         try:
@@ -68,7 +75,7 @@ def get_team(
         except APIError as e:
             _handle_api_error(e)
             return
-    emit(result, output)
+    emit(result, output, fields=parse_fields(fields))
 
 
 @app.command("update")
