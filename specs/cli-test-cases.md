@@ -30,6 +30,18 @@
 
 1.3.3 `--output table` принудительно table.
 
+1.3.4 `--fields a,b,c` — рендерить только указанные поля (применимо ко всем get/list-командам, PRD §7.9). Поле, отсутствующее в ответе, опускается. Без флага — дефолтный набор полей данной команды.
+
+### 1.4 Идентификаторы и prefix-lookup
+
+1.4.1 Любая команда, принимающая SHA1-ключ сущности (task, team, project, automation, secret), принимает также префикс ключа от 4 hex-символов (PRD §5.2.7).
+
+1.4.2 Префикс короче 4 символов → exit 2, stderr `prefix too short (min 4 chars)`.
+
+1.4.3 Префикс не найден → exit 1, stderr `<entity> not found`.
+
+1.4.4 Префикс соответствует >1 сущности → exit 1, stderr `ambiguous prefix '<p>', candidates:\n  <sha1>  <discriminator>\n  ...`.
+
 ## 2. Общие негативные кейсы (применимы к любой команде)
 
 2.1 Неизвестный флаг → exit 2, stderr содержит `unknown option`.
@@ -54,13 +66,13 @@
 
 ### 3.1 task create — позитивные
 
-3.1.1 Минимальный: `--title "T1"` без других полей. exit 0. stdout содержит UUID. БД: задача создана со статусом `open`, assignee = SOLO_USER (M1) или текущий пользователь (M2+).
+3.1.1 Минимальный: `--title "T1"` без других полей. exit 0. stdout содержит SHA1-ключ. БД: задача создана со статусом `open`, assignee = SOLO_USER (M1) или текущий пользователь (M2+).
 
 3.1.2 С описанием: `--title "T2" --description "## Hello"`. exit 0. БД: `description_md = "## Hello"`.
 
 3.1.3 С метками: `--title "T3" --label bug --label urgent`. exit 0. БД: `labels = ["bug", "urgent"]`.
 
-3.1.4 С блокирующей задачей: `--title "T4" --blocked-by <UUID существующей задачи>`. exit 0. БД: запись в `task_blockers`.
+3.1.4 С блокирующей задачей: `--title "T4" --blocked-by <key или префикс существующей задачи>`. exit 0. БД: запись в `task_blockers`.
 
 3.1.5 Статус: `--title "T5" --status done`. exit 0. БД: `status = "done"`.
 
@@ -68,9 +80,9 @@
 
 3.1.7 С шарингом (M2+): `--title "T7" --share-user other@x.com:edit_title,edit_status`. exit 0. БД: запись в `task_user_shares`.
 
-3.1.8 С командой (M2+): `--title "T8" --share-team <UUID команды, в которой я>:edit_title`. exit 0.
+3.1.8 С командой (M2+): `--title "T8" --share-team <key команды, в которой я>:edit_title`. exit 0.
 
-3.1.9 С проектом (M2+): `--title "T9" --project <UUID проекта, в котором у меня manage_projects>`. exit 0.
+3.1.9 С проектом (M2+): `--title "T9" --project <key проекта, в котором у меня manage_projects>`. exit 0.
 
 ### 3.2 task create — негативные
 
@@ -78,7 +90,7 @@
 
 3.2.2 `--status invalid_value` → exit 2, stderr `status must be one of open|done|archived`.
 
-3.2.3 `--blocked-by` с несуществующим UUID → exit 1, stderr `task not found: <uuid>`.
+3.2.3 `--blocked-by` с несуществующим ключом → exit 1, stderr `task not found: <key>`.
 
 3.2.4 `--label ""` пустая строка → exit 2, stderr `label cannot be empty`.
 
@@ -108,6 +120,8 @@
 
 3.3.7 `--output json` → ответ в JSON.
 
+3.3.8 `--fields id,title,status` → table/json содержит только эти три колонки; остальные поля задачи опущены.
+
 ### 3.4 task list — негативные
 
 3.4.1 `--filter "invalid syntax"` → exit 2, stderr `RSQL parse error at position N`.
@@ -122,13 +136,21 @@
 
 ### 3.5 task get — позитивные
 
-3.5.1 `clite task get <existing UUID>` → exit 0, вывод с полями задачи.
+3.5.1 `clite task get <existing SHA1>` (полный 40-символьный ключ) → exit 0, вывод с полями задачи.
+
+3.5.2 `clite task get <unique prefix>` (4+ hex-символов, единственное совпадение) → exit 0, вывод задачи (PRD §5.2.7.2).
+
+3.5.3 `clite task get <existing SHA1> --fields id,title` → exit 0, в выводе только `id` и `title`.
 
 ### 3.6 task get — негативные
 
-3.6.1 Несуществующий UUID → exit 1, stderr `task not found`.
+3.6.1 Несуществующий ключ → exit 1, stderr `task not found`.
 
 3.6.2 (M2+) Задача существует, но у меня нет прав → exit 4 (или 1 task_not_found — окончательное решение фиксируется в M2).
+
+3.6.3 Префикс соответствует нескольким задачам → exit 1, stderr `ambiguous prefix '<p>', candidates:\n  <sha1>  "<title>"\n  <sha1>  "<title>"` (PRD §5.2.7.3, TC §1.4.4).
+
+3.6.4 Префикс короче 4 символов → exit 2, stderr `prefix too short (min 4 chars)` (TC §1.4.2).
 
 ### 3.7 task update — позитивные
 
@@ -138,7 +160,7 @@
 
 3.7.3 `--add-label x --remove-label y` → exit 0.
 
-3.7.4 `--add-blocker <uuid>` → exit 0.
+3.7.4 `--add-blocker <key>` → exit 0.
 
 ### 3.8 task update — негативные
 
@@ -190,13 +212,13 @@
 
 ### 4.1 history task — позитивные
 
-4.1.1 `clite history task <uuid>` → exit 0, до 50 событий, отсортированы по `created_at desc`.
+4.1.1 `clite history task <key>` → exit 0, до 50 событий, отсортированы по `created_at desc`.
 
 4.1.2 С курсором → следующая страница.
 
 ### 4.2 history task — негативные
 
-4.2.1 Несуществующий UUID → exit 1.
+4.2.1 Несуществующий ключ → exit 1.
 
 4.2.2 (M2+) Нет прав чтения задачи → exit 4.
 
@@ -212,25 +234,27 @@
 
 ## 5. clite login / logout / whoami (M2+)
 
-Терминальный magic-code flow (ARCH §4.2). Браузер не используется.
+Magic-link click-flow (ARCH §4.2). Пользователь кликает по ссылке в письме; ввода кода в терминал нет.
 
 ### 5.1 login — позитивные
 
-5.1.1 `clite login` (интерактивный): запрашивает email на stdin → отправляет magic-code на почту → запрашивает paste кода → exit 0, stderr `logged in as <email>`. credentials.yaml создан.
+5.1.1 `clite login` (интерактивный): запрашивает email на stdin → POST /api/auth/magic/start → печатает stderr `✉ Link sent to <email>. Click it from your inbox. Waiting…` → пользователь кликает по ссылке (e2e-тест дёргает confirm-эндпоинт напрямую) → CLI получает 200 от poll → stdout `success, press enter to continue` → пользователь жмёт Enter → exit 0. credentials.yaml создан.
 
-5.1.2 `clite login --email <e>` (неинтерактивный email, intерактивный код): пропускает первый prompt → exit 0.
+5.1.2 `clite login --email <e>`: пропускает первый prompt → дальше как 5.1.1.
 
-5.1.3 `clite login --email <e> --code <c>` (полностью неинтерактивный, для скриптов и e2e): exit 0 если code валиден.
+5.1.3 `clite login --email <e> --no-wait`: возвращается сразу после `magic/start`, печатает `login_session_id` на stdout, exit 0; используется в скриптах для дальнейшего ручного poll.
 
 ### 5.2 login — негативные
 
 5.2.1 Невалидный email формат → exit 2, stderr `invalid email`.
 
-5.2.2 Неверный/просроченный code → exit 1, stderr `invalid or expired code`. Login не выполнен.
+5.2.2 Magic-link истёк (expires_in прошёл без клика) → exit 1, stderr `magic link expired, run clite login again`.
 
 5.2.3 Сеть до auth-svc недоступна → exit 1, stderr `connection failed`.
 
-5.2.4 Email не отправляется (SMTP_HOST не настроен в auth-svc) → exit 1 c stderr `email delivery failed`; на dev-сервере код есть в логах auth-svc (loguru WARNING).
+5.2.4 SMTP_HOST не настроен в auth-svc → POST /api/auth/magic/start возвращает 500 `email_delivery_not_configured`; CLI exit 1, stderr `email delivery not configured on server` (ARCH §4.2.1.1).
+
+5.2.5 SIGINT во время ожидания → exit 130; токен остаётся неиспользованным до истечения.
 
 ### 5.3 logout — позитивные
 
@@ -250,11 +274,11 @@
 
 ### 6.1 team create — позитивные
 
-6.1.1 `clite team create --name "Eng"` → exit 0, stdout UUID. БД: команда создана, создатель — единственный участник с правами `edit_team_name, manage_member_permissions`.
+6.1.1 `clite team create --name "Eng"` → exit 0, stdout SHA1-ключ. БД: команда создана, создатель — единственный участник с правами `edit_team_name, manage_member_permissions`.
 
 ### 6.2 team member set — позитивные
 
-6.2.1 `clite team member set <team-uuid> --email x@y.com --perms edit_team_name` → exit 0.
+6.2.1 `clite team member set <team-key> --email x@y.com --perms edit_team_name` → exit 0.
 
 ### 6.3 team member set — негативные
 
@@ -264,7 +288,7 @@
 
 ### 6.4 team leave — позитивные
 
-6.4.1 `clite team leave <uuid>` → exit 0, я больше не участник.
+6.4.1 `clite team leave <key>` → exit 0, я больше не участник.
 
 6.4.2 Был единственным участником → команда удалена (cascade, PRD §6.1.6).
 
@@ -272,7 +296,7 @@
 
 ### 7.1 project create — позитивные
 
-7.1.1 `clite project create --name P1` → exit 0, UUID. БД: я единственный участник со всеми правами.
+7.1.1 `clite project create --name P1` → exit 0, SHA1-ключ. БД: я единственный участник со всеми правами.
 
 ### 7.2 project member set
 
@@ -300,7 +324,7 @@
 
 ### 8.1 share user set — позитивные
 
-8.1.1 `clite share user set <task-uuid> --email x@y.com --perms edit_title,edit_status` → exit 0.
+8.1.1 `clite share user set <task-key> --email x@y.com --perms edit_title,edit_status` → exit 0.
 
 ### 8.2 share user set — негативные
 
@@ -318,13 +342,13 @@
 
 ### 8.5 share remove — позитивные
 
-8.5.1 Self-revoke: `clite share user remove <task-uuid> --self` → exit 0.
+8.5.1 Self-revoke: `clite share user remove <task-key> --self` → exit 0.
 
 ## 9. clite automation (M3+)
 
 ### 9.1 automation create — позитивные
 
-9.1.1 Cron-триггер: `--project <uuid> --name "morning" --cron "0 9 * * *" --action-type webhook --action-url ... --action-body "..."` → exit 0, UUID.
+9.1.1 Cron-триггер: `--project <key> --name "morning" --cron "0 9 * * *" --action-type webhook --action-url ... --action-body "..."` → exit 0, SHA1-ключ.
 
 9.1.2 Event-триггер: `--event-type task.status_changed --filter "status==done" --action-type system_method --action-method tasks.list --action-args ...`.
 
@@ -344,7 +368,7 @@
 
 ### 9.3 automation run-now — позитивные
 
-9.3.1 `clite automation run-now <uuid>` → запускает action немедленно вне триггера; exit 0, stdout — результат action.
+9.3.1 `clite automation run-now <key>` → запускает action немедленно вне триггера; exit 0, stdout — результат action.
 
 ### 9.4 automation delete — позитивные
 
@@ -354,7 +378,7 @@
 
 ### 10.1 secret set — позитивные
 
-10.1.1 `clite secret set --project <uuid> --name token --value <plain>` → exit 0; в БД `value_encrypted`.
+10.1.1 `clite secret set --project <key> --name token --value <plain>` → exit 0; в БД `value_encrypted`.
 
 10.1.2 Перезапись существующего → exit 0.
 
@@ -364,7 +388,7 @@
 
 ### 10.3 secret list — позитивные
 
-10.3.1 `clite secret list --project <uuid>` → exit 0, перечислены имена БЕЗ значений.
+10.3.1 `clite secret list --project <key>` → exit 0, перечислены имена БЕЗ значений.
 
 ### 10.4 secret delete — позитивные
 

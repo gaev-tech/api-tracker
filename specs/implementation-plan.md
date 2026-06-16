@@ -128,7 +128,7 @@
 
 4.2.1.2 SMTP-интеграция (ARCH §17.2.2.3).
 
-4.2.1.3 REST endpoints: `/api/magic/start`, `/api/magic/verify`, `/api/cli/code`, `/api/cli/exchange`, `/api/cli/device-start`, `/api/cli/device-approve`, `/api/cli/device-poll`, `/api/cli/refresh`, `/api/auth/refresh`, `/api/auth/logout`, `/api/sessions`.
+4.2.1.3 REST endpoints: `/api/magic/start`, `/api/magic/confirm`, `/api/magic/poll/{login_session_id}`, `/api/cli/refresh`, `/api/auth/refresh`, `/api/auth/logout`, `/api/sessions`. (Browser-handoff `/api/cli/code|exchange|device-*` — deprecated, см. ARCH §4.4. Paste-code `/api/magic/verify` удалён в §4.2.9.)
 
 4.2.1.4 gRPC-сервер: `GetUserByEmail`, `GetUsersByIds`, `GetJWKS` (ARCH §6).
 
@@ -156,7 +156,7 @@
 
 #### 4.2.4 CLI
 
-4.2.4.1 `clite login` (interactive email + magic-code paste), `clite logout`, `clite whoami`. Browser-handoff и device-code-flow упразднены вместе с auth-client.
+4.2.4.1 `clite login` (interactive email + magic-link click + poll, см. ARCH §4.3.1), `clite logout`, `clite whoami`. Browser-handoff и device-code-flow упразднены вместе с auth-client; paste-code заменён click-flow в §4.2.9.
 
 4.2.4.2 `clite team create/get/update/list`, `clite team member set/remove`, `clite team leave`.
 
@@ -186,9 +186,55 @@
 
 4.2.6.3 Первый стабильный релиз `v1.0.0` создаётся к моменту "done" M2.
 
+#### 4.2.7 SHA1-идентификаторы и prefix-lookup
+
+4.2.7.1 Тип колонок `id` всех сущностей в схемах `tasks` и `auth.users.id` меняется с UUID на CHAR(40) (ARCH §3.5.0, §3.7).
+
+4.2.7.2 Генератор SHA1 для новых записей: `SHA1(<deterministic-content> || \n || time.time_ns())` (ARCH §3.7.5, PRD §5.2.6).
+
+4.2.7.3 Alembic data-миграция конвертирует существующие записи на проде; все FK обновляются по мапе (ARCH §3.7.1, §3.7.2).
+
+4.2.7.4 Серверный resolver префикса: каждый запрос с идентификатором задачи/команды/проекта/автоматизации/секрета сначала разрешает префикс в полный ключ (PRD §5.2.7). Ошибки маппятся на HTTP 400 `prefix_too_short`, 404 `not_found`, 409 `ambiguous_prefix` с массивом кандидатов в теле ответа.
+
+4.2.7.5 Pydantic-схема: ID — `str` с регексом `^[0-9a-f]{4,40}$`; OpenAPI x-format `sha1-prefix`.
+
+4.2.7.6 CLI: аргументы типа `UUID` меняются на `str`; help указывает "SHA1 key or unique prefix"; ошибка ambiguous показывает список кандидатов с дискриминатором (TC §1.4, §3.6.3).
+
+#### 4.2.8 `--fields` на get/list
+
+4.2.8.1 Все get/list-команды CLI (PRD §7.9) принимают `--fields`; рендерер `output.py` фильтрует ключи перед `emit_table`/`emit_object`.
+
+4.2.8.2 Сервер не меняется — фильтрация целиком CLI-сайд (ARCH §15.6.1).
+
+4.2.8.3 Кеширование на CLI не вводится.
+
+#### 4.2.9 Magic-link click-flow
+
+4.2.9.1 Auth-svc:
+- `POST /api/auth/magic/start` изменён (ARCH §4.2.1) — возвращает `login_session_id`;
+- новый `GET /api/auth/magic/confirm?token=` отдаёт HTML 200/410 (ARCH §4.2.3);
+- новый `GET /api/auth/magic/poll/{login_session_id}` (long-poll, ARCH §4.2.4);
+- `POST /api/auth/magic/verify` удалён (ARCH §4.2.5).
+
+4.2.9.2 Email-template содержит URL; plaintext-токен из тела удалён (ARCH §4.2.2).
+
+4.2.9.3 Таблица `auth.magic_tokens` дополнена колонками `login_session_id UUID NOT NULL UNIQUE` и `confirmed_at TIMESTAMPTZ NULL` (ARCH §3.6.2).
+
+4.2.9.4 CLI `clite login` переписывается под poll-цикл (ARCH §4.3.1); paste-code код удаляется.
+
+4.2.9.5 Тест-кейсы 5.1, 5.2 обновляются (TC §5.1, §5.2).
+
+#### 4.2.10 Fix: SMTP silent failure
+
+4.2.10.1 Эндпоинт `/api/auth/magic/start` валидирует SMTP-конфиг до записи токена: при пустом `SMTP_HOST` возвращает 500 `email_delivery_not_configured` (ARCH §4.2.1.1).
+
+4.2.10.2 Соответствующее env-значение задаётся в `.env.prod` на сервере (ARCH §17.2.2.3).
+
+4.2.10.3 TC §5.2.4 переписан под новое поведение.
+
 ### 4.3 Done criteria
 
-4.3.1 Автор приглашает второго пользователя по email; второй логинится через `clite login` (получает код на email, вставляет в терминал).
+4.3.1 Автор приглашает второго пользователя по email; второй логинится через `clite login` (получает magic-link на email, кликает по ссылке, CLI печатает `success`).
 
 4.3.2 Автор шарит задачу второму пользователю; второй видит её в `clite task list`.
 

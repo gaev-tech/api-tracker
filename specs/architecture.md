@@ -58,6 +58,8 @@
 
 ### 3.5 Схема `tasks`
 
+3.5.0 Все колонки `id` сущностей и FK на них — `CHAR(40)` SHA1-hex (PRD §5.2.6, миграция см. §3.7). Исключение — `users.user_id` тоже SHA1, синхронизируется с `auth.users.id`.
+
 3.5.1 `users(user_id, email)` — кеш, наполняется gRPC-резолвом из auth-svc.
 
 3.5.2 `tasks(id, title, description_md, labels[], status, assignee_id, created_at)`.
@@ -92,17 +94,43 @@
 
 ### 3.6 Схема `auth`
 
+3.6.0 Колонки `id` — `CHAR(40)` SHA1-hex (см. §3.7, PRD §5.2.6).
+
 3.6.1 `users(id, email, created_at)`.
 
-3.6.2 `magic_tokens(token_hash, email, intent, expires_at, used_at)`.
+3.6.2 `magic_tokens(token_hash, email, login_session_id, expires_at, used_at, confirmed_at)` — `login_session_id` UUID NOT NULL UNIQUE; `confirmed_at` NULL пока не кликнут.
 
 3.6.3 `refresh_tokens(id, user_id, kind, label, created_at, revoked_at, expires_at)`.
 
 3.6.4 `sessions(refresh_token_id, last_seen_at, user_agent)`.
 
-3.6.5 `cli_auth_codes(state, code_challenge, code, code_used_at, expires_at, user_id)`.
+3.6.5 `cli_auth_codes(state, code_challenge, code, code_used_at, expires_at, user_id)` — таблица сохранена для legacy browser-handoff (см. §4.4); в magic-link flow не используется.
 
-3.6.6 `device_codes(device_code, user_code, expires_at, user_id, approved_at)`.
+3.6.6 `device_codes(device_code, user_code, expires_at, user_id, approved_at)` — см. §4.4.
+
+### 3.7 Миграция UUID → SHA1 на проде
+
+3.7.1 Одноразовая Alembic-миграция; для каждой записи в `auth.users`, `tasks.tasks`, `tasks.teams`, `tasks.projects`, `tasks.automations`, `tasks.project_secrets` вычисляется SHA1-ключ:
+
+3.7.1.1 Для пользователя: `SHA1(email || \n || created_at_ns)`.
+
+3.7.1.2 Для задачи: `SHA1(title || \n || description_md || \n || created_at_ns)`.
+
+3.7.1.3 Для команды/проекта: `SHA1(name || \n || created_at_ns)`.
+
+3.7.1.4 Для автоматизации/секрета: `SHA1(project_id || \n || name || \n || created_at_ns)` (project_id — уже мигрированный SHA1).
+
+3.7.1.5 `created_at_ns` — `EXTRACT(EPOCH FROM created_at) * 1e9` округлённое до int.
+
+3.7.2 Все FK (`assignee_id`, `task_id`, `blocked_by_task_id`, `team_id`, `project_id`, `target_id`, `actor_user_id`, `user_id` в шаринге и членствах, `source_task_id`, `automation_id`) обновляются по мапе old_uuid → new_sha1.
+
+3.7.3 Тип колонок меняется с `UUID` на `CHAR(40)`; индексы и уникальные констрейнты пересоздаются.
+
+3.7.4 Миграция запускается на проде один раз через стандартный entrypoint (§3.3); downtime — длительность миграции (для текущего объёма данных ~секунды).
+
+3.7.5 Создание новых записей использует генератор `SHA1(<deterministic-content> || \n || time.time_ns())` (PRD §5.2.6); коллизии исключаются включением timestamp в наносекундах.
+
+3.7.6 Prefix-lookup: для каждой таблицы существующий PK-индекс на `CHAR(40)` достаточен для эффективного поиска по префиксу через `WHERE id LIKE 'prefix%'`; дополнительные индексы не требуются.
 
 ## 4. Аутентификация
 
@@ -114,31 +142,59 @@
 
 4.1.3 SOLO_USER создаётся при первом старте tasks-svc с `AUTH_MODE=disabled` в `tasks.users` (auth-svc может ещё не существовать).
 
-### 4.2 Magic-code (terminal-only)
+### 4.2 Magic-link (click-to-confirm)
 
-4.2.1 `POST /api/auth/magic/start {email, intent: "cli"}` — генерит токен (32 байта random), хранит хеш в `auth.magic_tokens`, TTL 15 мин.
+4.2.1 `POST /api/auth/magic/start {email}` — генерит токен (32 байта random) и `login_session_id` (UUID); хранит запись в `auth.magic_tokens` (см. §3.6.2), TTL 15 мин. Возвращает `{login_session_id, expires_in}`.
 
-4.2.2 SMTP отправляет письмо. Тело письма содержит код для вставки в терминал (plaintext token). URL-ссылок нет.
+4.2.1.1 Перед записью токена эндпоинт валидирует `SMTP_HOST`; если не задан — возвращает 500 `email_delivery_not_configured` без записи в БД.
 
-4.2.3 `POST /api/auth/magic/verify {token, intent: "cli"}` — проверяет хеш, expiry, флаг `used_at`; помечает использованным; создаёт пользователя если нет; создаёт сессию `kind=cli` (refresh + access).
+4.2.2 SMTP отправляет письмо с URL-ссылкой `https://apitracker.ru/api/auth/magic/confirm?token=<plaintext-token>` и подсказкой "после клика вернитесь в терминал". Plaintext-кода в письме нет.
+
+4.2.3 `GET /api/auth/magic/confirm?token=<t>` (открывается в браузере по клику пользователя):
+
+4.2.3.1 Проверяет хеш, expiry, флаг `used_at`.
+
+4.2.3.2 Помечает токен `used_at = now()`, `confirmed_at = now()`.
+
+4.2.3.3 Создаёт пользователя в `auth.users` если его нет (PRD §10.4).
+
+4.2.3.4 Создаёт сессию `kind=cli` (refresh + access токены); связывает с `login_session_id` через `auth.magic_tokens.login_session_id`.
+
+4.2.3.5 Возвращает `200 text/html` со страницей "Сессия подтверждена. Вернитесь в терминал." (минимальный inline-HTML, без зависимости от docs-client).
+
+4.2.3.6 При истёкшем/использованном токене — `410 text/html` со страницей "Ссылка истекла. Запустите `clite login` повторно.".
+
+4.2.4 `GET /api/auth/magic/poll/{login_session_id}` — long-poll-эндпоинт, который CLI вызывает в цикле:
+
+4.2.4.1 Если `confirmed_at IS NULL` и токен не истёк → `202 {"status":"pending"}`.
+
+4.2.4.2 Если подтверждён → `200 {access_token, refresh_token, expires_in}`. Возврат однократный: после первого 200 сессия помечается выданной, повторный poll того же `login_session_id` → `410`.
+
+4.2.4.3 Если токен истёк без подтверждения → `410 {"status":"expired"}`.
+
+4.2.4.4 Если `login_session_id` не существует → `404`.
+
+4.2.5 Paste-code-эндпоинт `POST /api/auth/magic/verify` упразднён.
 
 ### 4.3 CLI login flow
 
 4.3.1 `clite login`:
 
-4.3.1.1 Интерактивно спрашивает email.
+4.3.1.1 Интерактивно спрашивает email (или принимает `--email <e>`).
 
-4.3.1.2 `POST /api/auth/magic/start {email, intent: "cli"}`.
+4.3.1.2 `POST /api/auth/magic/start {email}` → `{login_session_id, expires_in}`.
 
-4.3.1.3 Показывает: `✉ Code sent to <email>. Paste it below:`.
+4.3.1.3 Печатает на stderr: `✉ Link sent to <email>. Click it from your inbox. Waiting…`.
 
-4.3.1.4 Интерактивно читает код.
+4.3.1.4 Циклически вызывает `GET /api/auth/magic/poll/{login_session_id}` с бэкоффом 1с, 1с, 2с, 2с, 5с, далее каждые 5с до `expires_in`.
 
-4.3.1.5 `POST /api/auth/magic/verify {token: <code>, intent: "cli"}` → `{access_token, refresh_token, expires_in}`.
+4.3.1.5 При 200 → сохраняет `{access_token, refresh_token, expires_in}` в `~/.config/clite/credentials.yaml` 0600, печатает на stdout `success, press enter to continue`, ждёт нажатия Enter, выходит exit 0.
 
-4.3.1.6 Сохраняет в `~/.config/clite/credentials.yaml` 0600.
+4.3.1.6 При 410 → exit 1, stderr `magic link expired, run clite login again`.
 
-4.3.2 Браузер не задействован.
+4.3.1.7 При SIGINT (Ctrl-C) → exit 130; токен на сервере остаётся неиспользованным до `expires_in`.
+
+4.3.2 Браузер пользователя задействован только для клика по ссылке из письма; CLI его не запускает.
 
 ### 4.4 Deprecated: browser-handoff endpoints
 
@@ -150,7 +206,7 @@
 
 4.5.1 Алгоритм RS256.
 
-4.5.2 Claims: `sub` (user_id UUID), `email`, `iat`, `exp` (1 час от iat).
+4.5.2 Claims: `sub` (user_id SHA1-hex), `email`, `iat`, `exp` (1 час от iat).
 
 4.5.3 Никаких прав в токене.
 
@@ -258,7 +314,7 @@
 
 ### 10.2 Видимость
 
-10.2.1 `clite history task <uuid>` — доступна при наличии ≥1 разрешения на задаче (PRD §6.1.8).
+10.2.1 `clite history task <key>` — доступна при наличии ≥1 разрешения на задаче (PRD §6.1.8).
 
 10.2.2 `clite history user <email>`:
 
@@ -306,7 +362,7 @@
 
 11.4.4 `tasks.batch_update(filter: str, patch: dict) → BatchResult`.
 
-11.4.5 `tasks.share(task_id: UUID, user_email: str | null, team_id: UUID | null, perms: list[str])`.
+11.4.5 `tasks.share(task_id: str, user_email: str | null, team_id: str | null, perms: list[str])` — `task_id`/`team_id` принимают SHA1-ключ или префикс (PRD §5.2.7).
 
 11.4.6 Расширения whitelist — отдельный PR с обновлением docs-client.
 
@@ -365,6 +421,8 @@
 15.5 Команды группируются: `task`, `team`, `project`, `share`, `history`, `automation`, `secret`, `login`, `logout`, `whoami`.
 
 15.6 Каждая команда поддерживает `--output table|json`; default — table при TTY, json при пайпе.
+
+15.6.1 Каждая get/list-команда поддерживает `--fields <a,b,c>` (PRD §7.9) — фильтрация полей рендера на стороне CLI; полный ответ всегда читается с сервера, кеширование отсутствует.
 
 ### 15.7 Exit-коды
 
