@@ -30,8 +30,12 @@ def _send_blocking(to: str, subject: str, body: str) -> None:
     msg.set_content(body)
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as s:
         s.starttls()
-        if settings.smtp_user:
-            s.login(settings.smtp_user, settings.smtp_password)
+        # Многие провайдеры (Yandex, SES) логинятся email-ом из FROM —
+        # как делал прежний Go-сендер. SMTP_USER задаём, только если он
+        # реально отличается от FROM.
+        login_user = settings.smtp_user or settings.smtp_from
+        if settings.smtp_password:
+            s.login(login_user, settings.smtp_password)
         s.send_message(msg)
 
 

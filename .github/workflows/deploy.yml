@@ -96,14 +96,22 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: GHCR_USER,GHCR_TOKEN
+          envs: GHCR_USER,GHCR_TOKEN,SMTP_HOST,SMTP_PORT,SMTP_FROM,SMTP_PASSWORD
           script: |
             export GHCR_USER="${{ github.actor }}"
             export GHCR_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+            export SMTP_HOST="${SMTP_HOST:-}"
+            export SMTP_PORT="${SMTP_PORT:-587}"
+            export SMTP_FROM="${SMTP_FROM:-noreply@apitracker.ru}"
+            export SMTP_PASSWORD="${SMTP_PASSWORD:-}"
             /opt/api-tracker/repo/deploy/scripts/pull-and-up.sh
         env:
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
 
   record-deploy:
     runs-on: ubuntu-latest
