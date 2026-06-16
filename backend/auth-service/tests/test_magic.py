@@ -5,6 +5,8 @@ from unittest.mock import patch
 import pytest
 from httpx import AsyncClient
 
+from auth_service.config import settings
+
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
@@ -72,6 +74,18 @@ async def test_magic_verify_intent_mismatch(client: AsyncClient) -> None:
     token = _extract_token(_SENT_EMAILS[-1][2])
     r = await client.post("/auth/magic/verify", json={"token": token, "intent": "cli"})
     assert r.status_code == 400
+
+
+async def test_magic_start_500_when_smtp_not_configured(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ARCH §4.2.1.1: пустой SMTP_HOST → 500 без записи токена в БД."""
+    monkeypatch.setattr(settings, "smtp_host", "")
+    r = await client.post(
+        "/auth/magic/start", json={"email": "x@example.com", "intent": "browser"}
+    )
+    assert r.status_code == 500
+    assert r.json()["detail"] == "email_delivery_not_configured"
 
 
 async def test_magic_verify_marks_used(client: AsyncClient) -> None:

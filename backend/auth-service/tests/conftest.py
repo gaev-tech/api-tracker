@@ -23,9 +23,17 @@ except ImportError:
     _TESTCONTAINERS_AVAILABLE = False
     PostgresContainer = None  # type: ignore[assignment,misc]
 
+from auth_service.config import settings
 from auth_service.deps import get_db
 from auth_service.main import create_app
 from auth_service.models import Base
+
+
+@pytest.fixture(autouse=True)
+def smtp_host_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Тесты по умолчанию имеют сконфигурированный SMTP_HOST, чтобы /magic/start
+    не падал с 500 (ARCH §4.2.1.1). Отдельные тесты могут переопределить."""
+    monkeypatch.setattr(settings, "smtp_host", "smtp.test.local")
 
 
 def _docker_available() -> bool:

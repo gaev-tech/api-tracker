@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Request, status
 
+from auth_service.config import settings
 from auth_service.deps import SessionDep
 from auth_service.email_sender import magic_link_email_body, send_email
 from auth_service.models import SessionKind
@@ -32,6 +33,9 @@ async def magic_start(
     payload: MagicStartRequest, session: SessionDep
 ) -> MagicStartResponse:
     """Создаёт magic-token и отправляет письмо на email пользователя."""
+    # ARCH §4.2.1.1: fail loudly when SMTP не сконфигурирован, без записи в БД.
+    if not settings.smtp_host:
+        raise HTTPException(status_code=500, detail="email_delivery_not_configured")
     email = str(payload.email).lower()
     token = await issue_magic_token(session, email=email, intent=payload.intent)
     link = build_magic_link(token, payload.intent)
