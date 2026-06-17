@@ -2,13 +2,35 @@
 name = "clite"
 version = "2.0.0"
 description = "clite — command line task engine for apitracker.ru"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "gaev-tech" }]
 requires-python = ">=3.13"
+keywords = ["task-tracker", "cli", "rsql", "productivity", "apitracker"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business :: Scheduling",
+  "Topic :: Software Development",
+  "Topic :: Utilities",
+]
 dependencies = [
   "typer>=0.13.0",
   "httpx>=0.27.0",
   "rich>=13.9.0",
   "pyyaml>=6.0.2",
 ]
+
+[project.urls]
+Homepage = "https://apitracker.ru"
+Documentation = "https://apitracker.ru/installation"
+Repository = "https://github.com/gaev-tech/clite"
+Issues = "https://github.com/gaev-tech/api-tracker/issues"
 
 [project.optional-dependencies]
 dev = [
