@@ -57,12 +57,17 @@ def _require_perm(member: TeamMember | None, perm: TeamPermission) -> None:
 
 
 async def create_team(session: AsyncSession, *, creator: User, name: str) -> Team:
-    """Создаёт команду; создатель — единственный участник со всеми правами."""
+    """Создаёт команду; создатель — единственный участник со всеми правами.
+
+    Tariff: pre-check `teams` создателя (tariff.md §4.2.1, IPLAN §7.2.4.1).
+    """
     from tasks_service.ids import new_team_id
+    from tasks_service.services.tariff_enforcement import check_tariff_limit
 
     if not name.strip():
         raise TeamError("team name cannot be empty")
     clean_name = name.strip()
+    await check_tariff_limit(session, user_id=creator.id, metric="teams")
     team = Team(id=new_team_id(clean_name), name=clean_name)
     session.add(team)
     await session.flush()
@@ -164,6 +169,14 @@ async def set_member_permissions(
             await session.flush()
         return None
 
+    # Tariff: pre-check `teams` адресата если это новый INSERT
+    # (tariff.md §4.2.2, IPLAN §7.2.4.1). Существующая запись (perms update)
+    # лимита не трогает.
+    existing = await _get_member(session, team.id, target_user_id)
+    if existing is None:
+        from tasks_service.services.tariff_enforcement import check_tariff_limit
+
+        await check_tariff_limit(session, user_id=target_user_id, metric="teams")
     # Upsert.
     stmt = (
         pg_insert(TeamMember)

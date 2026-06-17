@@ -104,9 +104,13 @@ class BulkCreateRequest(BaseModel):
 
 class BulkCreateResultItem(BaseModel):
     index: int
-    status: str
+    status: str  # "ok" | "validation_failed" | "tariff_limit_exceeded" | ...
     task_id: str | None = None
     error: str | None = None
+    # tariff.md §17.1.1 — заполняются при status='tariff_limit_exceeded'.
+    subject_email: str | None = None
+    metric: str | None = None
+    limit: int | None = None
 
 
 class BulkCreateResult(BaseModel):

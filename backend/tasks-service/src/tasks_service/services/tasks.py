@@ -489,6 +489,8 @@ async def bulk_create(
     current_user: User,
     items: Sequence[TaskCreate],
 ) -> list[BulkCreateResultItem]:
+    from tasks_service.services.tariff_enforcement import TariffLimitExceeded
+
     results: list[BulkCreateResultItem] = []
     for idx, payload in enumerate(items):
         sp = await session.begin_nested()
@@ -496,6 +498,19 @@ async def bulk_create(
             t = await create_task(session, current_user=current_user, payload=payload)
             await sp.commit()
             results.append(BulkCreateResultItem(index=idx, status="ok", task_id=t.id))
+        except TariffLimitExceeded as e:
+            # tariff.md §4.3, IPLAN §7.2.4.4 — per-item status с полями.
+            await sp.rollback()
+            results.append(
+                BulkCreateResultItem(
+                    index=idx,
+                    status="tariff_limit_exceeded",
+                    error=str(e),
+                    subject_email=e.subject_email,
+                    metric=e.metric,
+                    limit=e.limit,
+                )
+            )
         except (TaskNotFound, ValueError, IntegrityError) as e:
             await sp.rollback()
             results.append(
@@ -512,8 +527,12 @@ async def batch_create(
     current_user: User,
     items: Sequence[TaskCreate],
 ) -> list[str]:
+    """tariff.md §4.4, IPLAN §7.2.4.5: первое же TariffLimitExceeded
+    откатывает всю транзакцию (как любая другая ошибка batch)."""
     ids: list[str] = []
     for payload in items:
+        # TariffLimitExceeded не ловим — пропускаем наверх в router,
+        # FastAPI exception handler вернёт 400 с error_code.
         t = await create_task(session, current_user=current_user, payload=payload)
         ids.append(t.id)
     return ids

@@ -26,6 +26,7 @@ from tasks_service.services.prefix_lookup import (
     PrefixTooShort,
 )
 from tasks_service.services.reactive_matcher import run_reactive_matcher
+from tasks_service.services.tariff_enforcement import TariffLimitExceeded
 from tasks_service.services.webhook_outbox import run_outbox_worker
 
 _log = logging.getLogger(__name__)
@@ -130,6 +131,23 @@ def create_app(*, with_lifespan: bool = True) -> FastAPI:
     @app.exception_handler(PrefixNotFound)
     async def _prefix_not_found(_req: Request, _exc: PrefixNotFound) -> JSONResponse:
         return JSONResponse(status_code=404, content={"detail": "not_found"})
+
+    @app.exception_handler(TariffLimitExceeded)
+    async def _tariff_limit_exceeded(
+        _req: Request, exc: TariffLimitExceeded
+    ) -> JSONResponse:
+        # tariff.md §17.1.1: error code tariff_limit_exceeded, поля subject_email,
+        # metric, limit. Возвращаем как HTTP 400 — CLI распознаёт по error_code.
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": "tariff_limit_exceeded",
+                "error_code": "tariff_limit_exceeded",
+                "subject_email": exc.subject_email,
+                "metric": exc.metric,
+                "limit": exc.limit,
+            },
+        )
 
     return app
 

@@ -86,12 +86,17 @@ async def _get_team_member(
 
 async def create_project(session: AsyncSession, *, creator: User, name: str) -> Project:
     """Создаёт проект; создатель — единственный участник со всеми правами
-    (project- + task-уровневыми)."""
+    (project- + task-уровневыми).
+
+    Tariff: pre-check `projects` создателя (tariff.md §4.2.3, IPLAN §7.2.4.1).
+    """
     from tasks_service.ids import new_project_id
+    from tasks_service.services.tariff_enforcement import check_tariff_limit
 
     if not name.strip():
         raise ProjectError("project name cannot be empty")
     clean_name = name.strip()
+    await check_tariff_limit(session, user_id=creator.id, metric="projects")
     project = Project(id=new_project_id(clean_name), name=clean_name)
     session.add(project)
     await session.flush()
@@ -182,6 +187,14 @@ async def set_user_member(
         await _maybe_cascade_delete(session, project)
         return None
 
+    # Tariff: pre-check `projects` адресата если это новый INSERT
+    # (tariff.md §4.2.4, IPLAN §7.2.4.1). Update perms у существующего
+    # члена — лимит не трогает.
+    existing = await _get_user_member(session, project.id, target_user_id)
+    if existing is None:
+        from tasks_service.services.tariff_enforcement import check_tariff_limit
+
+        await check_tariff_limit(session, user_id=target_user_id, metric="projects")
     stmt = (
         pg_insert(ProjectUserMember)
         .values(project_id=project.id, user_id=target_user_id, perms=perms)

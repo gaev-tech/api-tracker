@@ -127,6 +127,18 @@ async def set_user_share(
         await _maybe_cascade_delete_task(session, task)
         return
 
+    # Tariff: pre-check `task_shares` адресата если это новый INSERT
+    # (tariff.md §4.2.6, IPLAN §7.2.4.1).
+    existing = await session.execute(
+        select(TaskUserShare).where(
+            TaskUserShare.task_id == task.id,
+            TaskUserShare.user_id == target_user_id,
+        )
+    )
+    if existing.scalar_one_or_none() is None:
+        from tasks_service.services.tariff_enforcement import check_tariff_limit
+
+        await check_tariff_limit(session, user_id=target_user_id, metric="task_shares")
     # Upsert.
     stmt = (
         pg_insert(TaskUserShare)
@@ -279,7 +291,21 @@ async def add_creator_share(
 
     Обеспечивает anchor-rule (PRD §6.6) автоматически в случае, когда явных
     project/share-параметров в запросе не было.
+
+    Tariff: pre-check `task_shares` создателя (tariff.md §4.2.5 — для каждого
+    `user_shares[i]`, включая создателя по PRD §6.6.1.2). Если запись уже
+    существует, проверка не нужна (on_conflict_do_nothing → no-op INSERT).
     """
+    existing = await session.execute(
+        select(TaskUserShare).where(
+            TaskUserShare.task_id == task_id,
+            TaskUserShare.user_id == creator_id,
+        )
+    )
+    if existing.scalar_one_or_none() is None:
+        from tasks_service.services.tariff_enforcement import check_tariff_limit
+
+        await check_tariff_limit(session, user_id=creator_id, metric="task_shares")
     stmt = (
         pg_insert(TaskUserShare)
         .values(task_id=task_id, user_id=creator_id, perms=ALL_TASK_PERMS)
