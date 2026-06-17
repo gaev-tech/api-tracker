@@ -17,6 +17,9 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - /var/lib/api-tracker/certbot/conf:/etc/letsencrypt:ro
       - /var/lib/api-tracker/certbot/www:/var/www/certbot:ro
+      # docs-client SPA — статический артефакт; обновляется в CI и копируется
+      # в /var/lib/api-tracker/docs-client/ (см. deploy/scripts/pull-and-up.sh).
+      - /var/lib/api-tracker/docs-client:/var/www/docs-client:ro
     depends_on:
       tasks-svc:
         condition: service_healthy

@@ -86,10 +86,52 @@ jobs:
           cache-from: type=gha,scope=auth-svc
           cache-to: type=gha,mode=max,scope=auth-svc
 
+  build-docs:
+    runs-on: ubuntu-latest
+    needs: [python-lint, python-test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.5.4"
+          enable-cache: true
+      - run: uv python install 3.13
+      - run: uv sync --all-extras
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm --registry https://registry.npmjs.org/ install --legacy-peer-deps
+      - name: Build docs-client (generators + ng build)
+        working-directory: frontend
+        run: npm --registry https://registry.npmjs.org/ run build:docs
+      - name: Upload docs-client artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-client
+          path: frontend/dist/docs-client/browser
+          if-no-files-found: error
+          retention-days: 7
+
   deploy:
     runs-on: ubuntu-latest
-    needs: build-push
+    needs: [build-push, build-docs]
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-client
+          path: docs-client-dist
+      - name: Pack docs-client tarball
+        run: tar -C docs-client-dist -czf docs-client.tar.gz .
+      - name: Ship docs-client to prod (ARCH §16.4)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "docs-client.tar.gz"
+          target: "/opt/api-tracker/"
       - name: SSH deploy
         uses: appleboy/ssh-action@v1
         with:

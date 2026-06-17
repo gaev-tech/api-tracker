@@ -14,6 +14,19 @@ echo "### git fetch + reset на origin/main"
 git fetch --all --prune
 git reset --hard origin/main
 
+echo "### docs-client: распаковать tarball, если он был залит SCP-шагом"
+DOCS_TARBALL="/opt/api-tracker/docs-client.tar.gz"
+DOCS_TARGET="/var/lib/api-tracker/docs-client"
+if [ -f "$DOCS_TARBALL" ]; then
+  sudo mkdir -p "$DOCS_TARGET"
+  sudo tar -xzf "$DOCS_TARBALL" -C "$DOCS_TARGET"
+  sudo chown -R root:root "$DOCS_TARGET"
+  rm -f "$DOCS_TARBALL"
+  echo "docs-client распакован в $DOCS_TARGET"
+else
+  echo "docs-client.tar.gz отсутствует — пропускаем (не первый деплой M4?)"
+fi
+
 echo "### docker login в GHCR"
 echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
