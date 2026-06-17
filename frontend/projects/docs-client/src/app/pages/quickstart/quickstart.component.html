@@ -1,4 +1,77 @@
 <section class="quickstart">
+  <div class="quickstart__breadcrumb">
+    <span>Docs</span>
+    <span class="quickstart__chevron">›</span>
+    <span class="quickstart__breadcrumb-current">Quickstart</span>
+  </div>
+
   <h1>Quickstart</h1>
-  <p>Placeholder — filled in M4.7.</p>
+  <p class="quickstart__lede">
+    Zero to your first task in under a minute.
+  </p>
+
+  <div class="quickstart__meta">
+    <span>≈ 1 MIN READ</span>
+    <span class="quickstart__meta-sep"></span>
+    <span>FOR: HUMAN OR AI AGENT</span>
+  </div>
+
+  <article class="quickstart__step">
+    <div class="quickstart__step-tag" data-accent="red">
+      <span class="quickstart__step-num">01</span>
+      <span class="quickstart__step-title">Install</span>
+    </div>
+    <p>
+      The recommended channel is <code>pipx</code> — it isolates the install
+      and exposes the <code>clite</code> binary on your <code>$PATH</code>.
+    </p>
+    <pre class="quickstart__code"><span class="quickstart__prompt">$</span> pipx install clite
+<span class="quickstart__prompt">$</span> clite version</pre>
+    <p class="quickstart__note">
+      Other channels (Homebrew, APT, npm wrapper) land in M4.B. See
+      <a routerLink="/installation">installation</a>.
+    </p>
+  </article>
+
+  <article class="quickstart__step">
+    <div class="quickstart__step-tag" data-accent="blue">
+      <span class="quickstart__step-num">02</span>
+      <span class="quickstart__step-title">Log in</span>
+    </div>
+    <p>
+      Magic-link login. The CLI asks the server to email you a link, then
+      waits for you to click.
+    </p>
+    <pre class="quickstart__code"><span class="quickstart__prompt">$</span> clite login --email me&#64;example.org</pre>
+  </article>
+
+  <article class="quickstart__step">
+    <div class="quickstart__step-tag" data-accent="yellow">
+      <span class="quickstart__step-num">03</span>
+      <span class="quickstart__step-title">Create a task</span>
+    </div>
+    <p>
+      Even single-task create goes through the bulk API. Pass a JSON array.
+    </p>
+    <pre class="quickstart__code"><span class="quickstart__prompt">$</span> clite create tasks --bulk '[&#123;"title":"First task"&#125;]'</pre>
+  </article>
+
+  <article class="quickstart__step">
+    <div class="quickstart__step-tag" data-accent="green">
+      <span class="quickstart__step-num">04</span>
+      <span class="quickstart__step-title">Read it back</span>
+    </div>
+    <p>
+      Filter with <a routerLink="/rsql">RSQL</a>; <code>me</code> is a
+      built-in literal for the current user.
+    </p>
+    <pre class="quickstart__code"><span class="quickstart__prompt">$</span> clite get tasks --filter 'status=="open";assignee==me'</pre>
+  </article>
+
+  <h2>Where next?</h2>
+  <ul>
+    <li><a routerLink="/tutorials/getting-started">Getting started tutorial</a> — same flow, more depth.</li>
+    <li><a routerLink="/cli">CLI Reference</a> — every command, every option.</li>
+    <li><a routerLink="/tutorials/ai-driven-workflow">AI-driven workflow</a> — how to let an agent run the tracker.</li>
+  </ul>
 </section>

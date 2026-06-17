@@ -1,4 +1,48 @@
 <section class="installation">
+  <div class="installation__breadcrumb">
+    <span>Docs</span>
+    <span class="installation__chevron">›</span>
+    <span class="installation__breadcrumb-current">Installation</span>
+  </div>
+
   <h1>Installation</h1>
-  <p>Placeholder — filled in M4.7.</p>
+  <p class="installation__lede">
+    Available channels and what's coming. After installing, verify with
+    <code>clite version</code> and continue to
+    <a routerLink="/quickstart">Quickstart</a>.
+  </p>
+
+  @for (ch of channels; track ch.name) {
+    <article
+      class="installation__channel"
+      [class.installation__channel--soon]="ch.status === 'coming-soon'"
+    >
+      <header class="installation__channel-head">
+        <h2 class="installation__channel-name">{{ ch.name }}</h2>
+        @if (ch.status === 'available') {
+          <span class="installation__badge installation__badge--ok">Available</span>
+        } @else {
+          <span class="installation__badge installation__badge--soon">Coming in M4.B</span>
+        }
+      </header>
+      <p class="installation__channel-platforms">{{ ch.platforms }}</p>
+
+      <pre class="installation__code"><code>{{ ch.install }}</code></pre>
+
+      @if (ch.verify) {
+        <p class="installation__sub">Verify:</p>
+        <pre class="installation__code"><code>{{ ch.verify }}</code></pre>
+      }
+
+      @if (ch.note) {
+        <p class="installation__note">{{ ch.note }}</p>
+      }
+
+      @if (ch.issueUrl && ch.status === 'coming-soon') {
+        <a class="installation__issue" [href]="ch.issueUrl" target="_blank" rel="noopener">
+          Track progress on GitHub →
+        </a>
+      }
+    </article>
+  }
 </section>
