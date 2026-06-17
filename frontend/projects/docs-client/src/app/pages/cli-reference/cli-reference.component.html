@@ -1,4 +1,159 @@
-<section class="cli-reference">
+<section class="cli-ref">
+  <div class="cli-ref__breadcrumb">
+    <span>Docs</span>
+    <span class="cli-ref__chevron">›</span>
+    <a routerLink="/cli">CLI Reference</a>
+    @if (selectedCommand(); as sel) {
+      <span class="cli-ref__chevron">›</span>
+      <span class="cli-ref__breadcrumb-current">clite {{ sel.path }}</span>
+    }
+  </div>
+
   <h1>CLI Reference</h1>
-  <p>Placeholder — filled in M4.3.</p>
+
+  @if (!reference()) {
+    <p class="cli-ref__loading">Loading reference…</p>
+  } @else {
+    <div class="cli-ref__layout">
+      <aside class="cli-ref__toc">
+        <h3 class="cli-ref__toc-title">Commands</h3>
+        <ul class="cli-ref__toc-list">
+          @for (cmd of allCommands(); track cmd.path) {
+            <li>
+              <a
+                [routerLink]="['/cli', slugFor(cmd.path)]"
+                [class.cli-ref__toc-link--active]="
+                  selectedCommand()?.path === cmd.path
+                "
+                class="cli-ref__toc-link"
+                [class.cli-ref__toc-link--group]="cmd.is_group"
+                [style.paddingLeft.px]="14 + (cmd.path.split(' ').length - 1) * 14"
+              >
+                <span class="cli-ref__toc-name">clite {{ cmd.path }}</span>
+                @if (cmd.is_group) {
+                  <span class="cli-ref__toc-tag">group</span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      </aside>
+
+      <article class="cli-ref__body">
+        @if (selectedCommand(); as sel) {
+          <h2 class="cli-ref__cmd-title">
+            <span class="cli-ref__prompt">$</span>
+            <span>clite {{ sel.path }}</span>
+            @if (sel.is_group) {
+              <span class="cli-ref__cmd-suffix">[SUBCOMMAND]</span>
+            } @else {
+              <span class="cli-ref__cmd-suffix">[OPTIONS]</span>
+            }
+          </h2>
+
+          @if (sel.description) {
+            <pre class="cli-ref__desc">{{ sel.description }}</pre>
+          }
+
+          @if (sel.is_group && subCommandsOfSelected().length > 0) {
+            <h3>Subcommands</h3>
+            <table>
+              <thead>
+                <tr><th>Command</th><th>Summary</th></tr>
+              </thead>
+              <tbody>
+                @for (sub of subCommandsOfSelected(); track sub.path) {
+                  <tr>
+                    <td>
+                      <a [routerLink]="['/cli', slugFor(sub.path)]">
+                        <code>clite {{ sub.path }}</code>
+                      </a>
+                    </td>
+                    <td>{{ sub.summary }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (sel.arguments.length > 0) {
+            <h3>Arguments</h3>
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Type</th><th>Required</th></tr>
+              </thead>
+              <tbody>
+                @for (arg of sel.arguments; track arg.name) {
+                  <tr>
+                    <td><code>{{ arg.name }}</code></td>
+                    <td><code>{{ arg.type }}</code></td>
+                    <td>{{ arg.required ? 'yes' : 'no' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (sel.options.length > 0) {
+            <h3>Options</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Flag</th><th>Type</th><th>Default</th><th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (opt of sel.options; track opt.names[0]) {
+                  <tr>
+                    <td>
+                      @for (name of opt.names; track name) {
+                        <code>{{ name }}</code>
+                      }
+                    </td>
+                    <td><code>{{ opt.is_flag ? 'flag' : opt.type }}</code></td>
+                    <td><code>{{ formatDefault(opt.default) }}</code></td>
+                    <td>{{ opt.help || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (sel.examples.length > 0) {
+            <h3>Examples</h3>
+            @for (ex of sel.examples; track ex.cmd) {
+              <pre class="cli-ref__example"><span class="cli-ref__example-prompt">$</span> {{ ex.cmd }}</pre>
+              @if (ex.note) {
+                <p class="cli-ref__example-note">{{ ex.note }}</p>
+              }
+            }
+          }
+        } @else {
+          <p class="cli-ref__overview-lede">
+            <code>clite</code> is the api-tracker CLI. Pick a command from the
+            list. Reference is auto-generated from typer at build time
+            (ARCH §16.5.1).
+          </p>
+          <h3>Leaf commands ({{ leafCommands().length }})</h3>
+          <table>
+            <thead>
+              <tr><th>Command</th><th>Summary</th></tr>
+            </thead>
+            <tbody>
+              @for (cmd of leafCommands(); track cmd.path) {
+                <tr>
+                  <td>
+                    <a [routerLink]="['/cli', slugFor(cmd.path)]">
+                      <code>clite {{ cmd.path }}</code>
+                    </a>
+                  </td>
+                  <td>{{ cmd.summary }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </article>
+    </div>
+  }
 </section>

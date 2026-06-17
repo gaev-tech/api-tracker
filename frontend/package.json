@@ -8,7 +8,8 @@
     "start:docs": "ng serve docs-client",
     "build": "ng build auth-client && ng build docs-client",
     "build:auth": "ng build auth-client",
-    "build:docs": "ng build docs-client",
+    "build:docs": "uv run --project .. python projects/docs-client/scripts/generate-all.py && ng build docs-client",
+    "generate:docs": "uv run --project .. python projects/docs-client/scripts/generate-all.py",
     "test": "ng test --no-watch --browsers ChromeHeadless",
     "lint": "ng lint"
   },

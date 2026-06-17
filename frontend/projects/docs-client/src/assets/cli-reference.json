@@ -1,0 +1,1503 @@
+{
+  "generator": "generate-cli-reference.py",
+  "source": "cli.__main__:app",
+  "commands": [
+    {
+      "path": "login",
+      "name": "login",
+      "summary": "Magic-link login. Пользователь кликает по ссылке из почты — CLI ждёт.",
+      "description": "Magic-link login. Пользователь кликает по ссылке из почты — CLI ждёт.\n\nARCH §4.2-§4.3, PRD §10.5.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--email",
+            "-e"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Если не задан — спросит интерактивно",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--no-wait"
+          ],
+          "secondary_names": [],
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "help": "Не ждать клик: распечатать login_session_id и выйти (для скриптов/e2e, TC §5.1.3)",
+          "multiple": false,
+          "is_flag": true
+        }
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "cmd": "clite login --email me@example.org",
+          "note": "Magic-link login (TC §5)."
+        }
+      ]
+    },
+    {
+      "path": "logout",
+      "name": "logout",
+      "summary": "Удалить локальные credentials. Серверная сессия остаётся (revoke — Post-MVP).",
+      "description": "Удалить локальные credentials. Серверная сессия остаётся (revoke — Post-MVP).",
+      "is_group": false,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "me",
+      "name": "me",
+      "summary": "Показать текущего пользователя (по локальным credentials).",
+      "description": "Показать текущего пользователя (по локальным credentials).",
+      "is_group": false,
+      "options": [],
+      "arguments": [],
+      "examples": [
+        {
+          "cmd": "clite me",
+          "note": "Print current credentials."
+        }
+      ]
+    },
+    {
+      "path": "version",
+      "name": "version",
+      "summary": "Показать версию CLI.",
+      "description": "Показать версию CLI.",
+      "is_group": false,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "get",
+      "name": "get",
+      "summary": "Чтение данных",
+      "description": "Чтение данных",
+      "is_group": true,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "get tasks",
+      "name": "tasks",
+      "summary": "Список задач с RSQL-фильтром (PRD §7.1).",
+      "description": "Список задач с RSQL-фильтром (PRD §7.1).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--filter",
+            "-f"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "RSQL",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--cursor"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--limit"
+          ],
+          "secondary_names": [],
+          "type": "integer range",
+          "required": false,
+          "default": 50,
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "cmd": "clite get tasks --filter 'status==\"open\";assignee==me'",
+          "note": "RSQL filter (TC §3)."
+        },
+        {
+          "cmd": "clite get tasks --fields id,title,status",
+          "note": "Trim columns."
+        }
+      ]
+    },
+    {
+      "path": "get teams",
+      "name": "teams",
+      "summary": "Список моих команд.",
+      "description": "Список моих команд.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "get team",
+      "name": "team",
+      "summary": "Одна команда: имя + участники + перм-флаги.",
+      "description": "Одна команда: имя + участники + перм-флаги.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "get projects",
+      "name": "projects",
+      "summary": "Список моих проектов.",
+      "description": "Список моих проектов.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "get project",
+      "name": "project",
+      "summary": "Один проект: имя + участники + task_ids.",
+      "description": "Один проект: имя + участники + task_ids.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "get automations",
+      "name": "automations",
+      "summary": "Список автоматизаций проекта (PRD §8).",
+      "description": "Список автоматизаций проекта (PRD §8).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--project",
+            "-p"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "SHA1-ключ проекта (или префикс)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "get automation",
+      "name": "automation",
+      "summary": "Одна автоматизация: trigger_config + action_config.",
+      "description": "Одна автоматизация: trigger_config + action_config.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "get secrets",
+      "name": "secrets",
+      "summary": "Список секретов проекта (имена БЕЗ значений, ARCH §13.2).",
+      "description": "Список секретов проекта (имена БЕЗ значений, ARCH §13.2).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--project",
+            "-p"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "SHA1-ключ проекта (или префикс)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "get log",
+      "name": "log",
+      "summary": "История событий: ровно один из --task или --user.",
+      "description": "История событий: ровно один из --task или --user.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--task"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "SHA1-ключ задачи (или префикс)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--user"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Email пользователя или 'me'",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--cursor"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "cmd": "clite get log --task abc1234",
+          "note": "History of one task (TC §4)."
+        },
+        {
+          "cmd": "clite get log --user me@example.org",
+          "note": "Audit log per user."
+        }
+      ]
+    },
+    {
+      "path": "create",
+      "name": "create",
+      "summary": "Создание сущностей",
+      "description": "Создание сущностей",
+      "is_group": true,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "create tasks",
+      "name": "tasks",
+      "summary": "Массовое создание задач. Требуется ровно один из --bulk или --batch.",
+      "description": "Массовое создание задач. Требуется ровно один из --bulk или --batch.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--file"
+          ],
+          "secondary_names": [],
+          "type": "path",
+          "required": false,
+          "default": null,
+          "help": "Путь к JSON или CSV (определяется по расширению)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--bulk"
+          ],
+          "secondary_names": [],
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "help": "Partial success (PRD §7.2.1)",
+          "multiple": false,
+          "is_flag": true
+        },
+        {
+          "names": [
+            "--batch"
+          ],
+          "secondary_names": [],
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "help": "Атомарно (PRD §7.3.1)",
+          "multiple": false,
+          "is_flag": true
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "data",
+          "type": "text",
+          "required": false,
+          "nargs": 1
+        }
+      ],
+      "examples": [
+        {
+          "cmd": "clite create tasks --bulk '[{\"title\":\"first\"},{\"title\":\"second\"}]'",
+          "note": "Bulk create."
+        }
+      ]
+    },
+    {
+      "path": "create team",
+      "name": "team",
+      "summary": "Создать команду; создатель — единственный участник со всеми правами.",
+      "description": "Создать команду; создатель — единственный участник со всеми правами.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--name",
+            "-n"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "Имя команды",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "create project",
+      "name": "project",
+      "summary": "Создать проект; создатель получает все project + task perms.",
+      "description": "Создать проект; создатель получает все project + task perms.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--name",
+            "-n"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "Имя проекта",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "create automation",
+      "name": "automation",
+      "summary": "Создать автоматизацию проекта (PRD §8, ARCH §11).",
+      "description": "Создать автоматизацию проекта (PRD §8, ARCH §11).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--project",
+            "-p"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "SHA1-ключ проекта (или префикс)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--name",
+            "-n"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "Имя автоматизации",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--trigger-type"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "event | cron (PRD §8.4)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--trigger-config"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "JSON: {event_type, filter} для event | {cron} для cron",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--action-type"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "webhook | system_method (PRD §8.5)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--action-config"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "JSON: {url, headers, body} для webhook | {method, args} для system_method",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "cmd": "clite create automation --project P --name daily-digest --trigger cron:'0 9 * * *' --action 'tasks.list'",
+          "note": "Cron automation (TC §9)."
+        }
+      ]
+    },
+    {
+      "path": "create secret",
+      "name": "secret",
+      "summary": "Создать или перезаписать секрет проекта (PRD §8.7, ARCH §13).",
+      "description": "Создать или перезаписать секрет проекта (PRD §8.7, ARCH §13).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--project",
+            "-p"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "SHA1-ключ проекта (или префикс)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--name",
+            "-n"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "Имя секрета",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--value",
+            "-v"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "Значение",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "update",
+      "name": "update",
+      "summary": "Массовое обновление",
+      "description": "Массовое обновление",
+      "is_group": true,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "update tasks",
+      "name": "tasks",
+      "summary": "Массовое обновление по RSQL-фильтру. Ровно один из --bulk или --batch.",
+      "description": "Массовое обновление по RSQL-фильтру. Ровно один из --bulk или --batch.\n\n--set поля: title, description_md, status, assignee, labels (csv),\nprojects (csv), add_labels, remove_labels, add_blockers, remove_blockers.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--filter",
+            "-f"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "RSQL",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--set",
+            "-s"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "field=value",
+          "multiple": true,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--bulk"
+          ],
+          "secondary_names": [],
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "help": "Partial success (PRD §7.2.1)",
+          "multiple": false,
+          "is_flag": true
+        },
+        {
+          "names": [
+            "--batch"
+          ],
+          "secondary_names": [],
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "help": "Атомарно (PRD §7.3.1)",
+          "multiple": false,
+          "is_flag": true
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "cmd": "clite update tasks --filter 'status==\"open\"' --batch '{\"status\":\"done\"}'",
+          "note": "Batch update by RSQL (TC §3.4)."
+        }
+      ]
+    },
+    {
+      "path": "update automation",
+      "name": "automation",
+      "summary": "PATCH автоматизации. Любое не указанное поле не меняется.",
+      "description": "PATCH автоматизации. Любое не указанное поле не меняется.",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--name",
+            "-n"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Новое имя",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--trigger-config"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "JSON: новый trigger_config (заменяет полностью)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--action-config"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "JSON: новый action_config (заменяет полностью)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "rename",
+      "name": "rename",
+      "summary": "Переименование сущностей",
+      "description": "Переименование сущностей",
+      "is_group": true,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "rename team",
+      "name": "team",
+      "summary": "Переименовать команду (требуется perm `edit_team_name`).",
+      "description": "Переименовать команду (требуется perm `edit_team_name`).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--to"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "Новое имя",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "rename project",
+      "name": "project",
+      "summary": "Переименовать проект (требуется perm `edit_project_name`).",
+      "description": "Переименовать проект (требуется perm `edit_project_name`).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--to"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "Новое имя",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "leave",
+      "name": "leave",
+      "summary": "Self-revoke (PRD §7.8)",
+      "description": "Self-revoke (PRD §7.8)",
+      "is_group": true,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "leave team",
+      "name": "team",
+      "summary": "Выйти из команды; если был последним — команда удаляется (PRD §6.1.6).",
+      "description": "Выйти из команды; если был последним — команда удаляется (PRD §6.1.6).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "leave project",
+      "name": "project",
+      "summary": "Выйти из проекта (PRD §7.8.3).",
+      "description": "Выйти из проекта (PRD §7.8.3).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "add",
+      "name": "add",
+      "summary": "Добавить участника",
+      "description": "Добавить участника",
+      "is_group": true,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "add member",
+      "name": "member",
+      "summary": "Добавить/изменить участника команды или проекта.",
+      "description": "Добавить/изменить участника команды или проекта.\n\nЭквивалентен PUT в `/v1/teams/{key}/members/{email}` либо\n`/v1/projects/{key}/members/users/{email}` (или `.../members/teams/{team}`\nдля добавления команды в проект).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--email",
+            "-e"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Email пользователя",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--team"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "SHA1-ключ команды (только для проектов)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--perm",
+            "-p"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Перм-флаг (повторно); пустой список = удалить участника",
+          "multiple": true,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "container_key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "delete",
+      "name": "delete",
+      "summary": "Удаление сущностей",
+      "description": "Удаление сущностей",
+      "is_group": true,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "delete automation",
+      "name": "automation",
+      "summary": "Удалить автоматизацию (TC §9.4).",
+      "description": "Удалить автоматизацию (TC §9.4).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "delete secret",
+      "name": "secret",
+      "summary": "Удалить секрет проекта (TC §10.4).",
+      "description": "Удалить секрет проекта (TC §10.4).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--project",
+            "-p"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": true,
+          "default": null,
+          "help": "SHA1-ключ проекта (или префикс)",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": []
+    },
+    {
+      "path": "run",
+      "name": "run",
+      "summary": "Запуск (immediate trigger)",
+      "description": "Запуск (immediate trigger)",
+      "is_group": true,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "run automation",
+      "name": "automation",
+      "summary": "Запустить action автоматизации немедленно (TC §9.3.1).",
+      "description": "Запустить action автоматизации немедленно (TC §9.3.1).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "nargs": 1
+        }
+      ],
+      "examples": [
+        {
+          "cmd": "clite run automation <id>",
+          "note": "Fire immediately (TC §9.3.1)."
+        }
+      ]
+    },
+    {
+      "path": "tariff",
+      "name": "tariff",
+      "summary": "Тариф (M5 — Free)",
+      "description": "Тариф (M5 — Free)",
+      "is_group": true,
+      "options": [],
+      "arguments": [],
+      "examples": []
+    },
+    {
+      "path": "tariff show",
+      "name": "show",
+      "summary": "Состояние тарифа текущего пользователя (Bearer auth).",
+      "description": "Состояние тарифа текущего пользователя (Bearer auth).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "cmd": "clite tariff show",
+          "note": "Show current tariff state."
+        }
+      ]
+    },
+    {
+      "path": "tariff catalog",
+      "name": "catalog",
+      "summary": "Каталог тарифов (public, без auth).",
+      "description": "Каталог тарифов (public, без auth).",
+      "is_group": false,
+      "options": [
+        {
+          "names": [
+            "--output",
+            "-o"
+          ],
+          "secondary_names": [],
+          "type": "choice",
+          "required": false,
+          "default": "auto",
+          "help": "",
+          "multiple": false,
+          "is_flag": false
+        },
+        {
+          "names": [
+            "--fields"
+          ],
+          "secondary_names": [],
+          "type": "text",
+          "required": false,
+          "default": null,
+          "help": "Только эти поля через запятую (PRD §7.9)",
+          "multiple": false,
+          "is_flag": false
+        }
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "cmd": "clite tariff catalog",
+          "note": "List all tariffs."
+        }
+      ]
+    }
+  ]
+}
