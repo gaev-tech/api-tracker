@@ -337,11 +337,78 @@ jobs:
           git push
 
   publish-apt:
-    needs: [validate, build-binaries]
-    if: false  # включается в M4 (implementation-plan.md §6.3.4)
+    needs: [validate, publish-github-release]
+    # Skip без secret — позволяет релизам проходить до настройки apt.apitracker.ru.
+    if: needs.validate.result == 'success' && needs.publish-github-release.result == 'success'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "TODO M4 — собрать .deb, подписать GPG, aptly + SSH"
+      - uses: actions/checkout@v4
+
+      - name: Check APT_GPG_KEY presence
+        id: secret
+        env:
+          APT_GPG_KEY: ${{ secrets.APT_GPG_KEY }}
+        shell: bash
+        run: |
+          if [[ -z "${APT_GPG_KEY:-}" ]]; then
+            echo "has-key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping APT publish — secret APT_GPG_KEY is not set. См. SETUP.md."
+          else
+            echo "has-key=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.secret.outputs.has-key == 'true'
+        name: Download linux-amd64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: clite-linux-amd64
+          path: release-artifacts
+
+      - if: steps.secret.outputs.has-key == 'true'
+        name: SCP binary + publish script + aptly config to prod
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "release-artifacts/clite-linux-amd64,deploy/apt/publish-deb.sh,deploy/apt/aptly.conf"
+          target: "/tmp/clite-apt-${{ needs.validate.outputs.version }}/"
+
+      - if: steps.secret.outputs.has-key == 'true'
+        name: SSH — import GPG, run publish-deb.sh
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: VERSION,APT_GPG_KEY
+          script: |
+            set -euo pipefail
+            STAGE="/tmp/clite-apt-${VERSION}"
+            BIN="$STAGE/release-artifacts/clite-linux-amd64"
+            SCRIPT="$STAGE/deploy/apt/publish-deb.sh"
+            CONF="$STAGE/deploy/apt/aptly.conf"
+
+            # Lazy install aptly + gpg if missing (Debian/Ubuntu host).
+            command -v aptly >/dev/null || sudo apt-get update -qq && sudo apt-get install -y aptly gnupg dpkg-dev
+            command -v dpkg-deb >/dev/null || sudo apt-get install -y dpkg-dev
+
+            # Import GPG private key from secret (idempotent).
+            mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+            echo "$APT_GPG_KEY" | gpg --batch --import || true
+
+            sudo install -m 644 "$CONF" /etc/aptly.conf
+            sudo mkdir -p /var/lib/api-tracker/apt /var/lib/api-tracker/apt/public
+            sudo chown -R "$(id -u):$(id -g)" /var/lib/api-tracker/apt
+
+            chmod +x "$SCRIPT" "$BIN"
+            APTLY_CONFIG=/etc/aptly.conf "$SCRIPT" "$VERSION" "$BIN"
+
+            # Cleanup staging.
+            rm -rf "$STAGE"
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          APT_GPG_KEY: ${{ secrets.APT_GPG_KEY }}
 
   publish-npm:
     needs: [validate, publish-github-release]
