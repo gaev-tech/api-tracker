@@ -49,6 +49,18 @@ class Settings(BaseSettings):
     )
     jwt_issuer: str = Field(default="apitracker.ru")
 
+    tasks_service_url: str = Field(
+        default="http://tasks-svc:8080",
+        description=(
+            "Внутренний HTTP-адрес tasks-svc для M5 tariff usage_* (через "
+            "/v1/internal/membership-counts/{user_id})."
+        ),
+    )
+    internal_service_token: str = Field(
+        default="",
+        description="Shared secret для inter-service вызовов (см. tasks-svc).",
+    )
+
     @property
     def alembic_url(self) -> str:
         if self.sync_database_url:

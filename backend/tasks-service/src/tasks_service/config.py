@@ -37,6 +37,14 @@ class Settings(BaseSettings):
             "из solo_user_email."
         ),
     )
+    internal_service_token: str = Field(
+        default="",
+        description=(
+            "Shared secret для inter-service вызовов (auth-svc → tasks-svc, "
+            "M5 tariff usage_*). Пустая строка отключает проверку — "
+            "приемлемо в dev-режиме."
+        ),
+    )
 
     @property
     def alembic_url(self) -> str:

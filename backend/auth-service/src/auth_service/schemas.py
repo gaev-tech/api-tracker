@@ -78,3 +78,40 @@ class CliRefreshRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     refresh_token: str
+
+
+# === tariff (M5 — Free only; tariff.md §15.1, §16.2) ===
+
+
+class TariffCatalogEntry(BaseModel):
+    """Одна строка каталога тарифов (tariff.md §2).
+
+    В M5 каталог содержит только Free; `monthly_rub`/`annual_rub` отсутствуют.
+    `null` в `task_shares`/`projects`/`teams` (M6 unlimited) — здесь невозможен.
+    """
+
+    tier: str
+    task_shares: int | None
+    projects: int | None
+    teams: int | None
+
+
+class TariffCatalog(BaseModel):
+    entries: list[TariffCatalogEntry]
+
+
+class TariffState(BaseModel):
+    """Состояние тарифа текущего пользователя (tariff.md §15.10, M5-вариант).
+
+    M5: только tariff + usage_*/limit_* для трёх метрик. Поля
+    `auto_renew`, `tariff_until`, `pro_bank_days`, `payment_method_*` — M6
+    (tariff.md §15.10.1, §15.10.5; IPLAN §7.2.2.3).
+    """
+
+    tariff: str
+    usage_task_shares: int
+    limit_task_shares: int | None
+    usage_projects: int
+    limit_projects: int | None
+    usage_teams: int
+    limit_teams: int | None
