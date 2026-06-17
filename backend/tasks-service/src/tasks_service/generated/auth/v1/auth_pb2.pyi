@@ -26,7 +26,7 @@ class User(_message.Message):
     EMAIL_FIELD_NUMBER: _builtins.int
     CREATED_AT_FIELD_NUMBER: _builtins.int
     id: _builtins.str
-    """UUID, строковое представление"""
+    """SHA1-hex (40 chars), PRD §5.2.6"""
     email: _builtins.str
     created_at: _builtins.str
     """ISO-8601 UTC"""
@@ -138,3 +138,52 @@ class GetJWKSResponse(_message.Message):
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 
 Global___GetJWKSResponse: _TypeAlias = GetJWKSResponse  # noqa: Y015
+
+@_typing.final
+class GetUserLimitsRequest(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    USER_ID_FIELD_NUMBER: _builtins.int
+    user_id: _builtins.str
+    def __init__(
+        self,
+        *,
+        user_id: _builtins.str = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["user_id", b"user_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___GetUserLimitsRequest: _TypeAlias = GetUserLimitsRequest  # noqa: Y015
+
+@_typing.final
+class GetUserLimitsResponse(_message.Message):
+    DESCRIPTOR: _descriptor.Descriptor
+
+    TASK_SHARES_FIELD_NUMBER: _builtins.int
+    PROJECTS_FIELD_NUMBER: _builtins.int
+    TEAMS_FIELD_NUMBER: _builtins.int
+    task_shares: _builtins.int
+    """Лимиты по трём метрикам tariff.md §3 для текущего тарифа пользователя.
+    M5: для всех пользователей возвращается Free-каталог (200, 3, 3).
+    Поле 0 семантически означает «не задано»; в M5 значения всегда > 0.
+    null/unlimited (M6) маппится отдельным флагом — отложено до M6.
+    """
+    projects: _builtins.int
+    teams: _builtins.int
+    def __init__(
+        self,
+        *,
+        task_shares: _builtins.int = ...,
+        projects: _builtins.int = ...,
+        teams: _builtins.int = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["projects", b"projects", "task_shares", b"task_shares", "teams", b"teams"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___GetUserLimitsResponse: _TypeAlias = GetUserLimitsResponse  # noqa: Y015

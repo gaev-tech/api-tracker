@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12\x61uth/v1/auth.proto\x12\x07\x61uth.v1\"5\n\x04User\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05\x65mail\x18\x02 \x01(\t\x12\x12\n\ncreated_at\x18\x03 \x01(\t\"&\n\x15GetUserByEmailRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\"#\n\x14GetUsersByIdsRequest\x12\x0b\n\x03ids\x18\x01 \x03(\t\"5\n\x15GetUsersByIdsResponse\x12\x1c\n\x05users\x18\x01 \x03(\x0b\x32\r.auth.v1.User\"\x10\n\x0eGetJWKSRequest\")\n\x0fGetJWKSResponse\x12\x16\n\x0epublic_key_pem\x18\x01 \x01(\t2\xdc\x01\n\x0b\x41uthService\x12?\n\x0eGetUserByEmail\x12\x1e.auth.v1.GetUserByEmailRequest\x1a\r.auth.v1.User\x12N\n\rGetUsersByIds\x12\x1d.auth.v1.GetUsersByIdsRequest\x1a\x1e.auth.v1.GetUsersByIdsResponse\x12<\n\x07GetJWKS\x12\x17.auth.v1.GetJWKSRequest\x1a\x18.auth.v1.GetJWKSResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12\x61uth/v1/auth.proto\x12\x07\x61uth.v1\"5\n\x04User\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05\x65mail\x18\x02 \x01(\t\x12\x12\n\ncreated_at\x18\x03 \x01(\t\"&\n\x15GetUserByEmailRequest\x12\r\n\x05\x65mail\x18\x01 \x01(\t\"#\n\x14GetUsersByIdsRequest\x12\x0b\n\x03ids\x18\x01 \x03(\t\"5\n\x15GetUsersByIdsResponse\x12\x1c\n\x05users\x18\x01 \x03(\x0b\x32\r.auth.v1.User\"\x10\n\x0eGetJWKSRequest\")\n\x0fGetJWKSResponse\x12\x16\n\x0epublic_key_pem\x18\x01 \x01(\t\"\'\n\x14GetUserLimitsRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\t\"M\n\x15GetUserLimitsResponse\x12\x13\n\x0btask_shares\x18\x01 \x01(\x05\x12\x10\n\x08projects\x18\x02 \x01(\x05\x12\r\n\x05teams\x18\x03 \x01(\x05\x32\xac\x02\n\x0b\x41uthService\x12?\n\x0eGetUserByEmail\x12\x1e.auth.v1.GetUserByEmailRequest\x1a\r.auth.v1.User\x12N\n\rGetUsersByIds\x12\x1d.auth.v1.GetUsersByIdsRequest\x1a\x1e.auth.v1.GetUsersByIdsResponse\x12<\n\x07GetJWKS\x12\x17.auth.v1.GetJWKSRequest\x1a\x18.auth.v1.GetJWKSResponse\x12N\n\rGetUserLimits\x12\x1d.auth.v1.GetUserLimitsRequest\x1a\x1e.auth.v1.GetUserLimitsResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -43,6 +43,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETJWKSREQUEST']._serialized_end=234
   _globals['_GETJWKSRESPONSE']._serialized_start=236
   _globals['_GETJWKSRESPONSE']._serialized_end=277
-  _globals['_AUTHSERVICE']._serialized_start=280
-  _globals['_AUTHSERVICE']._serialized_end=500
+  _globals['_GETUSERLIMITSREQUEST']._serialized_start=279
+  _globals['_GETUSERLIMITSREQUEST']._serialized_end=318
+  _globals['_GETUSERLIMITSRESPONSE']._serialized_start=320
+  _globals['_GETUSERLIMITSRESPONSE']._serialized_end=397
+  _globals['_AUTHSERVICE']._serialized_start=400
+  _globals['_AUTHSERVICE']._serialized_end=700
 # @@protoc_insertion_point(module_scope)

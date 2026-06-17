@@ -15,6 +15,10 @@ service AuthService {
 
   // Публичные ключи для верификации JWT (RS256), PEM.
   rpc GetJWKS(GetJWKSRequest) returns (GetJWKSResponse);
+
+  // Лимиты тарифа пользователя (tariff.md §18.2).
+  // В M5 всегда возвращает Free-каталог (200/3/3); динамика — M6.
+  rpc GetUserLimits(GetUserLimitsRequest) returns (GetUserLimitsResponse);
 }
 
 message User {
@@ -40,4 +44,18 @@ message GetJWKSRequest {}
 message GetJWKSResponse {
   // PEM-encoded RSA public key для проверки JWT (algorithm=RS256).
   string public_key_pem = 1;
+}
+
+message GetUserLimitsRequest {
+  string user_id = 1;
+}
+
+message GetUserLimitsResponse {
+  // Лимиты по трём метрикам tariff.md §3 для текущего тарифа пользователя.
+  // M5: для всех пользователей возвращается Free-каталог (200, 3, 3).
+  // Поле 0 семантически означает «не задано»; в M5 значения всегда > 0.
+  // null/unlimited (M6) маппится отдельным флагом — отложено до M6.
+  int32 task_shares = 1;
+  int32 projects = 2;
+  int32 teams = 3;
 }

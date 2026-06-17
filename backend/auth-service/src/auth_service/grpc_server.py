@@ -20,6 +20,7 @@ from auth.v1 import auth_pb2, auth_pb2_grpc  # noqa: E402
 
 from auth_service.crypto import export_public_key_pem  # noqa: E402
 from auth_service.db import get_sessionmaker  # noqa: E402
+from auth_service.services.tariff import get_user_limits  # noqa: E402
 from auth_service.services.users import get_user_by_email, get_user_by_id  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,25 @@ class AuthServiceServicer(auth_pb2_grpc.AuthServiceServicer):  # type: ignore[mi
         self, request: auth_pb2.GetJWKSRequest, context: grpc.aio.ServicerContext
     ) -> auth_pb2.GetJWKSResponse:
         return auth_pb2.GetJWKSResponse(public_key_pem=export_public_key_pem())
+
+    async def GetUserLimits(
+        self,
+        request: auth_pb2.GetUserLimitsRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> auth_pb2.GetUserLimitsResponse:
+        """tariff.md §18.2, IPLAN §7.2.3.
+
+        В M5: запрашиваем tariff у юзера (но игнорируем — все на Free).
+        В M6: будем читать users.tariff и возвращать соответствующие лимиты.
+        """
+        sm = get_sessionmaker()
+        async with sm() as session:
+            user = await get_user_by_id(session, request.user_id)
+        tariff = user.tariff if user is not None else "free"
+        task_shares, projects, teams = get_user_limits(tariff)
+        return auth_pb2.GetUserLimitsResponse(
+            task_shares=task_shares, projects=projects, teams=teams
+        )
 
 
 async def start_grpc_server(port: int = GRPC_PORT) -> grpc.aio.Server:

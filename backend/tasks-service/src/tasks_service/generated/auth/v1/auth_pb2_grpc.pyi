@@ -42,6 +42,10 @@ class AuthServiceStub:
     """Батчевый резолв id→User; неизвестные id опускаются в ответе."""
     GetJWKS: _grpc.UnaryUnaryMultiCallable[_auth_pb2.GetJWKSRequest, _auth_pb2.GetJWKSResponse]
     """Публичные ключи для верификации JWT (RS256), PEM."""
+    GetUserLimits: _grpc.UnaryUnaryMultiCallable[_auth_pb2.GetUserLimitsRequest, _auth_pb2.GetUserLimitsResponse]
+    """Лимиты тарифа пользователя (tariff.md §18.2).
+    В M5 всегда возвращает Free-каталог (200/3/3); динамика — M6.
+    """
 
 @_typing.type_check_only
 class AuthServiceAsyncStub(AuthServiceStub):
@@ -57,6 +61,10 @@ class AuthServiceAsyncStub(AuthServiceStub):
     """Батчевый резолв id→User; неизвестные id опускаются в ответе."""
     GetJWKS: _aio.UnaryUnaryMultiCallable[_auth_pb2.GetJWKSRequest, _auth_pb2.GetJWKSResponse]  # type: ignore[assignment]
     """Публичные ключи для верификации JWT (RS256), PEM."""
+    GetUserLimits: _aio.UnaryUnaryMultiCallable[_auth_pb2.GetUserLimitsRequest, _auth_pb2.GetUserLimitsResponse]  # type: ignore[assignment]
+    """Лимиты тарифа пользователя (tariff.md §18.2).
+    В M5 всегда возвращает Free-каталог (200/3/3); динамика — M6.
+    """
 
 class AuthServiceServicer(metaclass=_abc_1.ABCMeta):
     """Внутренний gRPC-API auth-service.
@@ -87,5 +95,15 @@ class AuthServiceServicer(metaclass=_abc_1.ABCMeta):
         context: _ServicerContext,
     ) -> _typing.Union[_auth_pb2.GetJWKSResponse, _abc.Awaitable[_auth_pb2.GetJWKSResponse]]:
         """Публичные ключи для верификации JWT (RS256), PEM."""
+
+    @_abc_1.abstractmethod
+    def GetUserLimits(
+        self,
+        request: _auth_pb2.GetUserLimitsRequest,
+        context: _ServicerContext,
+    ) -> _typing.Union[_auth_pb2.GetUserLimitsResponse, _abc.Awaitable[_auth_pb2.GetUserLimitsResponse]]:
+        """Лимиты тарифа пользователя (tariff.md §18.2).
+        В M5 всегда возвращает Free-каталог (200/3/3); динамика — M6.
+        """
 
 def add_AuthServiceServicer_to_server(servicer: AuthServiceServicer, server: _typing.Union[_grpc.Server, _aio.Server]) -> None: ...

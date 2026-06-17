@@ -53,6 +53,11 @@ class AuthServiceStub:
                 request_serializer=auth_dot_v1_dot_auth__pb2.GetJWKSRequest.SerializeToString,
                 response_deserializer=auth_dot_v1_dot_auth__pb2.GetJWKSResponse.FromString,
                 _registered_method=True)
+        self.GetUserLimits = channel.unary_unary(
+                '/auth.v1.AuthService/GetUserLimits',
+                request_serializer=auth_dot_v1_dot_auth__pb2.GetUserLimitsRequest.SerializeToString,
+                response_deserializer=auth_dot_v1_dot_auth__pb2.GetUserLimitsResponse.FromString,
+                _registered_method=True)
 
 
 class AuthServiceServicer:
@@ -83,6 +88,14 @@ class AuthServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetUserLimits(self, request, context):
+        """Лимиты тарифа пользователя (tariff.md §18.2).
+        В M5 всегда возвращает Free-каталог (200/3/3); динамика — M6.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -100,6 +113,11 @@ def add_AuthServiceServicer_to_server(servicer, server):
                     servicer.GetJWKS,
                     request_deserializer=auth_dot_v1_dot_auth__pb2.GetJWKSRequest.FromString,
                     response_serializer=auth_dot_v1_dot_auth__pb2.GetJWKSResponse.SerializeToString,
+            ),
+            'GetUserLimits': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetUserLimits,
+                    request_deserializer=auth_dot_v1_dot_auth__pb2.GetUserLimitsRequest.FromString,
+                    response_serializer=auth_dot_v1_dot_auth__pb2.GetUserLimitsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -187,6 +205,33 @@ class AuthService:
             '/auth.v1.AuthService/GetJWKS',
             auth_dot_v1_dot_auth__pb2.GetJWKSRequest.SerializeToString,
             auth_dot_v1_dot_auth__pb2.GetJWKSResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetUserLimits(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/auth.v1.AuthService/GetUserLimits',
+            auth_dot_v1_dot_auth__pb2.GetUserLimitsRequest.SerializeToString,
+            auth_dot_v1_dot_auth__pb2.GetUserLimitsResponse.FromString,
             options,
             channel_credentials,
             insecure,
