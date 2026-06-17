@@ -1,7 +1,17 @@
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import ARRAY, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import (
+    ARRAY,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -291,3 +301,137 @@ class TaskTeamShare(Base):
     perms: Mapped[list[str]] = mapped_column(
         ARRAY(String(50)), default=list, nullable=False, server_default="{}"
     )
+
+
+# === Automations / secrets / event-log / webhook-outbox (M3) ===
+
+
+class AutomationTriggerType(StrEnum):
+    """Тип триггера автоматизации (PRD §8.4)."""
+
+    EVENT = "event"
+    CRON = "cron"
+
+
+class AutomationActionType(StrEnum):
+    """Тип действия автоматизации (PRD §8.5)."""
+
+    WEBHOOK = "webhook"
+    SYSTEM_METHOD = "system_method"
+
+
+class WebhookOutboxStatus(StrEnum):
+    """Статус записи в очереди webhook-доставки (PRD §8.6, ARCH §12)."""
+
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    SENT = "sent"
+    DEAD_LETTER = "dead_letter"
+
+
+class Automation(Base):
+    """Автоматизация проекта (PRD §5.1.5, §8, ARCH §3.5.12, §11)."""
+
+    __tablename__ = "automations"
+
+    id: Mapped[str] = mapped_column(String(_SID), primary_key=True)
+    project_id: Mapped[str] = mapped_column(
+        String(_SID),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    trigger_type: Mapped[AutomationTriggerType] = mapped_column(
+        String(20), nullable=False
+    )
+    trigger_config: Mapped[dict[str, object]] = mapped_column(
+        JSONB, default=dict, nullable=False
+    )
+    action_type: Mapped[AutomationActionType] = mapped_column(
+        String(20), nullable=False
+    )
+    action_config: Mapped[dict[str, object]] = mapped_column(
+        JSONB, default=dict, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+
+class ProjectSecret(Base):
+    """Зашифрованный секрет проекта (PRD §5.1.6, §8.7, ARCH §3.5.13, §13)."""
+
+    __tablename__ = "project_secrets"
+
+    id: Mapped[str] = mapped_column(String(_SID), primary_key=True)
+    project_id: Mapped[str] = mapped_column(
+        String(_SID),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    value_encrypted: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "name", name="uq_project_secrets_project_name"),
+    )
+
+
+class EventLog(Base):
+    """Журнал событий мутаций задач для reactive matcher (ARCH §3.5.15, §11.2)."""
+
+    __tablename__ = "event_log"
+
+    id: Mapped[str] = mapped_column(String(_SID), primary_key=True)
+    source_task_id: Mapped[str] = mapped_column(
+        String(_SID),
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    payload: Mapped[dict[str, object]] = mapped_column(
+        JSONB, default=dict, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    __table_args__ = (Index("ix_event_log_unprocessed", "processed_at", "created_at"),)
+
+
+class WebhookOutbox(Base):
+    """Очередь доставки webhook-действий с retry (ARCH §3.5.16, §12)."""
+
+    __tablename__ = "webhook_outbox"
+
+    id: Mapped[str] = mapped_column(String(_SID), primary_key=True)
+    automation_id: Mapped[str] = mapped_column(
+        String(_SID),
+        ForeignKey("automations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    attempt: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    scheduled_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    status: Mapped[WebhookOutboxStatus] = mapped_column(
+        String(20),
+        default=WebhookOutboxStatus.PENDING,
+        nullable=False,
+    )
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    payload: Mapped[dict[str, object]] = mapped_column(
+        JSONB, default=dict, nullable=False
+    )
+
+    __table_args__ = (Index("ix_webhook_outbox_ready", "status", "scheduled_at"),)
