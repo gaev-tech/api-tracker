@@ -14,6 +14,14 @@
 
 1.5 Перед началом M0 старые файлы спек (`api-spec.md`, `architecture-api.md`, `architecture-cli.md`, `architecture-ui.md`, `design-system.html`, `plan-design-system.html`, `prd.md`, `roadmap.md`) и предыдущая кодовая база (`backend/`, `frontend/`, `contracts/`, `deploy/`, `buf.yaml`, `Makefile`) удаляются.
 
+1.6 Прогресс по состоянию на 2026-06-17:
+
+1.6.1 M0..M3 закрыты (последний коммит M3.15 — unit-тесты webhook backoff).
+
+1.6.2 M5 закрыт: миграция `users.tariff` + Free-каталог + gRPC GetUserLimits + REST `tariff/catalog`/`me/tariff` + tasks-svc limit enforcement + CLI `tariff show/catalog` + TC §11.1.
+
+1.6.3 M4 (docs-client) и M6 (Pro/Max и ЮКасса биллинг) — следующие в плане.
+
 ## 2. M0 — Skeleton deploy
 
 ### 2.1 Цель
