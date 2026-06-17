@@ -1,0 +1,437 @@
+{
+  "generator": "generate-search-index.py",
+  "items": [
+    {
+      "type": "page",
+      "name": "Overview",
+      "description": "What api-tracker is and how to navigate the docs.",
+      "url": "/"
+    },
+    {
+      "type": "page",
+      "name": "Quickstart",
+      "description": "Install, log in, create a task, read it back. Four steps.",
+      "url": "/quickstart"
+    },
+    {
+      "type": "page",
+      "name": "Installation",
+      "description": "All install channels — available now and coming in M4.B.",
+      "url": "/installation"
+    },
+    {
+      "type": "page",
+      "name": "CLI Reference",
+      "description": "Every clite command, generated from typer introspection.",
+      "url": "/cli"
+    },
+    {
+      "type": "page",
+      "name": "RSQL Reference",
+      "description": "Operators, fields, and examples for the --filter language.",
+      "url": "/rsql"
+    },
+    {
+      "type": "page",
+      "name": "Events",
+      "description": "Catalog of event_type values emitted on task mutations.",
+      "url": "/events"
+    },
+    {
+      "type": "page",
+      "name": "System Methods",
+      "description": "Whitelisted methods callable by automations.",
+      "url": "/system-methods"
+    },
+    {
+      "type": "page",
+      "name": "Automations",
+      "description": "Trigger types, action shape, secret handling.",
+      "url": "/automations"
+    },
+    {
+      "type": "tutorial",
+      "name": "Getting Started",
+      "description": "Install, log in, create your first task, read history.",
+      "url": "/tutorials/getting-started"
+    },
+    {
+      "type": "tutorial",
+      "name": "RSQL primer",
+      "description": "Operators, logic, per-field examples for the filter language.",
+      "url": "/tutorials/rsql-primer"
+    },
+    {
+      "type": "tutorial",
+      "name": "AI-driven workflow",
+      "description": "Bulk-create, me literal, batch updates, history-as-audit-trail.",
+      "url": "/tutorials/ai-driven-workflow"
+    },
+    {
+      "type": "tutorial",
+      "name": "Writing automations",
+      "description": "Cron and event triggers, secrets, Jinja templates, debugging.",
+      "url": "/tutorials/writing-automations"
+    },
+    {
+      "type": "command",
+      "name": "clite login",
+      "description": "Magic-link login. Пользователь кликает по ссылке из почты — CLI ждёт.",
+      "url": "/cli/login"
+    },
+    {
+      "type": "command",
+      "name": "clite logout",
+      "description": "Удалить локальные credentials. Серверная сессия остаётся (revoke — Post-MVP).",
+      "url": "/cli/logout"
+    },
+    {
+      "type": "command",
+      "name": "clite me",
+      "description": "Показать текущего пользователя (по локальным credentials).",
+      "url": "/cli/me"
+    },
+    {
+      "type": "command",
+      "name": "clite version",
+      "description": "Показать версию CLI.",
+      "url": "/cli/version"
+    },
+    {
+      "type": "command",
+      "name": "clite get",
+      "description": "Чтение данных",
+      "url": "/cli/get"
+    },
+    {
+      "type": "command",
+      "name": "clite get tasks",
+      "description": "Список задач с RSQL-фильтром (PRD §7.1).",
+      "url": "/cli/get-tasks"
+    },
+    {
+      "type": "command",
+      "name": "clite get teams",
+      "description": "Список моих команд.",
+      "url": "/cli/get-teams"
+    },
+    {
+      "type": "command",
+      "name": "clite get team",
+      "description": "Одна команда: имя + участники + перм-флаги.",
+      "url": "/cli/get-team"
+    },
+    {
+      "type": "command",
+      "name": "clite get projects",
+      "description": "Список моих проектов.",
+      "url": "/cli/get-projects"
+    },
+    {
+      "type": "command",
+      "name": "clite get project",
+      "description": "Один проект: имя + участники + task_ids.",
+      "url": "/cli/get-project"
+    },
+    {
+      "type": "command",
+      "name": "clite get automations",
+      "description": "Список автоматизаций проекта (PRD §8).",
+      "url": "/cli/get-automations"
+    },
+    {
+      "type": "command",
+      "name": "clite get automation",
+      "description": "Одна автоматизация: trigger_config + action_config.",
+      "url": "/cli/get-automation"
+    },
+    {
+      "type": "command",
+      "name": "clite get secrets",
+      "description": "Список секретов проекта (имена БЕЗ значений, ARCH §13.2).",
+      "url": "/cli/get-secrets"
+    },
+    {
+      "type": "command",
+      "name": "clite get log",
+      "description": "История событий: ровно один из --task или --user.",
+      "url": "/cli/get-log"
+    },
+    {
+      "type": "command",
+      "name": "clite create",
+      "description": "Создание сущностей",
+      "url": "/cli/create"
+    },
+    {
+      "type": "command",
+      "name": "clite create tasks",
+      "description": "Массовое создание задач. Требуется ровно один из --bulk или --batch.",
+      "url": "/cli/create-tasks"
+    },
+    {
+      "type": "command",
+      "name": "clite create team",
+      "description": "Создать команду; создатель — единственный участник со всеми правами.",
+      "url": "/cli/create-team"
+    },
+    {
+      "type": "command",
+      "name": "clite create project",
+      "description": "Создать проект; создатель получает все project + task perms.",
+      "url": "/cli/create-project"
+    },
+    {
+      "type": "command",
+      "name": "clite create automation",
+      "description": "Создать автоматизацию проекта (PRD §8, ARCH §11).",
+      "url": "/cli/create-automation"
+    },
+    {
+      "type": "command",
+      "name": "clite create secret",
+      "description": "Создать или перезаписать секрет проекта (PRD §8.7, ARCH §13).",
+      "url": "/cli/create-secret"
+    },
+    {
+      "type": "command",
+      "name": "clite update",
+      "description": "Массовое обновление",
+      "url": "/cli/update"
+    },
+    {
+      "type": "command",
+      "name": "clite update tasks",
+      "description": "Массовое обновление по RSQL-фильтру. Ровно один из --bulk или --batch.",
+      "url": "/cli/update-tasks"
+    },
+    {
+      "type": "command",
+      "name": "clite update automation",
+      "description": "PATCH автоматизации. Любое не указанное поле не меняется.",
+      "url": "/cli/update-automation"
+    },
+    {
+      "type": "command",
+      "name": "clite rename",
+      "description": "Переименование сущностей",
+      "url": "/cli/rename"
+    },
+    {
+      "type": "command",
+      "name": "clite rename team",
+      "description": "Переименовать команду (требуется perm `edit_team_name`).",
+      "url": "/cli/rename-team"
+    },
+    {
+      "type": "command",
+      "name": "clite rename project",
+      "description": "Переименовать проект (требуется perm `edit_project_name`).",
+      "url": "/cli/rename-project"
+    },
+    {
+      "type": "command",
+      "name": "clite leave",
+      "description": "Self-revoke (PRD §7.8)",
+      "url": "/cli/leave"
+    },
+    {
+      "type": "command",
+      "name": "clite leave team",
+      "description": "Выйти из команды; если был последним — команда удаляется (PRD §6.1.6).",
+      "url": "/cli/leave-team"
+    },
+    {
+      "type": "command",
+      "name": "clite leave project",
+      "description": "Выйти из проекта (PRD §7.8.3).",
+      "url": "/cli/leave-project"
+    },
+    {
+      "type": "command",
+      "name": "clite add",
+      "description": "Добавить участника",
+      "url": "/cli/add"
+    },
+    {
+      "type": "command",
+      "name": "clite add member",
+      "description": "Добавить/изменить участника команды или проекта.",
+      "url": "/cli/add-member"
+    },
+    {
+      "type": "command",
+      "name": "clite delete",
+      "description": "Удаление сущностей",
+      "url": "/cli/delete"
+    },
+    {
+      "type": "command",
+      "name": "clite delete automation",
+      "description": "Удалить автоматизацию (TC §9.4).",
+      "url": "/cli/delete-automation"
+    },
+    {
+      "type": "command",
+      "name": "clite delete secret",
+      "description": "Удалить секрет проекта (TC §10.4).",
+      "url": "/cli/delete-secret"
+    },
+    {
+      "type": "command",
+      "name": "clite run",
+      "description": "Запуск (immediate trigger)",
+      "url": "/cli/run"
+    },
+    {
+      "type": "command",
+      "name": "clite run automation",
+      "description": "Запустить action автоматизации немедленно (TC §9.3.1).",
+      "url": "/cli/run-automation"
+    },
+    {
+      "type": "command",
+      "name": "clite tariff",
+      "description": "Тариф (M5 — Free)",
+      "url": "/cli/tariff"
+    },
+    {
+      "type": "command",
+      "name": "clite tariff show",
+      "description": "Состояние тарифа текущего пользователя (Bearer auth).",
+      "url": "/cli/tariff-show"
+    },
+    {
+      "type": "command",
+      "name": "clite tariff catalog",
+      "description": "Каталог тарифов (public, без auth).",
+      "url": "/cli/tariff-catalog"
+    },
+    {
+      "type": "rsql-field",
+      "name": "task.id",
+      "description": "Task id; 4..40 hex.",
+      "url": "/rsql"
+    },
+    {
+      "type": "rsql-field",
+      "name": "task.title",
+      "description": "Verbatim match.",
+      "url": "/rsql"
+    },
+    {
+      "type": "rsql-field",
+      "name": "task.status",
+      "description": "open | done (PRD §5.1).",
+      "url": "/rsql"
+    },
+    {
+      "type": "rsql-field",
+      "name": "task.labels",
+      "description": "=in= / =out= only.",
+      "url": "/rsql"
+    },
+    {
+      "type": "rsql-field",
+      "name": "task.assignee",
+      "description": "Accepts `me` literal (PRD §5.4).",
+      "url": "/rsql"
+    },
+    {
+      "type": "rsql-field",
+      "name": "task.created_at",
+      "description": "ISO-8601 string.",
+      "url": "/rsql"
+    },
+    {
+      "type": "rsql-field",
+      "name": "history.task_id",
+      "description": "History row's task.",
+      "url": "/rsql"
+    },
+    {
+      "type": "rsql-field",
+      "name": "history.actor",
+      "description": "Who made the change.",
+      "url": "/rsql"
+    },
+    {
+      "type": "rsql-field",
+      "name": "history.action",
+      "description": "created | updated | …",
+      "url": "/rsql"
+    },
+    {
+      "type": "rsql-field",
+      "name": "history.happened_at",
+      "description": "ISO-8601.",
+      "url": "/rsql"
+    },
+    {
+      "type": "event",
+      "name": "task.created",
+      "description": "Emitted right after a bulk-create commits each task.",
+      "url": "/events"
+    },
+    {
+      "type": "event",
+      "name": "task.updated",
+      "description": "Generic update — any field changed (PRD §7.1).",
+      "url": "/events"
+    },
+    {
+      "type": "event",
+      "name": "task.status_changed",
+      "description": "Dedicated event when `status` is among the changed fields.",
+      "url": "/events"
+    },
+    {
+      "type": "event",
+      "name": "task.assigned",
+      "description": "Dedicated event when `assignee` is among the changed fields.",
+      "url": "/events"
+    },
+    {
+      "type": "event",
+      "name": "task.labeled",
+      "description": "Dedicated event when `labels` are among the changed fields.",
+      "url": "/events"
+    },
+    {
+      "type": "event",
+      "name": "task.deleted",
+      "description": "Reserved for future hard-delete (not yet emitted).",
+      "url": "/events"
+    },
+    {
+      "type": "system-method",
+      "name": "tasks.list",
+      "description": "List tasks matching an RSQL filter, with optional limit.",
+      "url": "/system-methods"
+    },
+    {
+      "type": "system-method",
+      "name": "tasks.create",
+      "description": "Create exactly one task (thin wrapper over bulk_create[0]).",
+      "url": "/system-methods"
+    },
+    {
+      "type": "system-method",
+      "name": "tasks.bulk_update",
+      "description": "Apply the same patch to every task matching the RSQL filter.",
+      "url": "/system-methods"
+    },
+    {
+      "type": "system-method",
+      "name": "tasks.batch_update",
+      "description": "Atomic update for tasks; raises if any fails its permission check.",
+      "url": "/system-methods"
+    },
+    {
+      "type": "system-method",
+      "name": "tasks.share",
+      "description": "Grant direct task perms to a user or team.",
+      "url": "/system-methods"
+    }
+  ]
+}

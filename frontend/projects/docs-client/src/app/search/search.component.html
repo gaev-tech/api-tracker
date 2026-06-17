@@ -1,8 +1,36 @@
 <div class="search">
-  <span class="search__icon" aria-hidden="true">
-    <span class="search__icon-ring"></span>
-    <span class="search__icon-handle"></span>
-  </span>
-  <span class="search__placeholder">Search docs… (M4.8)</span>
-  <span class="search__shortcut">/</span>
+  <label class="search__box">
+    <span class="search__icon" aria-hidden="true">
+      <span class="search__icon-ring"></span>
+      <span class="search__icon-handle"></span>
+    </span>
+    <input
+      class="search__input"
+      type="text"
+      placeholder="Search docs…"
+      [formControl]="queryControl"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+    />
+  </label>
+
+  @if (open() && results().length > 0) {
+    <div class="search__panel">
+      @for (r of results(); track r.url + ':' + r.name) {
+        <button class="search__result" (mousedown)="pick(r)" type="button">
+          <span class="search__result-type">{{ typeLabel(r.type) }}</span>
+          <span class="search__result-body">
+            <span class="search__result-name">{{ r.name }}</span>
+            @if (r.description) {
+              <span class="search__result-desc">{{ r.description }}</span>
+            }
+          </span>
+        </button>
+      }
+    </div>
+  } @else if (open() && results().length === 0) {
+    <div class="search__panel">
+      <div class="search__empty">No matches.</div>
+    </div>
+  }
 </div>
