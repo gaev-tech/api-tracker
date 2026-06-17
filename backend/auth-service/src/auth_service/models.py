@@ -32,6 +32,11 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
+    # tariff.md §7.1.1, IPLAN §7.2.1 — M5: только колонка tariff.
+    # Полный набор биллинговых колонок появится в M6 (см. tariff.md §7.1.2–§7.1.7).
+    tariff: Mapped[str] = mapped_column(
+        String(10), default="free", server_default="free", nullable=False
+    )
 
 
 class MagicToken(Base):
