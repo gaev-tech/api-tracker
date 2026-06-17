@@ -89,9 +89,9 @@ def test_TC_3_3_8_get_tasks_fields(clite, mk_task):
         assert set(item.keys()) == {"id", "title", "status"}
 
 
-def test_TC_3_update_tasks_bulk_by_id_prefix(clite, mk_task):
-    """update tasks --bulk --filter id==<prefix> --set status=done — заменяет
-    single-task update."""
+def test_TC_3_7_10_update_one_task_by_id_prefix(clite, mk_task):
+    """3.7.10 — update tasks --bulk --filter id==<prefix> --set status=done — на
+    смену удалённому single-task update (PRD §7.6a.4)."""
     t = mk_task("TC-3.update")
     prefix = t["id"][:10]
     r = clite(

@@ -62,59 +62,69 @@
 
 2.9 Обрыв сети → exit 1, stderr `connection failed`.
 
-## 3. clite task
+## 3. clite create / get / update tasks
 
-M2.28: single-create (`task create [opts]`) и single-update (`task update <id>`) удалены — все мутации через bulk/batch. Single-task get/list объединены в callback `clite task [--filter ...]`. Просмотр одной задачи: `clite task --filter 'id==<prefix>'`.
+M2.28 удалил single-task мутации. M2.30 перевёл поверхность на verb-first (v2.0.0): все task-операции через `clite create tasks`, `clite get tasks`, `clite update tasks`. Просмотр одной задачи — `clite get tasks --filter 'id==<prefix>'`. Прямое шарингование задач после создания через CLI отсутствует — `user_shares`/`team_shares` задаются только в JSON-массиве `create tasks`.
 
-### 3.1 task create bulk — позитивные
+### 3.1 create tasks — позитивные
 
-3.1.1 Минимальный: `task create bulk '[{"title":"T1"}]'` → exit 0; в результате task_id (SHA1). БД: задача создана со статусом `open`, assignee = SOLO_USER (M1) или текущий пользователь (M2+).
+3.1.1 Минимальный: `create tasks --bulk '[{"title":"T1"}]'` → exit 0; в `results[0].task_id` — SHA1. БД: задача создана, `status="open"`, assignee = текущий пользователь.
 
-3.1.2 С описанием: `--title "T2" --description "## Hello"`. exit 0. БД: `description_md = "## Hello"`.
+3.1.2 С описанием: `--bulk '[{"title":"T2","description_md":"## Hello"}]'` → exit 0. БД: `description_md = "## Hello"`.
 
-3.1.3 С метками: `--title "T3" --label bug --label urgent`. exit 0. БД: `labels = ["bug", "urgent"]`.
+3.1.3 С метками: `--bulk '[{"title":"T3","labels":["bug","urgent"]}]'` → exit 0. БД: `labels = ["bug","urgent"]`.
 
-3.1.4 С блокирующей задачей: `--title "T4" --blocked-by <key или префикс существующей задачи>`. exit 0. БД: запись в `task_blockers`.
+3.1.4 С блокирующей задачей: `--bulk '[{"title":"T4","blocked_by":["<sha-or-prefix>"]}]'` → exit 0. БД: запись в `task_blockers`.
 
-3.1.5 Статус: `--title "T5" --status done`. exit 0. БД: `status = "done"`.
+3.1.5 Статус: `--bulk '[{"title":"T5","status":"done"}]'` → exit 0. БД: `status="done"`.
 
-3.1.6 stdin JSON: `echo '{"title":"T6","labels":["x"]}' | clite task create -`. exit 0. БД: задача создана.
+3.1.6 С прямым шарингом пользователю: `--bulk '[{"title":"T6","user_shares":[{"email":"x@x.com","perms":["edit_title","edit_status"]}]}]'` → exit 0. БД: запись в `task_user_shares`.
 
-3.1.7 С шарингом (M2+): `--title "T7" --share-user other@x.com:edit_title,edit_status`. exit 0. БД: запись в `task_user_shares`.
+3.1.7 С шарингом команде: `"team_shares":[{"team_id":"<key>","perms":["edit_title"]}]` → exit 0. БД: запись в `task_team_shares`.
 
-3.1.8 С командой (M2+): `--title "T8" --share-team <key команды, в которой я>:edit_title`. exit 0.
+3.1.8 С проектом: `"projects":["<project-key>"]` → exit 0. БД: запись в `project_tasks` (требует `manage_projects` в проекте).
 
-3.1.9 С проектом (M2+): `--title "T9" --project <key проекта, в котором у меня manage_projects>`. exit 0.
+3.1.9 `--file tasks.json` — массив из JSON-файла. exit 0.
 
-### 3.2 task create — негативные
+3.1.10 `--file tasks.csv` — header-row = поля; массивы `labels,projects,blocked_by` — `;`-separated в ячейке (PRD §7.7). exit 0.
 
-3.2.1 Без `--title` → exit 2, stderr `title required`.
+3.1.11 `--batch` вместо `--bulk` — атомарная семантика (PRD §7.3): первая же ошибка → exit 2, ничего не создано.
 
-3.2.2 `--status invalid_value` → exit 2, stderr `status must be one of open|done|archived`.
+### 3.2 create tasks — негативные
 
-3.2.3 `--blocked-by` с несуществующим ключом → exit 1, stderr `task not found: <key>`.
+3.2.1 Без `--bulk` и `--batch` → exit 2, stderr `requires exactly one of --bulk or --batch`.
 
-3.2.4 `--label ""` пустая строка → exit 2, stderr `label cannot be empty`.
+3.2.2 С `--bulk` и `--batch` одновременно → exit 2, stderr `--bulk and --batch are mutually exclusive`.
 
-3.2.5 `--label` с дубликатом → exit 2, stderr `duplicate label`.
+3.2.3 Без `title` в одном из элементов → в `--bulk` per-item `status=validation_failed`; в `--batch` exit 2.
 
-3.2.6 (M2+) Anchor-rule нарушен: `--title "X"` без `--project`, `--share-user`, `--share-team`. exit 2, stderr `task must have at least one anchor: --project, --share-user (with self), or --share-team (with own team)`.
+3.2.4 `status` не из enum → per-item `validation_failed` в `--bulk` / exit 2 в `--batch`.
 
-3.2.7 (M2+) `--share-team` с командой, в которой я не состою → exit 4, stderr `forbidden: not a team member`.
+3.2.5 `blocked_by` с несуществующим ключом → per-item `not_found` в `--bulk` / exit 1 в `--batch`.
 
-3.2.8 (M2+) `--share-user other@x.com:<perm-выше-моих>` → exit 4, stderr `cannot grant permission higher than your own`.
+3.2.6 Anchor-rule нарушен: нет ни `projects`, ни `user_shares` с self, ни `team_shares` со своей командой (PRD §6.6) → per-item `validation_failed`.
 
-3.2.9 (M2+) `--project` с проектом, в котором нет `manage_projects` → exit 4.
+3.2.7 `team_shares` с командой, в которой я не состою (PRD §6.7.1) → exit 4 forbidden.
 
-### 3.3 task list — позитивные
+3.2.8 `user_shares` с правом выше своего (PRD §6.1.7) → exit 4 `cannot grant above self`.
 
-3.3.1 Без фильтра → первые 50 задач, отсортированы по `created_at asc`.
+3.2.9 `projects` с проектом без `manage_projects` → exit 4.
+
+3.2.10 Невалидный JSON в позиционном аргументе → exit 2, stderr `invalid JSON`.
+
+3.2.11 `--file` указывает на несуществующий файл → exit 2 (см. 2.4).
+
+3.2.12 `--file <p.csv>` с некорректным header (отсутствует `title`) → exit 2.
+
+### 3.3 get tasks — позитивные
+
+3.3.1 Без фильтра → первые 50 задач, отсортированы по `created_at asc` (PRD §7.1.1, §7.1.2).
 
 3.3.2 `--filter "status==open"` → только open.
 
-3.3.3 `--filter "labels=in=(bug,urgent)"` → пересечение по меткам.
+3.3.3 `--filter "labels=in=(bug,urgent)"` → задачи с хотя бы одной из меток.
 
-3.3.4 `--filter "assignee==me"` → задачи на текущего пользователя.
+3.3.4 `--filter "assignee==me"` → задачи на текущего пользователя (PRD §7.1.4).
 
 3.3.5 `--cursor <opaque>` → следующая страница.
 
@@ -122,9 +132,9 @@ M2.28: single-create (`task create [opts]`) и single-update (`task update <id>`
 
 3.3.7 `--output json` → ответ в JSON.
 
-3.3.8 `--fields id,title,status` → table/json содержит только эти три колонки; остальные поля задачи опущены.
+3.3.8 `--fields id,title,status` → в выводе только указанные поля (PRD §7.9).
 
-### 3.4 task list — негативные
+### 3.4 get tasks — негативные
 
 3.4.1 `--filter "invalid syntax"` → exit 2, stderr `RSQL parse error at position N`.
 
@@ -136,95 +146,95 @@ M2.28: single-create (`task create [opts]`) и single-update (`task update <id>`
 
 3.4.5 `--cursor "garbage"` → exit 2, stderr `invalid cursor`.
 
-### 3.5 task get (через --filter) — позитивные
+### 3.5 get tasks через `--filter` (вместо удалённого single-get) — позитивные
 
-3.5.1 `clite task --filter 'id==<existing-SHA1>'` → exit 0; items содержит ровно одну задачу.
+3.5.1 `get tasks --filter 'id==<existing-SHA1>'` → exit 0; `items` содержит ровно одну задачу.
 
-3.5.2 `clite task --filter 'id==<prefix>'` (4+ hex-символов) → exit 0; items содержит все задачи с этим префиксом (LIKE-match, PRD §5.2.7).
+3.5.2 `get tasks --filter 'id==<prefix>'` (4+ hex) → exit 0; `items` содержит все задачи с этим префиксом (LIKE-match, PRD §5.2.7).
 
-3.5.3 `clite task --filter 'id==<sha>' --fields id,title` → в выводе только `id` и `title`.
+3.5.3 `--fields id,title` — в выводе только указанные поля.
 
-### 3.6 task get (через --filter) — негативные
+### 3.6 get tasks через `--filter` — негативные
 
 3.6.1 Несуществующий ключ → exit 0, `items: []` (list-семантика).
 
-3.6.2 (M2+) Задача существует, но у меня нет прав → отсутствует в `items` (видимость).
+3.6.2 Задача существует, но у меня нет прав → отсутствует в `items` (видимость, PRD §6.2).
 
-### 3.7 task update single → bulk by id-prefix
+### 3.7 update tasks — позитивные
 
-3.7.1 Single-task update удалён в M2.28; изменить одну задачу — `task update bulk --filter 'id==<sha-prefix>' --set status=done`.
+3.7.1 `update tasks --filter "labels=in=(bug)" --set status=done --bulk` → exit 0; stdout содержит `results`, `total`, `succeeded`.
 
-3.7.2 Все варианты single-update переписаны на bulk с фильтром id.
+3.7.2 `--set title=X --set description_md=...` — комбинация полей.
 
-### 3.9 task update bulk — позитивные
+3.7.3 `--set add_labels=urgent --bulk` — добавление метки без перезаписи остальных.
 
-3.9.1 `--filter "labels=in=(bug)" --set status=done` → exit 0. stdout: `results: [...]`, `total = N`, `succeeded = K`.
+3.7.4 `--set remove_labels=bug --bulk` — удаление одной метки.
 
-3.9.2 Все попавшие задачи мне доступны → `succeeded == total`.
+3.7.5 `--set labels=a,b --bulk` — полная перезапись массива меток (CSV).
 
-### 3.10 task update bulk — негативные
+3.7.6 `--set assignee=other@x.com --bulk` — назначение через email.
 
-3.10.1 (M2+) Часть задач без прав → exit 0, в `results` есть `forbidden`-записи; остальные применены.
+3.7.7 `--set projects=K1,K2 --bulk` — привязка задач к проектам (CSV) (PRD §7.6a).
 
-3.10.2 Фильтр охватывает >10000 задач → exit 1, stderr `too_many_matches` (ARCH §9.3).
+3.7.8 `--set projects= --bulk` (пустое значение) — отвязка от всех проектов.
 
-3.10.3 Невалидный `--set field=value` (тип не совпадает) → exit 2.
+3.7.9 `--set add_blockers=K --bulk` / `--set remove_blockers=K --bulk` — управление блокирующими задачами.
 
-### 3.11 task update batch — позитивные
+3.7.10 Изменение одной конкретной задачи: `update tasks --filter 'id==<prefix>' --set status=done --bulk` (на смену удалённому single-update, PRD §7.6a.4).
 
-3.11.1 `--filter ... --set ...` со всеми доступными мне задачами → exit 0, все обновлены.
+3.7.11 `--batch` — атомарная семантика: либо все совпавшие задачи обновлены, либо ни одна (PRD §7.3.1).
 
-### 3.12 task update batch — негативные
+### 3.8 update tasks — негативные
 
-3.12.1 (M2+) Хотя бы одна задача в выборке без прав → exit 4, stderr `atomic batch failed on task <id>: forbidden`. Состояние БД не изменилось.
+3.8.1 Без `--filter` → exit 2 (required).
 
-3.12.2 Невалидное значение для одной из задач → exit 2, ничего не изменилось.
+3.8.2 Без `--set` → exit 2 (требуется ≥1).
 
-### 3.13 task create bulk — позитивные
+3.8.3 Без `--bulk` и `--batch` → exit 2 (см. 3.2.1).
 
-3.13.1 `--from tasks.json` с массивом из N валидных задач → exit 0, stdout — массив `results` с per-item статусом.
+3.8.4 `--set unknown_field=v` → exit 2, stderr `unknown field 'unknown_field'`.
 
-### 3.14 task create bulk — негативные
+3.8.5 `--set status=invalid` → per-item `validation_failed` в `--bulk` / exit 2 в `--batch`.
 
-3.14.1 Одна из задач не имеет якоря → exit 0, в `results` для этой задачи `status = validation_failed`.
+3.8.6 Часть задач без прав в `--bulk` → exit 0; в `results` есть `forbidden`; остальные применены (PRD §7.2).
 
-3.14.2 Невалидный JSON → exit 2 (см. 2.3).
+3.8.7 Часть задач без прав в `--batch` → exit 4, stderr `atomic batch failed on task <id>: forbidden`; БД не изменилась (PRD §7.3.2).
 
-### 3.15 task create batch
+3.8.8 Фильтр охватывает >10 000 задач → exit 1, stderr `too_many_matches` (ARCH §9.3).
 
-3.15.1 Все валидны → exit 0, все созданы.
+## 4. clite get log
 
-3.15.2 Одна не валидна → exit 2, ничего не создано.
+История событий — `clite get log` с обязательным ровно одним из `--task <key>` или `--user <email|me>` (PRD §9.3, §9.4).
 
-## 4. clite history
+### 4.1 get log --task — позитивные
 
-### 4.1 history --task — позитивные
+4.1.1 `get log --task <key>` → exit 0, до 50 событий, отсортированы по `created_at desc`.
 
-4.1.1 `clite history --task <key>` → exit 0, до 50 событий, отсортированы по `created_at desc`.
+4.1.2 `--cursor <opaque>` → следующая страница.
 
-4.1.2 С `--cursor` → следующая страница.
+4.1.3 `--fields at,event_type,actor` → в выводе только указанные поля (PRD §7.9).
 
-### 4.2 history --task — негативные
+### 4.2 get log --task — негативные
 
 4.2.1 Несуществующий ключ → exit 1.
 
-4.2.2 (M2+) Нет прав чтения задачи → exit 4.
+4.2.2 Нет прав чтения задачи → exit 4 (PRD §6.1.8).
 
-### 4.3 history --user (M2+) — позитивные
+### 4.3 get log --user — позитивные
 
-4.3.1 `clite history --user me` → собственные события.
+4.3.1 `get log --user me` → собственные события; работает и для свежезалогиненного пользователя (страница может быть пустой), и после действий — события появляются.
 
-4.3.2 `clite history --user other@x.com` → события другого пользователя, только те, что касаются доступных мне задач (ARCH §10.2.2).
+4.3.2 `get log --user other@x.com` → события другого пользователя, фильтруются по видимости: только те, чья цель доступна мне (ARCH §10.2.2).
 
-### 4.4 history --user (M2+) — негативные
+### 4.4 get log --user — негативные
 
 4.4.1 Email несуществующего пользователя → exit 1.
 
 4.4.2 Ни `--task`, ни `--user` (или оба) → exit 2, stderr `provide exactly one of --task or --user`.
 
-## 5. clite login / logout / whoami (M2+)
+## 5. clite login / logout / me (M2+)
 
-Magic-link click-flow (ARCH §4.2). Пользователь кликает по ссылке в письме; ввода кода в терминал нет.
+Magic-link click-flow (ARCH §4.2). Пользователь кликает по ссылке в письме; ввода кода в терминал нет. M2.30 переименовал `whoami` → `me`.
 
 ### 5.1 login — позитивные
 
@@ -250,89 +260,103 @@ Magic-link click-flow (ARCH §4.2). Пользователь кликает по
 
 5.3.1 `clite logout` → exit 0, credentials.yaml удалён. (Серверная revoke — Post-MVP.)
 
-5.3.2 `clite logout` без credentials → exit 0, stderr `already logged out`.
+5.3.2 `clite logout` без credentials → exit 0 (idempotent), stderr `already logged out`.
 
-### 5.4 whoami — позитивные
+### 5.4 me — позитивные
 
-5.4.1 `clite whoami` после логина → exit 0, stdout — email.
+5.4.1 `clite me` после логина → exit 0, stdout — email (из локальных credentials).
 
-### 5.5 whoami — негативные
+### 5.5 me — негативные
 
 5.5.1 Без credentials → exit 3, stderr `not authenticated, run clite login`.
 
 ## 6. clite team (M2+)
 
-### 6.1 team create — позитивные
+Команда в verb-first surface: `create team`, `get teams`/`get team <key>`, `rename team`, `leave team`, `add member <team-key>` (универсальная команда добавления для команд и проектов с авто-детектом контейнера по ключу).
 
-6.1.1 `clite team create --name "Eng"` → exit 0, stdout SHA1-ключ. БД: команда создана, создатель — единственный участник с правами `edit_team_name, manage_member_permissions`.
+### 6.1 create team — позитивные
 
-### 6.2 team member set — позитивные
+6.1.1 `clite create team --name "Eng"` → exit 0, stdout — SHA1-ключ. БД: команда создана, создатель — единственный участник с правами `edit_team_name, manage_member_permissions`. Созданная команда видна в `clite get teams` (PRD §6.1.8).
 
-6.2.1 `clite team member set <team-key> --email x@y.com --perms edit_team_name` → exit 0.
+### 6.2 add member (team) — позитивные
 
-### 6.3 team member set — негативные
+6.2.1 `clite add member <team-key> --email x@y.com --perm edit_team_name` → exit 0. БД: запись в `team_members`. Изменение существующего: повторный вызов с новым перм-набором заменяет флаги; пустой `--perm` (без флагов) удаляет участника (PRD §6.1.3).
+
+### 6.3 add member (team) — негативные
 
 6.3.1 Без права `manage_member_permissions` → exit 4.
 
-6.3.2 `--perms` выше своих → exit 4 `cannot grant above self`.
+6.3.2 `--perm` выше своих (PRD §6.1.7) → exit 4, stderr `cannot grant above self`.
 
-### 6.4 team leave — позитивные
+6.3.3 Невалидный perm-флаг → exit 2.
 
-6.4.1 `clite team leave <key>` → exit 0, я больше не участник.
+6.3.4 Несуществующий email — резолвится через auth-svc; если пользователь ещё не зарегистрирован — он автоматически создаётся при добавлении (PRD §10.4).
 
-6.4.2 Был единственным участником → команда удалена (cascade, PRD §6.1.6).
+### 6.4 leave team — позитивные
+
+6.4.1 `clite leave team <key>` → exit 0 (PRD §7.8.2); я больше не участник. Если был единственным — команда удалена каскадом (PRD §6.1.6) и недоступна в `get team <key>` (404).
+
+### 6.5 get team / get teams — позитивные
+
+6.5.1 `get teams` → exit 0, мои команды (PRD §6.1.8).
+
+6.5.2 `get team <key-or-prefix>` → exit 0, имя + участники с перм-флагами.
+
+6.5.3 `--fields id,name` — в выводе только указанные поля (PRD §7.9).
+
+### 6.6 rename team
+
+6.6.1 `clite rename team <key> --to "NewName"` → exit 0. Требуется `edit_team_name`.
+
+6.6.2 Без `edit_team_name` → exit 4.
 
 ## 7. clite project (M2+)
 
-### 7.1 project create — позитивные
+Проект в verb-first surface: `create project`, `get projects`/`get project <key>`, `rename project`, `leave project`, `add member <project-key>` (универсальная команда добавления). Привязка задач к проекту — через `update tasks --set projects=...` (PRD §7.6a).
 
-7.1.1 `clite project create --name P1` → exit 0, SHA1-ключ. БД: я единственный участник со всеми правами.
+### 7.1 create project — позитивные
 
-### 7.2 project member set
+7.1.1 `clite create project --name "P1"` → exit 0, stdout — SHA1-ключ. БД: я единственный участник со всеми правами проекта (PRD §6.5).
 
-7.2.1 Позитив: добавление с непустыми правами → exit 0.
+### 7.2 add member (project)
 
-7.2.2 Негатив без `manage_member_permissions` → exit 4.
+7.2.1 Позитив: `clite add member <project-key> --email x@y.com --perm edit_project_name --perm manage_member_permissions` → exit 0. БД: запись в `project_user_members`. Добавление команды: `--team <team-key>` вместо `--email` → запись в `project_team_members` (требует, чтобы я был в этой команде, PRD §6.7.2). Удаление участника: вызов без `--perm` (пустой массив) → запись удаляется.
 
-7.2.3 `--perms` выше своих → exit 4.
+7.2.2 Негатив без `manage_member_permissions` → exit 4. `--perm` выше своих → exit 4 (PRD §6.1.7). Добавление команды, в которой я не состою → exit 4 (PRD §6.7.2).
 
-### 7.3 project task add/remove — позитивные
+### 7.3 Привязка задач к проекту через `update tasks`
 
-7.3.1 Добавление задачи в проект при `manage_projects` → exit 0. БД: запись в `project_tasks`.
+7.3.1 `update tasks --filter 'id==<prefix>' --set projects=<project-key> --bulk` → exit 0; задача добавлена в `project_tasks` (требует `manage_projects` в проекте).
 
-7.3.2 Удаление задачи из проекта при `manage_projects` → exit 0.
+7.3.2 Отвязка: `update tasks --filter 'id==<prefix>' --set projects= --bulk` (пустое значение) → задача удалена из всех проектов.
 
-### 7.4 project task add — негативные
+7.3.3 Без `manage_projects` в указанном проекте → per-item `forbidden` в `--bulk` / exit 4 в `--batch`.
 
-7.4.1 Без `manage_projects` → exit 4.
+### 7.5 leave project — позитивные
 
-### 7.5 project leave — позитивные
+7.5.1 `clite leave project <key>` → exit 0 (PRD §7.8.3); я больше не участник. Задачи, видимые мне исключительно через этот проект, становятся недоступны. Если был единственным — проект удалён каскадом (PRD §6.1.6).
 
-7.5.1 Выход с потерей доступа ко всем задачам проекта, если не было прямого шаринга.
+### 7.6 get project / get projects — позитивные
 
-## 8. clite share (M2+)
+7.6.1 `get projects` → exit 0, мои проекты (PRD §6.1.8).
 
-### 8.1 share user set — позитивные
+7.6.2 `get project <key-or-prefix>` → exit 0, имя + участники с перм-флагами + `task_ids` (видимые мне, PRD §6.2).
 
-8.1.1 `clite share user set <task-key> --email x@y.com --perms edit_title,edit_status` → exit 0.
+7.6.3 `--fields id,name` — фильтрация полей.
 
-### 8.2 share user set — негативные
+### 7.7 rename project
 
-8.2.1 Без права `share` на задаче → exit 4.
+7.7.1 `clite rename project <key> --to "NewName"` → exit 0. Требуется `edit_project_name`.
 
-8.2.2 `--perms` выше своих → exit 4.
+7.7.2 Без `edit_project_name` → exit 4.
 
-### 8.3 share team set — позитивные
+## 8. clite share (удалён в M2.30)
 
-8.3.1 Шаринг команде, в которой я состою → exit 0.
+8.1 В v2.0.0 группа `clite share` удалена. Шаринг задач задаётся **только в момент создания** через JSON-массив `create tasks` — поля `user_shares` и `team_shares` (см. §3.1.6, §3.1.7).
 
-### 8.4 share team set — негативные
+8.2 Backend-эндпоинты `POST/DELETE /v1/tasks/{task_id}/share/...` физически остались (см. `tasks_service/routers/shares.py`), но CLI-обёртки нет. Modify-share после создания возможен только через прямые HTTP-запросы — не входит в supported surface.
 
-8.4.1 Шаринг команде, в которой я НЕ состою → exit 4 (PRD §6.7.1).
-
-### 8.5 share remove — позитивные
-
-8.5.1 Self-revoke: `clite share user remove <task-key> --self` → exit 0.
+8.3 Self-revoke прямого шаринга задачи (PRD §7.8.1) — соответствующей CLI-команды в v2.0.0 нет; для управления членством используются `leave team` (§6.6) и `leave project` (§7.7).
 
 ## 9. clite automation (M3+)
 
