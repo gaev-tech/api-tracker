@@ -29,6 +29,14 @@ class Settings(BaseSettings):
         default="",
         description="sync DSN для Alembic; вычисляется из database_url если пуст",
     )
+    master_secret_key: str = Field(
+        default="",
+        description=(
+            "AES-256-GCM ключ (32 байта base64) для шифрования project_secrets "
+            "(ARCH §13.1). Если пуст в dev-режиме — генерируется детерминированно "
+            "из solo_user_email."
+        ),
+    )
 
     @property
     def alembic_url(self) -> str:
