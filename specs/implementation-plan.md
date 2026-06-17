@@ -22,6 +22,8 @@
 
 1.6.3 M4 (docs-client) и M6 (Pro/Max и ЮКасса биллинг) — следующие в плане.
 
+1.6.4 M4.A (docs-client SPA) закрыт; M4.B (multi-channel CLI distribution) — код готов в репо. Активация каналов требует user-side действий: регистрация пакетов на pypi.org/npmjs.com, создание `gaev-tech/homebrew-clite` tap, GPG-ключ + nginx vhost для apt.apitracker.ru. Шаги документированы в commit bodies M4.B.1–M4.B.4 и в issue-трекере.
+
 ## 2. M0 — Skeleton deploy
 
 ### 2.1 Цель
