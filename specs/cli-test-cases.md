@@ -358,52 +358,88 @@ Magic-link click-flow (ARCH §4.2). Пользователь кликает по
 
 8.3 Self-revoke прямого шаринга задачи (PRD §7.8.1) — соответствующей CLI-команды в v2.0.0 нет; для управления членством используются `leave team` (§6.6) и `leave project` (§7.7).
 
-## 9. clite automation (M3+)
+## 9. clite create/get/update/delete/run automation (M3+)
 
-### 9.1 automation create — позитивные
+В v2.0.0 verb-first схеме все команды — глагольные группы (`create`, `get`,
+`update`, `delete`, `run`). Подкоманды и опции (`--trigger-type`,
+`--trigger-config`, `--action-type`, `--action-config`) принимают JSON-строки
+для гибкости (PRD §8.4–§8.5).
 
-9.1.1 Cron-триггер: `--project <key> --name "morning" --cron "0 9 * * *" --action-type webhook --action-url ... --action-body "..."` → exit 0, SHA1-ключ.
+### 9.1 create automation — позитивные
 
-9.1.2 Event-триггер: `--event-type task.status_changed --filter "status==done" --action-type system_method --action-method tasks.list --action-args ...`.
+9.1.1 Cron-триггер: `clite create automation --project <key> --name morning
+--trigger-type cron --trigger-config '{"cron":"0 9 * * *"}' --action-type
+webhook --action-config '{"url":"...","body":"..."}'` → exit 0, SHA1-ключ.
 
-9.1.3 С секретом в шаблоне: action-body содержит `{{secrets.token}}` и в БД есть secret `token` → exit 0.
+9.1.2 Event-триггер: `--trigger-type event --trigger-config
+'{"event_type":"task.status_changed","filter":"status==done"}' --action-type
+system_method --action-config '{"method":"tasks.list","args":{}}'`.
 
-### 9.2 automation create — негативные
+9.1.3 С секретом в шаблоне: action-config.body содержит `{{secrets.token}}` и
+в БД есть secret `token` → exit 0.
+
+### 9.2 create automation — негативные
 
 9.2.1 Без `manage_automations` в проекте → exit 4.
 
-9.2.2 Невалидный cron → exit 2 `invalid cron expression`.
+9.2.2 Невалидный cron → exit 1 (server 400 `invalid cron expression`).
 
-9.2.3 Невалидный RSQL в filter → exit 2.
+9.2.3 Невалидный RSQL в filter → exit 1 (server 400).
 
-9.2.4 system_method не в whitelist → exit 2 `method not allowed` (ARCH §11.4).
+9.2.4 system_method не в whitelist → exit 1 (server 400 `method not allowed`,
+ARCH §11.4).
 
-9.2.5 Ссылка на несуществующий secret → exit 2 `unknown secret <name>`.
+9.2.5 Ссылка на несуществующий secret в шаблоне → ошибка рендера в момент
+исполнения; запись попадает в outbox с last_error.
 
-### 9.3 automation run-now — позитивные
+### 9.3 run automation — позитивные
 
-9.3.1 `clite automation run-now <key>` → запускает action немедленно вне триггера; exit 0, stdout — результат action.
+9.3.1 `clite run automation <key>` → запускает action немедленно вне триггера;
+exit 0, stdout — результат action (`{"status":"...","result":...}`).
 
-### 9.4 automation delete — позитивные
+### 9.4 delete automation — позитивные
 
-9.4.1 exit 0, в БД помечена удалённой; pending webhook_outbox-задачи отменяются.
+9.4.1 `clite delete automation <key>` → exit 0; запись удалена; в `get
+automations --project <p>` её больше нет; pending webhook_outbox-задачи
+каскадно удаляются (FK ondelete=CASCADE).
 
-## 10. clite secret (M3+)
+### 9.5 get/list automations — позитивные
 
-### 10.1 secret set — позитивные
+9.5.1 `clite get automations --project <key>` — список автоматизаций.
 
-10.1.1 `clite secret set --project <key> --name token --value <plain>` → exit 0; в БД `value_encrypted`.
+9.5.2 `clite get automation <key>` — одна с полным `trigger_config`,
+`action_config`.
 
-10.1.2 Перезапись существующего → exit 0.
+### 9.6 update automation
 
-### 10.2 secret set — негативные
+9.6.1 `clite update automation <key> --name X` — изменить имя.
+
+9.6.2 `--trigger-config '<json>'` — заменить trigger_config (полная замена).
+
+9.6.3 `--action-config '<json>'` — заменить action_config.
+
+## 10. clite create/get/delete secret (M3+)
+
+### 10.1 create secret — позитивные
+
+10.1.1 `clite create secret --project <key> --name token --value <plain>` →
+exit 0; в БД хранится `value_encrypted` (AES-256-GCM, ARCH §13).
+
+10.1.2 Перезапись существующего секрета по `(project_id, name)` → exit 0
+(upsert).
+
+### 10.2 create secret — негативные
 
 10.2.1 Без `manage_secrets` → exit 4.
 
-### 10.3 secret list — позитивные
+### 10.3 get secrets — позитивные
 
-10.3.1 `clite secret list --project <key>` → exit 0, перечислены имена БЕЗ значений.
+10.3.1 `clite get secrets --project <key>` → exit 0, перечислены имена БЕЗ
+значений (ARCH §13.2).
 
-### 10.4 secret delete — позитивные
+### 10.4 delete secret — позитивные
 
-10.4.1 exit 0, БД: секрет удалён; автоматизации, ссылающиеся на него, на следующий запуск получат ошибку рендера.
+10.4.1 `clite delete secret <key> --project <p>` → exit 0; в `get secrets`
+секрета больше нет. Автоматизации, ссылающиеся на него через
+`{{secrets.<name>}}`, на следующий запуск получат RenderError (отражается в
+`webhook_outbox.last_error`).
