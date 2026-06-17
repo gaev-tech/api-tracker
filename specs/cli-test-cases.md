@@ -443,3 +443,37 @@ exit 0; в БД хранится `value_encrypted` (AES-256-GCM, ARCH §13).
 секрета больше нет. Автоматизации, ссылающиеся на него через
 `{{secrets.<name>}}`, на следующий запуск получат RenderError (отражается в
 `webhook_outbox.last_error`).
+
+## 11. clite tariff (M5+)
+
+### 11.1 tariff (M5 — Free only)
+
+11.1.1 `clite tariff show` на свежезарегистрированном пользователе → exit 0;
+`tariff: free`, `usage_task_shares: 0`, `usage_projects: 0`, `usage_teams: 0`,
+`limit_task_shares: 200`, `limit_projects: 3`, `limit_teams: 3` (tariff.md
+§2.5, §15.10).
+
+11.1.2 `clite tariff catalog` без auth → exit 0; одна запись с `tier: free`,
+`task_shares: 200`, `projects: 3`, `teams: 3` (tariff.md §15.11).
+
+11.1.3 Free-пользователь после `clite create team` x3 пытается создать 4-ю
+команду → exit 1; `error_code: tariff_limit_exceeded`, `metric: teams`,
+`limit: 3`, `subject_email` = email пользователя (tariff.md §4.2.1, §17.1.1).
+
+11.1.4 Per-item статус в bulk-add: пользователь с `usage_task_shares: 199`
+делает `clite create task --bulk` на 3 задачи (создатель сам — приглашаемый
+по PRD §6.6.1.2). 1-я задача создаётся (usage становится 200), 2-я и 3-я
+получают `status: tariff_limit_exceeded` в `results[]` с полями
+`subject_email`, `metric: task_shares`, `limit: 200` (tariff.md §4.3).
+
+11.1.5 Batch откатывается: те же три задачи через `clite create task --batch`
+→ exit 1, `error_code: tariff_limit_exceeded`; в БД ни одна из трёх задач не
+создалась (tariff.md §4.4).
+
+11.1.6 Grandfathering: пользователь P, у которого в БД на момент M5-rollout
+есть 5 записей в `team_members` (создано напрямую SQL для теста). `clite
+tariff show --user P` → `usage_teams: 5`, `limit_teams: 3`. Попытка другого
+пользователя добавить P в новую команду → exit 1,
+`error_code: tariff_limit_exceeded`. После self-revoke P из 3 команд
+(`clite leave team`) → `usage_teams: 2`; теперь добавление P в новую команду
+проходит (exit 0).
