@@ -1,0 +1,46 @@
+{
+  "name": "@gaev-tech/clite",
+  "version": "0.0.0",
+  "description": "AI-driven task tracker CLI for apitracker.ru (binary wrapper)",
+  "keywords": [
+    "task-tracker",
+    "cli",
+    "rsql",
+    "apitracker",
+    "productivity"
+  ],
+  "homepage": "https://apitracker.ru",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gaev-tech/api-tracker.git",
+    "directory": "cli/npm-wrapper"
+  },
+  "bugs": {
+    "url": "https://github.com/gaev-tech/api-tracker/issues"
+  },
+  "license": "MIT",
+  "author": "gaev-tech",
+  "bin": {
+    "clite": "./bin/clite"
+  },
+  "scripts": {
+    "postinstall": "node scripts/download.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "arm64",
+    "x64"
+  ]
+}

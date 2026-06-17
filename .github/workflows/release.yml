@@ -412,7 +412,43 @@ jobs:
 
   publish-npm:
     needs: [validate, publish-github-release]
-    if: false  # включается в M4 (implementation-plan.md §6.3.5)
+    # Skip без secret — позволяет релизам проходить до регистрации scope на npmjs.
+    if: needs.validate.result == 'success' && needs.publish-github-release.result == 'success'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "TODO M4 — npm publish @gaev-tech/clite"
+      - uses: actions/checkout@v4
+
+      - name: Check NPM_TOKEN presence
+        id: secret
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "${NPM_TOKEN:-}" ]]; then
+            echo "has-token=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping npm publish — secret NPM_TOKEN is not set. См. SETUP.md."
+          else
+            echo "has-token=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.secret.outputs.has-token == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org/"
+
+      - if: steps.secret.outputs.has-token == 'true'
+        name: Sync package.json version with tag
+        working-directory: cli/npm-wrapper
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          node -e "const fs=require('fs'); const p=require('./package.json'); p.version=process.env.VERSION; fs.writeFileSync('package.json', JSON.stringify(p,null,2)+'\n')"
+          node -e "console.log('synced to', require('./package.json').version)"
+
+      - if: steps.secret.outputs.has-token == 'true'
+        name: Publish to npm
+        working-directory: cli/npm-wrapper
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --registry https://registry.npmjs.org/
