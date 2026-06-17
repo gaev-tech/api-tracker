@@ -254,10 +254,87 @@ jobs:
 
   publish-homebrew:
     needs: [validate, publish-github-release]
-    if: false  # включается в M4 (implementation-plan.md §6.3.3)
+    # Skip без secret — позволяет релизам проходить до создания tap-репо.
+    if: needs.validate.result == 'success' && needs.publish-github-release.result == 'success'
     runs-on: ubuntu-latest
+    env:
+      TAP_REPO: gaev-tech/homebrew-clite
     steps:
-      - run: echo "TODO M4 — обновить Formula в gaev-tech/homebrew-clite"
+      - uses: actions/checkout@v4
+
+      - name: Check HOMEBREW_TAP_TOKEN presence
+        id: secret
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "${HOMEBREW_TAP_TOKEN:-}" ]]; then
+            echo "has-token=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping Homebrew publish — secret HOMEBREW_TAP_TOKEN is not set. См. SETUP.md."
+          else
+            echo "has-token=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.secret.outputs.has-token == 'true'
+        name: Download macOS binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - if: steps.secret.outputs.has-token == 'true'
+        name: Extract SHA256 sums
+        id: sha
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARM64_SUM=$(awk '{print $1}' release-artifacts/clite-darwin-arm64.sha256)
+          # darwin-amd64 build is continue-on-error — fall back to arm64 sum if missing,
+          # so the Formula still renders (Intel users get the arm64 binary via Rosetta).
+          if [[ -f release-artifacts/clite-darwin-amd64.sha256 ]]; then
+            AMD64_SUM=$(awk '{print $1}' release-artifacts/clite-darwin-amd64.sha256)
+          else
+            AMD64_SUM="$ARM64_SUM"
+            echo "::warning::clite-darwin-amd64.sha256 missing — using arm64 sum as fallback."
+          fi
+          echo "arm64=$ARM64_SUM" >> "$GITHUB_OUTPUT"
+          echo "amd64=$AMD64_SUM" >> "$GITHUB_OUTPUT"
+
+      - if: steps.secret.outputs.has-token == 'true'
+        name: Checkout tap repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TAP_REPO }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap-repo
+
+      - if: steps.secret.outputs.has-token == 'true'
+        name: Render Formula
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          python3 cli/homebrew/render_formula.py \
+            --version "$VERSION" \
+            --sha256-arm64 "${{ steps.sha.outputs.arm64 }}" \
+            --sha256-amd64 "${{ steps.sha.outputs.amd64 }}" \
+            --out tap-repo/Formula/clite.rb
+
+      - if: steps.secret.outputs.has-token == 'true'
+        name: Commit + push Formula
+        working-directory: tap-repo
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "gaev-tech-bot"
+          git config user.email "bot@gaev.tech"
+          git add Formula/clite.rb
+          if git diff --cached --quiet; then
+            echo "::notice::Formula unchanged — nothing to commit."
+            exit 0
+          fi
+          git commit -m "clite v${VERSION}"
+          git push
 
   publish-apt:
     needs: [validate, build-binaries]

@@ -1,0 +1,39 @@
+# Homebrew Formula template — rendered by .github/workflows/release.yml (publish-homebrew job).
+# Placeholders are replaced via Python `string.Template`-style substitution:
+#   ${VERSION}        — release version without leading "v" (e.g. 1.0.0)
+#   ${SHA256_ARM64}   — SHA256 of clite-darwin-arm64 binary in the GitHub Release
+#   ${SHA256_AMD64}   — SHA256 of clite-darwin-amd64 binary in the GitHub Release
+# All assets live in the public release: https://github.com/gaev-tech/clite/releases/tag/v${VERSION}
+#
+# Spec: architecture.md §15.9.4, implementation-plan.md §6.3.3.
+
+class Clite < Formula
+  desc "AI-driven task tracker CLI for apitracker.ru"
+  homepage "https://apitracker.ru"
+  version "${VERSION}"
+  license "MIT"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/gaev-tech/clite/releases/download/v${VERSION}/clite-darwin-arm64"
+      sha256 "${SHA256_ARM64}"
+
+      def install
+        bin.install "clite-darwin-arm64" => "clite"
+      end
+    end
+
+    on_intel do
+      url "https://github.com/gaev-tech/clite/releases/download/v${VERSION}/clite-darwin-amd64"
+      sha256 "${SHA256_AMD64}"
+
+      def install
+        bin.install "clite-darwin-amd64" => "clite"
+      end
+    end
+  end
+
+  test do
+    assert_match "clite", shell_output("#{bin}/clite --version")
+  end
+end
