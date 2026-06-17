@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from importlib.metadata import version as _pkg_version
@@ -16,11 +18,16 @@ from tasks_service.routers.secrets import router as secrets_router
 from tasks_service.routers.shares import router as shares_router
 from tasks_service.routers.tasks import router as tasks_router
 from tasks_service.routers.teams import router as teams_router
+from tasks_service.services.cron_scheduler import CronManager
 from tasks_service.services.prefix_lookup import (
     AmbiguousPrefix,
     PrefixNotFound,
     PrefixTooShort,
 )
+from tasks_service.services.reactive_matcher import run_reactive_matcher
+from tasks_service.services.webhook_outbox import run_outbox_worker
+
+_log = logging.getLogger(__name__)
 
 VERSION = _pkg_version("tasks-service")
 
@@ -42,9 +49,40 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         async with sm() as session:
             await ensure_solo_user(session)
             await session.commit()
-    yield
-    await close_channel()
-    await dispose_engine()
+    # M3 фоновые подсистемы (ARCH §14): reactive_matcher, webhook_outbox,
+    # cron_scheduler. Запускаются как asyncio-таски в lifespan.
+    stop_event = asyncio.Event()
+    sm = get_sessionmaker()
+    cron_mgr = CronManager(sessionmaker=sm)
+    await cron_mgr.start()
+    bg_tasks = [
+        asyncio.create_task(
+            run_reactive_matcher(sm, stop_event=stop_event),
+            name="reactive_matcher",
+        ),
+        asyncio.create_task(
+            run_outbox_worker(sm, stop_event=stop_event),
+            name="webhook_outbox",
+        ),
+        asyncio.create_task(
+            cron_mgr.run_reload_loop(stop_event=stop_event),
+            name="cron_reload",
+        ),
+    ]
+    try:
+        yield
+    finally:
+        stop_event.set()
+        for task in bg_tasks:
+            try:
+                await asyncio.wait_for(task, timeout=5.0)
+            except (TimeoutError, asyncio.CancelledError):
+                task.cancel()
+            except Exception as e:
+                _log.warning("background task %s exited: %s", task.get_name(), e)
+        await cron_mgr.shutdown()
+        await close_channel()
+        await dispose_engine()
 
 
 def create_app(*, with_lifespan: bool = True) -> FastAPI:

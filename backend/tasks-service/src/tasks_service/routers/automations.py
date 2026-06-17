@@ -128,3 +128,21 @@ async def delete(automation_id: str, session: SessionDep, user: CurrentUserDep) 
         await delete_automation(session, current=user, automation_id=aid)
     except AutomationError as e:
         _handle_error(e)
+
+
+@router.post("/{automation_id}/run", response_model=dict)
+async def run_now(
+    automation_id: str, session: SessionDep, user: CurrentUserDep
+) -> dict[str, object]:
+    """Запустить action автоматизации немедленно вне триггера (TC §9.3)."""
+    from tasks_service.services.reactive_matcher import execute_automation
+
+    aid = await _resolve_automation_key(session, automation_id)
+    try:
+        automation = await get_automation(session, current=user, automation_id=aid)
+    except AutomationError as e:
+        _handle_error(e)
+    result = await execute_automation(
+        session, automation=automation, task=None, event=None
+    )
+    return result
