@@ -24,7 +24,6 @@ import asyncio
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any
 
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -38,6 +37,7 @@ from tasks_service.services.jinja_render import (
     RenderError,
     render_cron_context,
 )
+from tasks_service.services.query_resolver import resolve_cron_query
 from tasks_service.services.reactive_matcher import execute_automation
 from tasks_service.services.secrets import resolve_secrets_for_project
 from tasks_service.services.webhook_outbox import enqueue_webhook
@@ -87,10 +87,10 @@ async def _fire_cron_automation(
             return
 
         # Cron-контекст: { now, query(rsql), secrets } (ARCH §11.5.2).
-        # Реальный query() сейчас не подсунем синхронно в Jinja — оставим
-        # как noop, возвращающий пустой list; реализация — M3.14.
-        def query(_rsql: str) -> list[dict[str, Any]]:
-            return []
+        # `query` — sync callable, который читает задачи через отдельный
+        # sync-движок (см. services/query_resolver.py). Actor = первый
+        # участник проекта с manage_automations.
+        query = await resolve_cron_query(session, project_id=automation.project_id)
 
         now_iso = datetime.now(UTC).isoformat()
         if str(automation.action_type) == "webhook":
