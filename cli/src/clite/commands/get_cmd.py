@@ -21,6 +21,8 @@ app = typer.Typer(no_args_is_help=True, help="Чтение данных")
 _DEFAULT_TASK_FIELDS = ["id", "title", "description_md"]
 _DEFAULT_TEAM_FIELDS = ["id", "name"]
 _DEFAULT_PROJECT_FIELDS = ["id", "name"]
+_DEFAULT_AUTOMATION_FIELDS = ["id", "name", "trigger_type", "action_type"]
+_DEFAULT_SECRET_FIELDS = ["id", "name", "created_at"]
 
 
 @app.command("tasks")
@@ -106,6 +108,60 @@ def project(
             handle_api_error(e)
             return
     emit(result, output, fields=parse_fields(fields) or _DEFAULT_PROJECT_FIELDS)
+
+
+@app.command("automations")
+def automations(
+    project_key: Annotated[
+        str,
+        typer.Option("--project", "-p", help="SHA1-ключ проекта (или префикс)"),
+    ],
+    output: OutputOpt = "auto",
+    fields: FieldsOpt = None,
+) -> None:
+    """Список автоматизаций проекта (PRD §8)."""
+    with client() as c:
+        try:
+            result = c.get("/v1/automations", params={"project_id": project_key})
+        except APIError as e:
+            handle_api_error(e)
+            return
+    emit(result, output, fields=parse_fields(fields) or _DEFAULT_AUTOMATION_FIELDS)
+
+
+@app.command("automation")
+def automation(
+    key: Annotated[str, typer.Argument(help="SHA1-ключ автоматизации (или префикс)")],
+    output: OutputOpt = "auto",
+    fields: FieldsOpt = None,
+) -> None:
+    """Одна автоматизация: trigger_config + action_config."""
+    with client() as c:
+        try:
+            result = c.get(f"/v1/automations/{key}")
+        except APIError as e:
+            handle_api_error(e)
+            return
+    emit(result, output, fields=parse_fields(fields) or _DEFAULT_AUTOMATION_FIELDS)
+
+
+@app.command("secrets")
+def secrets(
+    project_key: Annotated[
+        str,
+        typer.Option("--project", "-p", help="SHA1-ключ проекта (или префикс)"),
+    ],
+    output: OutputOpt = "auto",
+    fields: FieldsOpt = None,
+) -> None:
+    """Список секретов проекта (имена БЕЗ значений, ARCH §13.2)."""
+    with client() as c:
+        try:
+            result = c.get(f"/v1/projects/{project_key}/secrets")
+        except APIError as e:
+            handle_api_error(e)
+            return
+    emit(result, output, fields=parse_fields(fields) or _DEFAULT_SECRET_FIELDS)
 
 
 @app.command("log")

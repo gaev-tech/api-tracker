@@ -8,9 +8,11 @@ from clite.commands import (
     add_cmd,
     auth_cmd,
     create_cmd,
+    delete_cmd,
     get_cmd,
     leave_cmd,
     rename_cmd,
+    run_cmd,
     update_cmd,
 )
 
@@ -29,6 +31,8 @@ app.add_typer(update_cmd.app, name="update")
 app.add_typer(rename_cmd.app, name="rename")
 app.add_typer(leave_cmd.app, name="leave")
 app.add_typer(add_cmd.app, name="add")
+app.add_typer(delete_cmd.app, name="delete")
+app.add_typer(run_cmd.app, name="run")
 
 # login / logout / me — на верхнем уровне.
 app.registered_commands.extend(auth_cmd.app.registered_commands)

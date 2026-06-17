@@ -1,7 +1,10 @@
-"""`clite update <noun>` — массовое обновление по фильтру."""
+"""`clite update <noun>` — массовое обновление по фильтру, а также PATCH
+для автоматизации."""
 
 from __future__ import annotations
 
+import json as _json
+import sys
 from typing import Annotated
 
 import typer
@@ -47,6 +50,55 @@ def tasks(
     with client() as c:
         try:
             result = c.post(endpoint, params={"filter": filter}, json={"patch": patch})
+        except APIError as e:
+            handle_api_error(e)
+            return
+    emit(result, output)
+
+
+@app.command("automation")
+def automation(
+    key: Annotated[str, typer.Argument(help="SHA1-ключ автоматизации (или префикс)")],
+    name: Annotated[str | None, typer.Option("--name", "-n", help="Новое имя")] = None,
+    trigger_config: Annotated[
+        str | None,
+        typer.Option(
+            "--trigger-config", help="JSON: новый trigger_config (заменяет полностью)"
+        ),
+    ] = None,
+    action_config: Annotated[
+        str | None,
+        typer.Option(
+            "--action-config", help="JSON: новый action_config (заменяет полностью)"
+        ),
+    ] = None,
+    output: OutputOpt = "auto",
+) -> None:
+    """PATCH автоматизации. Любое не указанное поле не меняется."""
+    body: dict[str, object] = {}
+    if name is not None:
+        body["name"] = name
+    if trigger_config is not None:
+        try:
+            body["trigger_config"] = _json.loads(trigger_config)
+        except _json.JSONDecodeError as e:
+            print(f"invalid --trigger-config JSON: {e}", file=sys.stderr)
+            raise typer.Exit(2) from e
+    if action_config is not None:
+        try:
+            body["action_config"] = _json.loads(action_config)
+        except _json.JSONDecodeError as e:
+            print(f"invalid --action-config JSON: {e}", file=sys.stderr)
+            raise typer.Exit(2) from e
+    if not body:
+        print(
+            "provide at least one of --name / --trigger-config / --action-config",
+            file=sys.stderr,
+        )
+        raise typer.Exit(2)
+    with client() as c:
+        try:
+            result = c.patch(f"/v1/automations/{key}", json=body)
         except APIError as e:
             handle_api_error(e)
             return
