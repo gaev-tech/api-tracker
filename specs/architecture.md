@@ -92,6 +92,8 @@
 
 3.5.16 `webhook_outbox(id, automation_id, attempt, scheduled_at, status, last_error, payload_json)`.
 
+3.5.17 Колонка `frozen bool NOT NULL DEFAULT false` добавляется в 3.5.4 `task_user_shares`, 3.5.7 `team_members`, 3.5.9 `project_user_members` (см. `tariff.md` §5.1, §19.2).
+
 ### 3.6 Схема `auth`
 
 3.6.0 Колонки `id` — `CHAR(40)` SHA1-hex (см. §3.7, PRD §5.2.6).
@@ -107,6 +109,10 @@
 3.6.5 `cli_auth_codes(state, code_challenge, code, code_used_at, expires_at, user_id)` — таблица сохранена для legacy browser-handoff (см. §4.4); в magic-link flow не используется.
 
 3.6.6 `device_codes(device_code, user_code, expires_at, user_id, approved_at)` — см. §4.4.
+
+3.6.7 Колонки `tariff`, `tariff_until`, `tariff_auto_renew`, `pro_bank_days`, `payment_method_token`, `payment_method_last4`, `payment_method_brand` добавляются в 3.6.1 `users` (см. `tariff.md` §7.1, §19.1.1).
+
+3.6.8 `payment_events(id, user_id, event_type, payload_json, created_at)` — журнал тарифных и платёжных событий (см. `tariff.md` §14.1, §19.1.2).
 
 ### 3.7 Миграция UUID → SHA1 на проде
 
@@ -280,6 +286,12 @@
 
 6.3 `GetJWKS() → JWKS` — публичные ключи для верификации JWT; tasks-svc кеширует in-process, обновляет фоновой таской раз в 5 минут.
 
+6.4 `GetUserLimits(user_id) → {task_shares: int|null, projects: int|null, teams: int|null}` — лимиты текущего тарифа пользователя для enforcement; `null` = unlimited (см. `tariff.md` §18.2).
+
+6.5 Обратное направление (gRPC tasks-svc → auth-svc — _новое направление, ранее отсутствовавшее_):
+
+6.5.1 `RecomputeFreezeForUser(user_id) → void` — обслуживается tasks-svc'ом; вызывается auth-svc'ом после изменения `tariff` или `tariff_until` пользователя (см. `tariff.md` §18.3).
+
 ## 7. Публичные REST API
 
 7.1 Базовый префикс tasks-svc: `https://apitracker.ru/api/v1/`.
@@ -325,6 +337,8 @@
 10.3 Курсор: opaque base64 из `(created_at, id)`; гарантирует стабильную последовательность.
 
 10.4 Лимит фиксирован 50, переопределение не поддерживается.
+
+10.5 Тарифные и платёжные события — отдельный журнал `auth.payment_events` (см. `tariff.md` §14, §16.2.3, §19.1.2), не пишется в `audit_events`/`event_log` из 10.1. Видимость и пагинация — `tariff.md` §14.3–§14.6.
 
 ## 11. Автоматизации (технически)
 
