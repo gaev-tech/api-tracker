@@ -372,24 +372,212 @@
 
 6.4.2 Установка через каждый из 5 каналов (GitHub Releases binary, PyPI, Homebrew, APT, npm) даёт работоспособный `clite --version` соответствующей версии.
 
-## 7. Сквозные требования
+## 7. M5 — Тарифная сетка и биллинг
 
-7.1 Все Python-функции/методы/атрибуты — с аннотациями типов (PRD §11.2).
+### 7.1 Цель
 
-7.2 `mypy --strict` без исключений.
+7.1.1 Запуск платной подписки с ЮКассой: пользователь покупает тариф через CLI, лимиты на permission-записи enforced серверно, downgrade фризит избыточные записи.
 
-7.3 Любое изменение контракта (OpenAPI или proto) — пересгенерированные клиенты в том же PR (ARCH §18.1.3, §18.1.4).
+7.1.2 Тарифы, метрики, freeze-семантика, платёжный flow — `tariff.md`.
 
-7.4 Каждый деплой — миграции через Alembic в entrypoint (ARCH §3.3).
+### 7.2 Делverables
 
-7.5 С M2: новая CLI-команда не мерджится без обновления `cli-test-cases.md` и соответствующего теста.
+#### 7.2.1 Миграции БД
 
-## 8. Зависимости между милстоунами
+7.2.1.1 `auth.users` расширяется колонками `tariff`, `tariff_until`, `tariff_auto_renew`, `pro_bank_days`, `payment_method_token`, `payment_method_last4`, `payment_method_brand` (tariff.md §7.1, §19.1.1; ARCH §3.6.7).
 
-8.1 M0 → M1: M1 нуждается в готовом каркасе и автодеплое.
+7.2.1.2 Создаётся `auth.payment_events` (tariff.md §14.1, §19.1.2; ARCH §3.6.8).
 
-8.2 M1 → M2: M2 строит auth поверх рабочей tasks-svc; модели задач из M1 расширяются перм-моделями.
+7.2.1.3 `tasks.task_user_shares`, `tasks.project_user_members`, `tasks.team_members` получают `frozen bool NOT NULL DEFAULT false` (tariff.md §5.1, §19.2; ARCH §3.5.17).
 
-8.3 M2 → M3: автоматизации требуют project-модель, secrets-модель, multi-user (события генерируются разными актёрами).
+7.2.1.4 Индексы `(user_id, frozen, created_at)` на трёх permission-таблицах из 7.2.1.3.
 
-8.4 M4 параллелен M2 и M3 после M1: автогенерация CLI/RSQL/event справки требует M3 в полном объёме (для каталога system-method), но скелет docs-client и tutorials могут начаться раньше.
+7.2.1.5 Колонка `created_at` гарантируется на трёх permission-таблицах; добавляется этой же миграцией с дефолтом `now()`, если отсутствует.
+
+#### 7.2.2 Auth-svc — каталог и состояние
+
+7.2.2.1 Каталог тарифов (free/pro/max с лимитами и ценами) хардкодится в коде auth-svc (tariff.md §2.9).
+
+7.2.2.2 Pydantic-модель `TariffState` с полями `tariff show` (tariff.md §15.10).
+
+7.2.2.3 REST: `GET /api/auth/tariff/catalog` — public, без auth (tariff.md §16.2.1).
+
+7.2.2.4 REST: `GET /api/auth/me/tariff` (tariff.md §16.2.2).
+
+7.2.2.5 Коды ошибок: `tariff_not_an_upgrade`, `tariff_not_active`, `tariff_already_cancelled`, `payment_method_absent`, `payment_method_verification_failed`, `payment_declined` (tariff.md §17.2).
+
+#### 7.2.3 Auth-svc — ЮКасса интеграция
+
+7.2.3.1 Клиент к ЮКасса API: создание payment intents для upgrade и для payment-method verification, токенизация и сохранение recurring-токена.
+
+7.2.3.2 Webhook `POST /api/auth/payments/yookassa-callback` с HMAC-валидацией подписи (tariff.md §13, §16.2.9).
+
+7.2.3.3 Идемпотентность webhook по `payment_id`.
+
+7.2.3.4 Маршрутизация webhook по `metadata.purpose` ∈ `{upgrade, payment_method_verification, renewal}` (tariff.md §13.4).
+
+7.2.3.5 Тест-стаб ЮКассы: локальный HTTP-сервер на pytest fixture, эмулирует полный жизненный цикл платежа (intent → confirmation → webhook) и подписи.
+
+7.2.3.6 Env на проде: `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`, `YOOKASSA_WEBHOOK_SECRET` в `.env.prod` (ARCH §17.2.2.3).
+
+#### 7.2.4 Auth-svc — upgrade / cancel / payment-method flow
+
+7.2.4.1 REST: `POST /api/auth/me/tariff/upgrade` — валидирует strict-выше-текущего, создаёт payment intent, возвращает `{confirmation_url, payment_id}` (tariff.md §9, §16.2.4).
+
+7.2.4.2 Webhook-обработчик upgrade применяет state-переходы из tariff.md §9.3, включая credit банка при Pro→Max (§11.2–§11.5).
+
+7.2.4.3 REST: `POST /api/auth/me/tariff/cancel` — выключает `tariff_auto_renew`, событие `tariff_cancelled` (tariff.md §10, §16.2.5).
+
+7.2.4.4 REST: `GET/POST/DELETE /api/auth/me/payment-method` — show / update / remove (tariff.md §12, §16.2.6–§16.2.8).
+
+7.2.4.5 Webhook-обработчик payment-method verification заменяет токен карты, `last4`, `brand` (tariff.md §12.3.4).
+
+7.2.4.6 `payment-method remove` имплицитно выключает auto-renew и пишет событие `tariff_cancelled` при переключении (tariff.md §12.4).
+
+#### 7.2.5 Auth-svc — auto-renew и фазовые переходы
+
+7.2.5.1 Фоновая asyncio-задача периодически опрашивает `auth.users` с `tariff_auto_renew=true AND tariff_until BETWEEN now AND now+N_HOURS` и инициирует рекуррентное списание через ЮКассу (tariff.md §8.1).
+
+7.2.5.2 Обработка успешного списания (`tariff_renewed`): `tariff_until += 1 period` (tariff.md §8.2).
+
+7.2.5.3 Обработка неуспешного списания (`tariff_renew_failed`): мгновенный фазовый переход в момент `tariff_until` (tariff.md §8.3, §11.6–§11.9).
+
+7.2.5.4 Фоновая задача проверяет `tariff != free AND tariff_until < now` и инициирует фазовый переход (tariff.md §11.6).
+
+7.2.5.5 Consume банка при `tariff=max AND tariff_until<now AND pro_bank_days>0` (tariff.md §11.7); иначе обычный downgrade на Free (§11.8).
+
+7.2.5.6 По окончании банковой Pro-фазы — downgrade на Free (tariff.md §11.9).
+
+#### 7.2.6 Auth-svc — журнал платёжных событий
+
+7.2.6.1 Запись в `auth.payment_events` на каждом state-переходе (типы — tariff.md §14.2).
+
+7.2.6.2 REST: `GET /api/auth/me/tariff/payments?cursor=` — курсорная пагинация, фиксированный лимит 50, сортировка `created_at desc` (tariff.md §14.4–§14.5, §16.2.3).
+
+7.2.6.3 Курсор opaque base64 из `(created_at, id)` (симметрично ARCH §10.3).
+
+#### 7.2.7 gRPC контракты
+
+7.2.7.1 `contracts/proto/auth.proto`: добавить метод `GetUserLimits(user_id) → {task_shares, projects, teams}` с `null = unlimited` (tariff.md §18.2; ARCH §6.4).
+
+7.2.7.2 `contracts/proto/tasks.proto` (новый файл): метод `RecomputeFreezeForUser(user_id) → Empty` (tariff.md §18.3; ARCH §6.5.1).
+
+7.2.7.3 Кодоген клиентов и серверов в `backend/auth-service/generated/grpc_pb/` и `backend/tasks-service/generated/grpc_pb/`; коммит сгенерённого (ARCH §5.4.4).
+
+7.2.7.4 Auth-svc становится gRPC-клиентом tasks-svc — добавляется gRPC-канал в обратную сторону (порт 50051, ARCH §1.2.3, §6.5).
+
+#### 7.2.8 Tasks-svc — frozen в effective-perm
+
+7.2.8.1 Effective-perm резолвер из 4.2.2.5 расширяется: permission-запись с `frozen=true` не вносит вклад в Path A и Path B (PRD §6.2.1.3, tariff.md §5.2).
+
+7.2.8.2 `task list` (PRD §7.1) исключает задачи, доступные исключительно через frozen-пути (tariff.md §15.19); задачи с хотя бы одним активным путём остаются (tariff.md §15.20).
+
+7.2.8.3 RSQL-whitelist `x-rsql-fields` не включает поля тарифа/банка (tariff.md §20.3.8).
+
+#### 7.2.9 Tasks-svc — limit enforcement
+
+7.2.9.1 Pre-check `tariff_limit_exceeded` перед INSERT во всех точках tariff.md §4.2.
+
+7.2.9.2 Лимиты получаются через gRPC `GetUserLimits` с in-process кешем; инвалидация — на каждый вызов `RecomputeFreezeForUser` (см. 7.2.10.3).
+
+7.2.9.3 Атомарность: limit-check + INSERT в одной транзакции с advisory-lock на `user_id` адресата (tariff.md §18.5).
+
+7.2.9.4 В bulk: per-item статус `tariff_limit_exceeded` с полями `subject_email`, `metric`, `limit` (tariff.md §4.3, §17.1.1).
+
+7.2.9.5 В batch: первое `tariff_limit_exceeded` откатывает всю транзакцию (tariff.md §4.4).
+
+#### 7.2.10 Tasks-svc — RecomputeFreezeForUser
+
+7.2.10.1 gRPC-сервер в tasks-svc на порту 50051 для обработки входящих от auth-svc вызовов.
+
+7.2.10.2 Реализация метода: для каждой из трёх permission-метрик получает текущий лимит через `GetUserLimits`, применяет алгоритм freeze (tariff.md §6.2) и unfreeze (§6.4).
+
+7.2.10.3 После применения сбрасывает локальный кеш лимитов пользователя (для 7.2.9.2).
+
+7.2.10.4 FIFO unfreeze при self-revoke active-записи: после удаления tasks-svc проверяет наличие frozen у того же пользователя по той же метрике и поднимает старейшую, если `count(active) < limit` (tariff.md §6.3).
+
+#### 7.2.11 CLI
+
+7.2.11.1 Группа `clite tariff` с командами `show`, `catalog`, `upgrade`, `cancel`, `payments` (tariff.md §15.1–§15.5).
+
+7.2.11.2 Группа `clite tariff payment-method` с командами `show`, `update`, `remove` (tariff.md §15.6–§15.8).
+
+7.2.11.3 Все команды группы поддерживают `--fields` и line-by-line рендер (PRD §7.9, 4.2.8).
+
+7.2.11.4 `tariff upgrade` и `payment-method update` — flow с открытием `confirmation_url` в браузере и `success, press enter to continue` по аналогии с `clite login` (PRD §10.5).
+
+7.2.11.5 Рендер unlimited: `∞` в TTY-выводе, `null` в `--output json`.
+
+7.2.11.6 Флаг `--include-frozen` на `clite team list`, `clite project list`, `clite share user list` (tariff.md §15.15); по умолчанию `false`.
+
+7.2.11.7 Поле `frozen: bool` всегда присутствует в выдаче этих list-команд (tariff.md §15.17).
+
+7.2.11.8 `clite team get` и `clite project get` отдают `frozen: bool` (tariff.md §15.18).
+
+#### 7.2.12 CLI test cases
+
+7.2.12.1 Новая глава `TC §11` (тариф) в `cli-test-cases.md`.
+
+7.2.12.2 Кейсы базового flow: `tariff show` на свежем юзере; `tariff catalog` без auth; upgrade на Pro через ЮКасса-stub; upgrade Pro→Max с проверкой `pro_bank_days`; `tariff cancel` и `tariff_auto_renew=false`; `payment-method update`; `payment-method remove` имплицитно выключает auto-renew.
+
+7.2.12.3 Кейсы лимитов: free-пользователь не добавляется в 4-ю команду (`tariff_limit_exceeded`); bulk с лимит-провалом отдаёт per-item статус; batch откатывается на первой же ошибке.
+
+7.2.12.4 Кейсы freeze/unfreeze: downgrade Pro→Free фризит новейшие excess-команды; `--include-frozen` показывает их; FIFO unfreeze при self-revoke; upgrade обратно — все размораживаются.
+
+7.2.12.5 Кейс банка: upgrade Pro→Max при tariff_until > now; ускоренное истечение Max через прямой UPDATE в тесте; auto-переход в banked Pro; событие `tariff_bank_consumed`; банка обнуляется.
+
+7.2.12.6 Кейсы webhook: невалидная HMAC-подпись → 401; повторный webhook с тем же `payment_id` → 200 без дубликата.
+
+7.2.12.7 Автотесты в `cli/tests/e2e/` под testcontainers (PostgreSQL + auth-svc + tasks-svc + nginx-stub + ЮКасса-stub из 7.2.3.5).
+
+#### 7.2.13 Документация в docs-client
+
+7.2.13.1 Страница каталога тарифов с источником `/api/auth/tariff/catalog`.
+
+7.2.13.2 Без интерактива покупки (PRD §1.2; tariff.md §20.5.1).
+
+### 7.3 Done criteria
+
+7.3.1 На стейдже автор `clite tariff upgrade pro --period monthly` через ЮКасса-stub; `tariff show` показывает `pro`, `tariff_until` через 1 месяц, `payment_method_last4` непустой.
+
+7.3.2 `tariff payments` показывает `tariff_upgraded` с полями `from=free, to=pro, period=monthly, amount_rub=99, payment_id`.
+
+7.3.3 `tariff cancel` устанавливает `auto_renew=false`; ручной сдвиг `tariff_until` в прошлое запускает фазовый переход в Free.
+
+7.3.4 Pro→Max upgrade зачисляет остаток в `pro_bank_days`; в `tariff payments` есть `tariff_bank_credited`; consume банка после истечения Max работает.
+
+7.3.5 Free-пользователь получает `tariff_limit_exceeded` при попытке создать 4-ю команду; в bulk — per-item статус, в batch — полный откат.
+
+7.3.6 Downgrade Pro→Free при состоянии 5 команд: новейшие 2 видны с `--include-frozen` как frozen и не дают доступа к задачам через эти команды.
+
+7.3.7 Self-revoke не-frozen команды при наличии frozen → старейшая frozen разморожена.
+
+7.3.8 ЮКасса webhook отбивает невалидную подпись 401; повторный webhook идемпотентен.
+
+7.3.9 CI green: новые TC §11 покрыты автотестами; coverage не падает ниже порога M1.
+
+## 8. Сквозные требования
+
+8.1 Все Python-функции/методы/атрибуты — с аннотациями типов (PRD §11.2).
+
+8.2 `mypy --strict` без исключений.
+
+8.3 Любое изменение контракта (OpenAPI или proto) — пересгенерированные клиенты в том же PR (ARCH §18.1.3, §18.1.4).
+
+8.4 Каждый деплой — миграции через Alembic в entrypoint (ARCH §3.3).
+
+8.5 С M2: новая CLI-команда не мерджится без обновления `cli-test-cases.md` и соответствующего теста.
+
+## 9. Зависимости между милстоунами
+
+9.1 M0 → M1: M1 нуждается в готовом каркасе и автодеплое.
+
+9.2 M1 → M2: M2 строит auth поверх рабочей tasks-svc; модели задач из M1 расширяются перм-моделями.
+
+9.3 M2 → M3: автоматизации требуют project-модель, secrets-модель, multi-user (события генерируются разными актёрами).
+
+9.4 M4 параллелен M2 и M3 после M1: автогенерация CLI/RSQL/event справки требует M3 в полном объёме (для каталога system-method), но скелет docs-client и tutorials могут начаться раньше.
+
+9.5 M2 → M5: M5 требует auth-svc с magic-link-auth (для логина перед покупкой) и tasks-svc с полной permission-моделью (для frozen-флага и enforcement).
+
+9.6 M5 параллелен M3 и M4 после M2; зависит только от M2.
