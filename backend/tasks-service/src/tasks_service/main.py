@@ -55,6 +55,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     sm = get_sessionmaker()
     cron_mgr = CronManager(sessionmaker=sm)
     await cron_mgr.start()
+    # CronManager сам синкается через PostgreSQL jobstore (ARCH §11.3.1);
+    # отдельная reload-таска больше не нужна — CRUD автоматизаций обязан
+    # вызывать `CronManager.add_or_update_cron` / `remove_cron` точечно.
     bg_tasks = [
         asyncio.create_task(
             run_reactive_matcher(sm, stop_event=stop_event),
@@ -63,10 +66,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         asyncio.create_task(
             run_outbox_worker(sm, stop_event=stop_event),
             name="webhook_outbox",
-        ),
-        asyncio.create_task(
-            cron_mgr.run_reload_loop(stop_event=stop_event),
-            name="cron_reload",
         ),
     ]
     try:
