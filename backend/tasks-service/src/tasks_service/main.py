@@ -10,6 +10,7 @@ from tasks_service.bootstrap import ensure_solo_user, run_migrations
 from tasks_service.config import settings
 from tasks_service.db import dispose_engine, get_sessionmaker
 from tasks_service.grpc_client import close_channel
+from tasks_service.routers.automations import router as automations_router
 from tasks_service.routers.projects import router as projects_router
 from tasks_service.routers.shares import router as shares_router
 from tasks_service.routers.tasks import router as tasks_router
@@ -66,6 +67,7 @@ def create_app(*, with_lifespan: bool = True) -> FastAPI:
     app.include_router(teams_router)
     app.include_router(projects_router)
     app.include_router(shares_router)
+    app.include_router(automations_router)
 
     # PRD §5.2.7 prefix-lookup exceptions → HTTP.
     @app.exception_handler(PrefixTooShort)

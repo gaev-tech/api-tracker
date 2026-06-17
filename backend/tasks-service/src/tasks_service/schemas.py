@@ -3,7 +3,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from tasks_service.models import TaskStatus
+from tasks_service.models import AutomationActionType, AutomationTriggerType, TaskStatus
 
 # SHA1 hex (PRD §5.2.6), либо префикс ≥4 hex-символов (PRD §5.2.7).
 EntityKey = Annotated[
@@ -236,3 +236,62 @@ class TaskShareTeamRead(BaseModel):
 class TaskSharesRead(BaseModel):
     user_shares: list[TaskShareUserRead] = Field(default_factory=list)
     team_shares: list[TaskShareTeamRead] = Field(default_factory=list)
+
+
+# === Automations (M3.2, PRD §8, ARCH §11) ===
+
+
+class AutomationCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project_id: EntityKey
+    name: Annotated[str, Field(min_length=1, max_length=200)]
+    trigger_type: AutomationTriggerType
+    trigger_config: dict[str, object] = Field(default_factory=dict)
+    action_type: AutomationActionType
+    action_config: dict[str, object] = Field(default_factory=dict)
+
+
+class AutomationUpdateRequest(BaseModel):
+    """PATCH: только указанные поля изменяются."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: Annotated[str, Field(min_length=1, max_length=200)] | None = None
+    trigger_config: dict[str, object] | None = None
+    action_config: dict[str, object] | None = None
+
+
+class AutomationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    project_id: str
+    name: str
+    trigger_type: AutomationTriggerType
+    trigger_config: dict[str, object]
+    action_type: AutomationActionType
+    action_config: dict[str, object]
+    created_at: datetime
+
+
+# === Project secrets (M3.3, PRD §8.7, ARCH §13) ===
+
+
+class SecretCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project_id: EntityKey
+    name: Annotated[str, Field(min_length=1, max_length=200)]
+    value: Annotated[str, Field(min_length=1)]
+
+
+class SecretRead(BaseModel):
+    """Список секретов БЕЗ значений (ARCH §13.2)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    project_id: str
+    name: str
+    created_at: datetime
