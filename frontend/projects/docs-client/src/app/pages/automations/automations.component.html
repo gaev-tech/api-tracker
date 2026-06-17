@@ -1,0 +1,22 @@
+<section class="automations">
+  <h1>Automations</h1>
+  <p class="automations__lede">
+    Automations are scheduled or event-driven actions on tasks. See the
+    <a routerLink="/tutorials/writing-automations">writing automations</a>
+    tutorial for an end-to-end walkthrough.
+  </p>
+
+  <h2>Trigger types</h2>
+  <ul>
+    <li><strong>cron</strong> — a cron expression schedules the action. PRD §8.4.</li>
+    <li><strong>event</strong> — reacts to a task event (see <a routerLink="/events">events</a>). PRD §8.4.3.</li>
+  </ul>
+
+  <h2>Action shape</h2>
+  <p>
+    Actions call a whitelisted
+    <a routerLink="/system-methods">system method</a>
+    (e.g. <code>tasks.bulk_update</code>) with a Jinja-rendered payload.
+    Secrets are referenced by name and resolved server-side. ARCH §11.
+  </p>
+</section>

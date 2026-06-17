@@ -1,0 +1,43 @@
+<div class="sidebar">
+  <div class="sidebar__accent-bar"></div>
+
+  <a class="sidebar__brand" routerLink="/">
+    <span class="sidebar__brand-mark">
+      <span class="sidebar__brand-accent">api</span>tracker
+    </span>
+    <span class="sidebar__brand-tag">docs</span>
+  </a>
+
+  <div class="sidebar__search-wrap">
+    <app-search></app-search>
+  </div>
+
+  <div class="sidebar__divider"></div>
+
+  <nav class="sidebar__nav">
+    @for (section of sections; track section.title) {
+      <div class="sidebar__section">
+        <div class="sidebar__section-title">
+          <span
+            class="sidebar__section-mark"
+            [attr.data-accent]="section.accent"
+          ></span>
+          <span>{{ section.title }}</span>
+        </div>
+        <div class="sidebar__links">
+          @for (link of section.links; track link.path) {
+            <a
+              class="sidebar__link"
+              [routerLink]="link.path"
+              routerLinkActive="sidebar__link--active"
+              [routerLinkActiveOptions]="{ exact: !!link.exact }"
+            >
+              <span class="sidebar__link-mark"></span>
+              <span class="sidebar__link-label">{{ link.label }}</span>
+            </a>
+          }
+        </div>
+      </div>
+    }
+  </nav>
+</div>

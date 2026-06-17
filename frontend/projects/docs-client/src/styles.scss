@@ -1,1 +1,165 @@
-/* Docs-client global styles. Реализация в M4 — см. specs/implementation-plan.md §6. */
+/* docs-client global styles — палитра из specs/design/Docs.dc.html, M4. */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap');
+
+:root {
+  /* base palette */
+  --color-bg: #141318;
+  --color-card-bg: #1A191F;
+  --color-card-bg-alt: #1C1B22;
+  --color-sidebar-bg: #161519;
+  --color-code-bg: #0E0D11;
+  --color-deep-bg: #0B0A0D;
+
+  /* text */
+  --color-text: #F1EEE7;
+  --color-text-strong: #FFFFFF;
+  --color-text-muted: #B7B2A8;
+  --color-text-dim: #9C978D;
+  --color-text-faint: #625E57;
+  --color-text-uppercase: #DDD9D0;
+
+  /* accents */
+  --color-accent: #E23B2C;
+  --color-accent-blue: #2F57D6;
+  --color-accent-blue-light: #5C82E8;
+  --color-accent-yellow: #D8A12A;
+  --color-accent-green: #3E9E63;
+
+  /* borders */
+  --color-border-soft: rgba(255, 255, 255, 0.08);
+  --color-border: rgba(255, 255, 255, 0.10);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-border-extra: rgba(255, 255, 255, 0.16);
+
+  /* typography */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-text-strong);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-text);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+h1 {
+  font-weight: 800;
+  font-size: 40px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+h2 {
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.2;
+  margin-top: 36px;
+  margin-bottom: 14px;
+}
+
+h3 {
+  font-weight: 700;
+  font-size: 18px;
+  margin-top: 28px;
+  margin-bottom: 10px;
+}
+
+p {
+  margin: 0 0 14px;
+  color: var(--color-text-muted);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  background: var(--color-code-bg);
+  color: var(--color-accent-yellow);
+  padding: 2px 7px;
+  border: 1px solid var(--color-border);
+}
+
+pre {
+  font-family: var(--font-mono);
+  background: var(--color-deep-bg);
+  border: 1px solid var(--color-border);
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-text);
+  margin: 0 0 20px;
+}
+
+pre code {
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+ul, ol {
+  color: var(--color-text-muted);
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0 20px;
+  font-size: 14px;
+}
+
+th, td {
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+th {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+td code {
+  font-size: 12px;
+  padding: 1px 5px;
+}

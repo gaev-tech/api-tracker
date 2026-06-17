@@ -63,8 +63,15 @@
             "outputPath": "dist/docs-client",
             "index": "projects/docs-client/src/index.html",
             "browser": "projects/docs-client/src/main.ts",
-            "polyfills": ["zone.js"],
+            "polyfills": [],
             "tsConfig": "projects/docs-client/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/docs-client/src/assets",
+                "output": "/assets"
+              }
+            ],
             "styles": ["projects/docs-client/src/styles.scss"],
             "scripts": []
           }

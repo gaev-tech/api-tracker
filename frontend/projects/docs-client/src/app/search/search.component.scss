@@ -1,0 +1,57 @@
+:host {
+  display: block;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-border-strong);
+  padding: 9px 12px;
+}
+
+.search__icon {
+  position: relative;
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
+.search__icon-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-text-dim);
+  border-radius: 50%;
+}
+
+.search__icon-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 6px;
+  height: 2px;
+  background: var(--color-text-dim);
+  transform: rotate(45deg);
+  transform-origin: right;
+}
+
+.search__placeholder {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+
+.search__shortcut {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-dim);
+  border: 1px solid var(--color-border-extra);
+  padding: 0 6px;
+  border-radius: 3px;
+}
