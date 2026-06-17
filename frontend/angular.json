@@ -70,6 +70,11 @@
                 "glob": "**/*",
                 "input": "projects/docs-client/src/assets",
                 "output": "/assets"
+              },
+              {
+                "glob": "**/*.md",
+                "input": "projects/docs-client/src/content/tutorials",
+                "output": "/assets/tutorials"
               }
             ],
             "styles": ["projects/docs-client/src/styles.scss"],

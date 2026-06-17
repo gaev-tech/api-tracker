@@ -1,3 +1,132 @@
 .tutorial {
+  max-width: 1240px;
+}
+
+.tutorial__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin-bottom: 22px;
+}
+
+.tutorial__chevron {
+  color: var(--color-text-faint);
+}
+
+.tutorial__breadcrumb-current {
+  color: var(--color-accent);
+}
+
+.tutorial__layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 32px;
+}
+
+.tutorial__toc {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
+  padding: 14px 0;
+}
+
+.tutorial__toc-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text-uppercase);
+  padding: 0 16px 10px;
+  margin: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tutorial__toc-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.tutorial__toc-link {
+  display: block;
+  padding: 7px 16px;
+  font-size: 13px;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.tutorial__toc-link:hover {
+  color: var(--color-text);
+}
+
+.tutorial__toc-link--active {
+  color: var(--color-text);
+  background: rgba(226, 59, 44, 0.10);
+  border-left-color: var(--color-accent);
+}
+
+.tutorial__body {
+  min-width: 0;
   max-width: 760px;
+}
+
+.tutorial__md h1 {
+  font-size: 36px;
+  margin-bottom: 18px;
+}
+
+.tutorial__md h2 {
+  margin-top: 36px;
+}
+
+.tutorial__md p {
+  font-size: 15.5px;
+  line-height: 1.75;
+  color: var(--color-text-muted);
+}
+
+.tutorial__md a {
+  color: var(--color-accent-blue-light);
+  text-decoration: underline;
+  text-decoration-color: rgba(92, 130, 232, 0.35);
+}
+
+.tutorial__md a:hover {
+  text-decoration-color: var(--color-accent-blue-light);
+}
+
+.tutorial__md ul,
+.tutorial__md ol {
+  font-size: 15.5px;
+  line-height: 1.75;
+}
+
+.tutorial__md blockquote {
+  border-left: 3px solid var(--color-accent-blue);
+  background: rgba(47, 87, 214, 0.05);
+  margin: 16px 0;
+  padding: 10px 18px;
+  color: var(--color-text-muted);
+}
+
+.tutorial__loading {
+  font-family: var(--font-mono);
+  color: var(--color-text-dim);
+}
+
+@media (max-width: 1000px) {
+  .tutorial__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .tutorial__toc {
+    position: static;
+  }
 }

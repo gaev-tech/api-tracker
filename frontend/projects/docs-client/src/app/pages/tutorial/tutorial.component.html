@@ -1,4 +1,39 @@
 <section class="tutorial">
-  <h1>Tutorial</h1>
-  <p>Placeholder — filled in M4.6.</p>
+  <div class="tutorial__breadcrumb">
+    <span>Docs</span>
+    <span class="tutorial__chevron">›</span>
+    <a routerLink="/tutorials/getting-started">Tutorials</a>
+    @if (currentMeta(); as meta) {
+      <span class="tutorial__chevron">›</span>
+      <span class="tutorial__breadcrumb-current">{{ meta.title }}</span>
+    }
+  </div>
+
+  <div class="tutorial__layout">
+    <aside class="tutorial__toc">
+      <h3 class="tutorial__toc-title">Tutorials</h3>
+      <ul class="tutorial__toc-list">
+        @for (t of tutorials; track t.slug) {
+          <li>
+            <a
+              class="tutorial__toc-link"
+              [class.tutorial__toc-link--active]="slug() === t.slug"
+              [routerLink]="['/tutorials', t.slug]"
+              >{{ t.title }}</a
+            >
+          </li>
+        }
+      </ul>
+    </aside>
+
+    <article class="tutorial__body">
+      @if (content(); as html) {
+        <div class="tutorial__md" [innerHTML]="html"></div>
+      } @else if (slug() && !content()) {
+        <p class="tutorial__loading">Loading tutorial…</p>
+      } @else {
+        <p class="tutorial__loading">Pick a tutorial from the list.</p>
+      }
+    </article>
+  </div>
 </section>
