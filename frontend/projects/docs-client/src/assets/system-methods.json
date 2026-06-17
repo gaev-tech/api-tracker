@@ -1,0 +1,97 @@
+{
+  "generator": "generate-catalogs.py",
+  "source": "backend/tasks-service/src/tasks_service/services/system_methods.py",
+  "items": [
+    {
+      "name": "tasks.list",
+      "summary": "List tasks matching an RSQL filter, with optional limit.",
+      "args": [
+        {
+          "name": "filter",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "required": false,
+          "default": 50
+        }
+      ],
+      "returns": "{ tasks: list[Task], next_cursor: string|null }"
+    },
+    {
+      "name": "tasks.create",
+      "summary": "Create exactly one task (thin wrapper over bulk_create[0]).",
+      "args": [
+        {
+          "name": "payload",
+          "type": "TaskCreate",
+          "required": true
+        }
+      ],
+      "returns": "{ task: Task }"
+    },
+    {
+      "name": "tasks.bulk_update",
+      "summary": "Apply the same patch to every task matching the RSQL filter.",
+      "args": [
+        {
+          "name": "filter",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "patch",
+          "type": "TaskUpdate",
+          "required": true
+        }
+      ],
+      "returns": "{ affected: int, task_ids: list[string] }"
+    },
+    {
+      "name": "tasks.batch_update",
+      "summary": "Atomic update for tasks; raises if any fails its permission check.",
+      "args": [
+        {
+          "name": "filter",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "patch",
+          "type": "TaskUpdate",
+          "required": true
+        }
+      ],
+      "returns": "{ affected: int }"
+    },
+    {
+      "name": "tasks.share",
+      "summary": "Grant direct task perms to a user or team.",
+      "args": [
+        {
+          "name": "task_id",
+          "type": "sha1_key",
+          "required": true
+        },
+        {
+          "name": "user_email",
+          "type": "user_email",
+          "required": false
+        },
+        {
+          "name": "team_id",
+          "type": "sha1_key",
+          "required": false
+        },
+        {
+          "name": "perms",
+          "type": "list[string]",
+          "required": true
+        }
+      ],
+      "returns": "{ ok: bool }"
+    }
+  ]
+}

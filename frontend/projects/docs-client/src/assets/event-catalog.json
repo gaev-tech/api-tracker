@@ -1,0 +1,30 @@
+{
+  "generator": "generate-catalogs.py",
+  "source": "backend/tasks-service/src/tasks_service/services/events.py",
+  "items": [
+    {
+      "type": "task.created",
+      "note": "Emitted right after a bulk-create commits each task."
+    },
+    {
+      "type": "task.updated",
+      "note": "Generic update — any field changed (PRD §7.1)."
+    },
+    {
+      "type": "task.status_changed",
+      "note": "Dedicated event when `status` is among the changed fields."
+    },
+    {
+      "type": "task.assigned",
+      "note": "Dedicated event when `assignee` is among the changed fields."
+    },
+    {
+      "type": "task.labeled",
+      "note": "Dedicated event when `labels` are among the changed fields."
+    },
+    {
+      "type": "task.deleted",
+      "note": "Reserved for future hard-delete (not yet emitted)."
+    }
+  ]
+}

@@ -1,4 +1,52 @@
-<section class="system-methods">
+<section class="sysmeth">
+  <div class="sysmeth__breadcrumb">
+    <span>Docs</span>
+    <span class="sysmeth__chevron">›</span>
+    <span class="sysmeth__breadcrumb-current">System Methods</span>
+  </div>
+
   <h1>System Methods</h1>
-  <p>Placeholder — filled in M4.5.</p>
+  <p class="sysmeth__lede">
+    System methods are the whitelisted operations available to
+    <code>action_config.method</code> of an automation
+    (ARCH §11.4). Each call runs as the automation's <em>actor</em>
+    (usually the project owner) with the actor's full permission set.
+  </p>
+
+  @if (catalog(); as cat) {
+    @for (item of cat.items; track item.name) {
+      <article class="sysmeth__item">
+        <h2 class="sysmeth__name"><code>{{ item.name }}</code></h2>
+        <p class="sysmeth__summary">{{ item.summary }}</p>
+
+        @if (item.args.length > 0) {
+          <h3>Arguments</h3>
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th></tr>
+            </thead>
+            <tbody>
+              @for (arg of item.args; track arg.name) {
+                <tr>
+                  <td><code>{{ arg.name }}</code></td>
+                  <td><code>{{ arg.type }}</code></td>
+                  <td>{{ arg.required ? 'yes' : 'no' }}</td>
+                  <td><code>{{ arg.default === undefined ? '—' : arg.default }}</code></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
+        <h3>Returns</h3>
+        <pre class="sysmeth__returns"><code>{{ item.returns }}</code></pre>
+      </article>
+    }
+
+    <p class="sysmeth__source">
+      Generated from <code>{{ cat.source }}</code>.
+    </p>
+  } @else {
+    <p class="sysmeth__loading">Loading catalog…</p>
+  }
 </section>

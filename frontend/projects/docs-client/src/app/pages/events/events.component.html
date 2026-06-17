@@ -1,4 +1,37 @@
 <section class="events">
+  <div class="events__breadcrumb">
+    <span>Docs</span>
+    <span class="events__chevron">›</span>
+    <span class="events__breadcrumb-current">Events</span>
+  </div>
+
   <h1>Events</h1>
-  <p>Placeholder — filled in M4.5.</p>
+  <p class="events__lede">
+    Every task mutation writes one or more events to <code>event_log</code> in
+    the same transaction. The reactive matcher pairs them with
+    <a routerLink="/automations">event-triggered automations</a> by exact
+    string match on <code>trigger_config.event_type</code>.
+  </p>
+
+  @if (catalog(); as cat) {
+    <table>
+      <thead>
+        <tr><th>event_type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        @for (item of cat.items; track item.type) {
+          <tr>
+            <td><code>{{ item.type }}</code></td>
+            <td>{{ item.note }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <p class="events__source">
+      Generated from <code>{{ cat.source }}</code>.
+    </p>
+  } @else {
+    <p class="events__loading">Loading catalog…</p>
+  }
 </section>
