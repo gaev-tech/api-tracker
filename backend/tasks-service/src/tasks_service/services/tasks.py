@@ -28,6 +28,14 @@ from tasks_service.schemas import (
     TaskUpdate,
 )
 from tasks_service.services.audit import record_audit
+from tasks_service.services.events import (
+    EVENT_TASK_ASSIGNED,
+    EVENT_TASK_CREATED,
+    EVENT_TASK_LABELED,
+    EVENT_TASK_STATUS_CHANGED,
+    EVENT_TASK_UPDATED,
+    record_event,
+)
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
@@ -236,6 +244,18 @@ async def create_task(
             "status": str(payload.status),
         },
     )
+    # event_log: reactive_matcher (M3.5) подберёт совпадающие автоматизации.
+    await record_event(
+        session,
+        source_task_id=task.id,
+        event_type=EVENT_TASK_CREATED,
+        payload={
+            "title": payload.title,
+            "labels": payload.labels,
+            "status": str(payload.status),
+            "actor_user_id": current_user.id,
+        },
+    )
     # Implicit user-share создателю (anchor-rule, PRD §6.6).
     from tasks_service.services.shares import add_creator_share
 
@@ -335,6 +355,44 @@ async def _apply_patch(
             event_type="task.updated",
             payload={"diff": diff},
         )
+        # event_log: общий task.updated + field-specific события для
+        # reactive_matcher (M3.5) и docs-client каталога (PRD §8.4.3, ARCH §11).
+        await record_event(
+            session,
+            source_task_id=task.id,
+            event_type=EVENT_TASK_UPDATED,
+            payload={"diff": diff, "actor_user_id": current_user.id},
+        )
+        if "status" in diff:
+            await record_event(
+                session,
+                source_task_id=task.id,
+                event_type=EVENT_TASK_STATUS_CHANGED,
+                payload={
+                    "diff": diff["status"],
+                    "actor_user_id": current_user.id,
+                },
+            )
+        if "assignee" in diff:
+            await record_event(
+                session,
+                source_task_id=task.id,
+                event_type=EVENT_TASK_ASSIGNED,
+                payload={
+                    "diff": diff["assignee"],
+                    "actor_user_id": current_user.id,
+                },
+            )
+        if "labels" in diff:
+            await record_event(
+                session,
+                source_task_id=task.id,
+                event_type=EVENT_TASK_LABELED,
+                payload={
+                    "diff": diff["labels"],
+                    "actor_user_id": current_user.id,
+                },
+            )
     await session.refresh(task, ["blockers"])
     cache: dict[str, str] = {}
     return await _to_read(session, task, cache)
