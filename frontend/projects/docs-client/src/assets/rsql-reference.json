@@ -1,0 +1,151 @@
+{
+  "generator": "generate-rsql-reference.py",
+  "source": "fallback (hardcoded, regenerate via openapi)",
+  "fallback": true,
+  "operators": [
+    {
+      "op": "==",
+      "kind": "comparison",
+      "applies": "string, int, datetime, sha1_key, user_email",
+      "note": "Strict equality."
+    },
+    {
+      "op": "!=",
+      "kind": "comparison",
+      "applies": "string, int, datetime, sha1_key, user_email",
+      "note": "Strict non-equality."
+    },
+    {
+      "op": "=gt=",
+      "kind": "comparison",
+      "applies": "int, datetime",
+      "note": "Greater than."
+    },
+    {
+      "op": "=ge=",
+      "kind": "comparison",
+      "applies": "int, datetime",
+      "note": "Greater or equal."
+    },
+    {
+      "op": "=lt=",
+      "kind": "comparison",
+      "applies": "int, datetime",
+      "note": "Less than."
+    },
+    {
+      "op": "=le=",
+      "kind": "comparison",
+      "applies": "int, datetime",
+      "note": "Less or equal."
+    },
+    {
+      "op": "=in=(a,b,…)",
+      "kind": "set",
+      "applies": "string, int, sha1_key, user_email, string_array",
+      "note": "Value is one of."
+    },
+    {
+      "op": "=out=(a,b,…)",
+      "kind": "set",
+      "applies": "string, int, sha1_key, user_email, string_array",
+      "note": "Value is none of."
+    },
+    {
+      "op": ";",
+      "kind": "logic",
+      "applies": "any",
+      "note": "Logical AND (higher precedence)."
+    },
+    {
+      "op": ",",
+      "kind": "logic",
+      "applies": "any",
+      "note": "Logical OR."
+    },
+    {
+      "op": "(…)",
+      "kind": "logic",
+      "applies": "any",
+      "note": "Grouping."
+    }
+  ],
+  "fields_by_entity": {
+    "task": [
+      {
+        "name": "id",
+        "type": "sha1_key",
+        "note": "Task id; 4..40 hex."
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "note": "Verbatim match."
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "note": "open | done (PRD §5.1)."
+      },
+      {
+        "name": "labels",
+        "type": "string_array",
+        "note": "=in= / =out= only."
+      },
+      {
+        "name": "assignee",
+        "type": "user_email",
+        "note": "Accepts `me` literal (PRD §5.4)."
+      },
+      {
+        "name": "created_at",
+        "type": "datetime",
+        "note": "ISO-8601 string."
+      }
+    ],
+    "history": [
+      {
+        "name": "task_id",
+        "type": "sha1_key",
+        "note": "History row's task."
+      },
+      {
+        "name": "actor",
+        "type": "user_email",
+        "note": "Who made the change."
+      },
+      {
+        "name": "action",
+        "type": "string",
+        "note": "created | updated | …"
+      },
+      {
+        "name": "happened_at",
+        "type": "datetime",
+        "note": "ISO-8601."
+      }
+    ]
+  },
+  "examples": [
+    {
+      "expr": "status==\"open\";assignee==me",
+      "note": "Open tasks assigned to current user (TC §3.3.1)."
+    },
+    {
+      "expr": "labels=in=(backend,urgent)",
+      "note": "Has any of these labels (TC §3.3.3)."
+    },
+    {
+      "expr": "created_at=ge=2026-01-01T00:00:00",
+      "note": "Created on or after the date."
+    },
+    {
+      "expr": "status==\"open\",assignee==me",
+      "note": "OR: open OR mine (less common, but supported)."
+    },
+    {
+      "expr": "(status==\"open\";labels=in=(urgent)),assignee==me",
+      "note": "Grouping with mixed AND/OR."
+    }
+  ]
+}

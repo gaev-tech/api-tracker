@@ -1,3 +1,64 @@
 .rsql {
   max-width: 960px;
 }
+
+.rsql__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin-bottom: 22px;
+}
+
+.rsql__chevron {
+  color: var(--color-text-faint);
+}
+
+.rsql__breadcrumb-current {
+  color: var(--color-accent);
+}
+
+.rsql__lede {
+  font-size: 17px;
+  color: var(--color-text-muted);
+  margin-bottom: 22px;
+}
+
+.rsql__note {
+  border: 1px solid rgba(47, 87, 214, 0.45);
+  background: rgba(47, 87, 214, 0.05);
+  padding: 12px 16px;
+  margin-bottom: 28px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.rsql__note strong {
+  font-family: var(--font-mono);
+  color: var(--color-accent-blue-light);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.rsql__example {
+  background: var(--color-deep-bg);
+  padding: 14px 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+}
+
+.rsql__example-note {
+  font-size: 13px;
+  color: var(--color-text-dim);
+  margin: 0 0 18px;
+}
+
+.rsql__loading {
+  font-family: var(--font-mono);
+  color: var(--color-text-dim);
+}

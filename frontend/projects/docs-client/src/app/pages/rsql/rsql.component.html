@@ -1,4 +1,82 @@
 <section class="rsql">
+  <div class="rsql__breadcrumb">
+    <span>Docs</span>
+    <span class="rsql__chevron">›</span>
+    <span class="rsql__breadcrumb-current">RSQL</span>
+  </div>
+
   <h1>RSQL</h1>
-  <p>Placeholder — filled in M4.4.</p>
+  <p class="rsql__lede">
+    RSQL is the query language used by every <code>--filter</code> flag in
+    <code>clite</code>. It compiles to SQL on the server, with a strict
+    per-entity field whitelist (ARCH §8).
+  </p>
+
+  @if (reference()?.fallback) {
+    <div class="rsql__note">
+      <strong>Note:</strong> field catalog is currently the hardcoded fallback
+      mirror of <code>services/tasks._task_field_specs</code>. It will be
+      regenerated from OpenAPI <code>x-rsql-fields</code> once those markers
+      land in the schema (ARCH §16.5.2).
+    </div>
+  }
+
+  <h2>Operators</h2>
+  @if (reference(); as ref) {
+    <table>
+      <thead>
+        <tr><th>Operator</th><th>Kind</th><th>Applies to</th><th>Note</th></tr>
+      </thead>
+      <tbody>
+        @for (op of ref.operators; track op.op) {
+          <tr>
+            <td><code>{{ op.op }}</code></td>
+            <td>{{ op.kind }}</td>
+            <td>{{ op.applies }}</td>
+            <td>{{ op.note }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <h2>Fields per entity</h2>
+  @for (entity of entities(); track entity) {
+    <h3>{{ entity }}</h3>
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Note</th></tr>
+      </thead>
+      <tbody>
+        @for (f of fieldsFor(entity); track f.name) {
+          <tr>
+            <td><code>{{ f.name }}</code></td>
+            <td><code>{{ f.type }}</code></td>
+            <td>{{ f.note }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <h2>Examples</h2>
+  @if (reference(); as ref) {
+    @for (ex of ref.examples; track ex.expr) {
+      <pre class="rsql__example">{{ ex.expr }}</pre>
+      @if (ex.note) {
+        <p class="rsql__example-note">{{ ex.note }}</p>
+      }
+    }
+  }
+
+  <h2>Special literals</h2>
+  <p>
+    <code>me</code> may be used as the right-hand value for
+    <code>assignee</code>. It resolves to the current user's id server-side
+    (PRD §5.4).
+  </p>
+
+  @if (!reference()) {
+    <p class="rsql__loading">Loading reference…</p>
+  }
 </section>
